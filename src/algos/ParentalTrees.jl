@@ -1,28 +1,34 @@
+# Good example net to work with: ((A,((B,(C,D)))#H1),(#H1,E));
+
 using PhyloNetworks
 import Combinators: powerset
-
+import DataStructures: Queue
 
 
 function getParentalTrees(net::HybridNetwork)
     # NETWORK PRE-PROCESSING
     # 
 
-    return _getParentalTrees(net)
+    return _getParentalTrees(deepcopy(net))
 end
 
 function _getParentalTrees(net::HybridNetwork)
     while length(net.hybrid) != 0
         # 1. Find a hybrid node with no other hybrids below it
         node = _getNextHybrid(net)
+        divisions = Vector{HybridNetwork}()
     
         # 2a. If there is only 1 LineageNode below the reticulation,
         #    condition on the reticulation
-        if length(getchildren(node)) == 1
+        children = getchildren(node)
+        if length(children) == 1 && (typeof(children) <: LineageNode || children[1].leaf)
             divisions = _conditionOnReticulation(net, node)
-        end
 
         # 2b. If there are multiple LineageNodes below the reticulation,
         #    condition on coalescent events
+        else
+            divisions = _conditionOnCoalescences(net, node)
+        end
 
         # 3. Repeat with the resultant networks
     end
@@ -51,6 +57,56 @@ function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode)
             rightLineages = lineages(child)[setdiff(1:nlineages(child), set)]
         end
     end
+end
+
+function _conditionOnCoalescences(net::HybridNetwork, node::PhyloNetworks.ANode)
+    return _conditionOnCoalescences([net], node)
+end
+
+# Conditions the given network on the various coalescent possibilities below `node`
+function _conditionOnCoalescences(nets::Vector{HybridNetwork}, node::PhyloNetworks.ANode)
+    children = getchildren(node)
+    length(children) == 2 || error("Polytomies are not accounted for.")
+
+    if !(typeof(children[1]) <: LineageNode || children[1].leaf)
+        nets = reduce(vcat, [_conditionOnCoalescences(net, children[1]) for net in nets])  # ISSUE: `node` will (I think) be different in each of these networks,
+                                                                                           # so may have to store the data as a vector of tuples (net, node)
+    end
+
+    if !(typeof(children[2]) <: LineageNode || children[2].leaf)
+        nets = reduce(vcat, [_conditionOnCoalescences(net, children[2]) for net in nets])
+    end
+
+    # Now the left and right nodes should both either be leaves or LineageNodes
+    if typeof(children[1]) <: LineageNode
+        if typeof(chidren[2]) <: LineageNode
+            # both are LineageNodes
+
+        else
+            # children[1] is LineageNode, children[2] is leaf
+
+        end
+    else
+        if typeof(children[2]) <: LineageNode
+            # children[1] is leaf, children[2] is LineageNode
+
+        else
+            # easiest case; both are leaf nodes
+
+        end
+    end
+end
+
+# Gets all the _deep_ children of `hyb`. I.e., not the nodes immediately proceeding it,
+# but all of the furthest tips that it can reach (not including any intermediate nodes)
+function _getChildrenDeep(hyb::PhyloNetworks.ANode)
+    children = getchildren(hyb)
+    returnlist = Vector{PhyloNetworks.ANode}([child for child in children if typeof(child) <: LineageNode || child.leaf])
+    for child in setdiff(children, returnlist)
+        returnlist = vcat(returnlist, _getChildrenDeep(child))
+    end
+
+    return returnlist
 end
 
 # Finds a hybrid node with no other hybrid nodes below it
