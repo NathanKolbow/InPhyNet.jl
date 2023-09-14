@@ -1,100 +1,133 @@
-# Good example net to work with: ((A,((B,(C,D)))#H1),(#H1,E));
+# New approach: have tuples with (HybridNetwork, Vector{LineageNode})
+#               so that instead of making fundamental changes to
+#               HybridNetwork, Vector{LineageNode} is just a 1-to-1
+#               vector mapping onto net.node
 
 using PhyloNetworks
-import Combinators: powerset
+import Combinatorics: powerset
 import DataStructures: Queue
 
 
-function getParentalTrees(net::HybridNetwork)
-    # NETWORK PRE-PROCESSING
-    # 
+function getParentalTrees(net::HybridNetwork; safe::Bool=true)
+    if safe net = deepcopy(net) end
 
-    return _getParentalTrees(deepcopy(net))
+    # NETWORK PRE-PROCESSING
+    lineagedict = LDict()   # nodes & nets will be deep copied, 
+                                                                            # so this never needs to be deep copied
+    i = 1
+    for node in net.node
+        if node.leaf
+            ldict[node] = LineageNode(i, net.numTaxa)
+            i += 1
+        else
+            ldict[node] = nothing
+        end
+    end
+
+    return _getParentalTrees(net, lineagedict)
 end
 
-function _getParentalTrees(net::HybridNetwork)
-    while length(net.hybrid) != 0
+function _getParentalTrees(net::HybridNetwork, lineagedict::LDict)
+    workingset = Queue{HybridNetwork}()
+    enqueue!(workingset, net)
+    parentaltrees = Vector{HybridNetwork}()
+
+    while !empty(workingset)
+        net = dequeue!(workingset)
+
         # 1. Find a hybrid node with no other hybrids below it
         node = _getNextHybrid(net)
         divisions = Vector{HybridNetwork}()
     
-        # 2a. If there is only 1 LineageNode below the reticulation,
-        #    condition on the reticulation
-        children = getchildren(node)
-        if length(children) == 1 && (typeof(children) <: LineageNode || children[1].leaf)
-            divisions = _conditionOnReticulation(net, node)
+        # 2a. If there is already a LineageNode associated with this node,
+        #     then we are ready to condition on the reticulation
+        if lineagedict[node] !== nothing
+            divisions = _conditionOnReticulation(net, node, lineagedict)
 
-        # 2b. If there are multiple LineageNodes below the reticulation,
-        #    condition on coalescent events
+        # 2b. If there is not a LineageNode associated with thisnode,
+        #     we must first condition on the coalescent events
         else
-            divisions = _conditionOnCoalescences(net, node)
+            divisions = _conditionOnCoalescences(net, node, lineagedict)
         end
 
         # 3. Repeat with the resultant networks
+        for d in divisions enqueue!(workingset, d) end
     end
 
-    return net
+    return parentaltrees
 end
 
 # Conditions the given network on the given reticulation
-function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode)
+function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode, lineagedict::LDict)
     # If everything is moving as expected, the children should be exclusively
     # one leaf node (signifying a single lineage) or one LineageNode
-    child = getchild(hyb)   # this will throw an error if more than 1 child exists
+    child = lineagedict[getchild(hyb)]   # this will throw an error if more than 1 child exists
 
-    if typeof(child) <: PhyloNetworks.Node || nlineages(child) == 1
-        # Only 2 outcomes: follow the left or follow the right
+    retlist = Vector{HybridNetwork}()
+    for set in powerset([1:nlineages(child);])
+        # `set` contains the indices of the children that go up the "left" reticulation
+        # while its `setdiff` is those the go up the "right" reticulation
+        leftline = LineageNode(lineages(child)[set])
+        rightline = LineageNode(lineages(child)[setdiff(1:nlineages(child), set)])
 
-    else
-        typeof(child) <: LineageNode || error("Expected a LineageNode, instead found a "*str(typeof(child)))
-        # 2^[nlineages(child)] outcomes from here
-        # Need to split among the set of all left/right combinations for each lineage
+        newnet = deepcopy(net)
+        copyldictcontents!(net, newnet, lineagedict)
 
-        for set in powerset([1:nlineages(child);])
-            # `set` contains the indices of the children that go up the "left" reticulation
-            # while its `setdiff` is those the go up the "right" reticulation
-            leftLineages = lineages(child)[set]
-            rightLineages = lineages(child)[setdiff(1:nlineages(child), set)]
-        end
+        # Split the reticulation into 2 tree-like splits
+        outcomes = splitreticulation(newnet, hyb, leftline, rightline, lineagedict)
+        for outcome in outcomes push!(retlist, outcome) end
     end
-end
-
-function _conditionOnCoalescences(net::HybridNetwork, node::PhyloNetworks.ANode)
-    return _conditionOnCoalescences([net], node)
 end
 
 # Conditions the given network on the various coalescent possibilities below `node`
-function _conditionOnCoalescences(nets::Vector{HybridNetwork}, node::PhyloNetworks.ANode)
+function _conditionOnCoalescences(net::HybridNetwork, node::PhyloNetworks.ANode, lineagedict::LDict)
+    if lineagedict[node] !== nothing return net end    # this means we'll never hit leaves
+    
     children = getchildren(node)
-    length(children) == 2 || error("Polytomies are not accounted for.")
+    length(children) <= 2 || error("Polytomies are not accounted for. Found "*string(length(children))*" children of node #"*string(node.number))
 
-    if !(typeof(children[1]) <: LineageNode || children[1].leaf)
-        nets = reduce(vcat, [_conditionOnCoalescences(net, children[1]) for net in nets])  # ISSUE: `node` will (I think) be different in each of these networks,
-                                                                                           # so may have to store the data as a vector of tuples (net, node)
+    # Check that the children are good; if not, recurse
+    nets = Vector{HybridNetwork}([net])
+    if lineagedict[children[1]] === nothing
+        nets = reduce(vcat, [_conditionOnCoalescences(net, children[1], lineagedict) for net in nets])
+    end
+    if length(children) > 1 && lineagedict[children[2]] === nothing
+        nets = reduce(vcat, [_conditionOnCoalescences(net, children[2], lineagedict) for net in nets])
     end
 
-    if !(typeof(children[2]) <: LineageNode || children[2].leaf)
-        nets = reduce(vcat, [_conditionOnCoalescences(net, children[2]) for net in nets])
-    end
+    # In the simplest case, this only has 1 net and `node` is above 2 leaves
+    retlist = Vector{HybridNetwork}()
+    for tempnet in nets
+        # when we copy nets, we need to somehow make sure that lower down references are not lost
+        tempnodeidx = findfirst([n.number == node.number for n in tempnet.node])
+        tempnode = tempnet.node[tempnodeidx]
+        children = getchildren(tempnode)
 
-    # Now the left and right nodes should both either be leaves or LineageNodes
-    if typeof(children[1]) <: LineageNode
-        if typeof(chidren[2]) <: LineageNode
-            # both are LineageNodes
-
+        # We are thinking about each of the children coming up from their node and into this node.
+        # From that perspective, all the lineages in each of the children nodes have _separate_
+        # chances to merge while moving up their branch. So, the resultant node `tempnode`
+        # potentially has any pairing of `opts1` and `opts2`
+        opts1 = getcoalescentcombos(lineagedict[children[1]])
+        if length(children) > 1
+            opts2 = getcoalescentcombos(lineagedict[children[2]])
         else
-            # children[1] is LineageNode, children[2] is leaf
-
+            opts2 = [LineageNode()]
         end
-    else
-        if typeof(children[2]) <: LineageNode
-            # children[1] is leaf, children[2] is LineageNode
 
-        else
-            # easiest case; both are leaf nodes
+        
+        for (i, opti) in enumerate(opts1)
+            for (j, optj) in enumerate(opts2)
+                # TODO: WARNING: STILL NEED TO WRITE CODE TO CONNECT THE LINEAGENODES
+                #       SO THAT NECESSARY INFO IS NOT LOST IN THE DEEPCOPY
+                newnet = deepcopy(tempnet)
+                copyldictcontents!(tempnet, newnet, lineagedict)
 
+                lineagedict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
+                push!(retlist, newnet)
+            end
         end
     end
+    return retlist
 end
 
 # Gets all the _deep_ children of `hyb`. I.e., not the nodes immediately proceeding it,
