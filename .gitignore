@@ -24,4 +24,4 @@ docs/site/
 Manifest.toml
 
 # So that CRLF changes don't get committed everytime switching between Mac and Windows
-relevant-reading/
+relevant-reading/*
