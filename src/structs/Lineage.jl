@@ -1,30 +1,44 @@
 # Contains info for which species/taxa/etc. this lineage is an ancestor for
-# e.g. if the bit array `lineage` is [0, 0, 0, 1, 1, 0], then this lineage
-# is an ancestor of species 4 & 5, but not of any others
+# while preserving coalescent order; e.g. [[3, 2], [1]]
+# means that this is an ancestor of A, B, and C, and that BC must be
+# together, coalescing before A
 struct Lineage
     # Fields
-    lineage::BitArray
+    # lineage::Vector{Union{Int64, Vector}}
+    lineage::Union
     
     # Constructors
-    function Lineage(i::Real, ntaxa::Real)
-        Lineage([i], ntaxa)
-    end
-    function Lineage(members::AbstractVector{<:Real}, ntaxa::Real)
-        lineage = BitArray([i in members for i=1:ntaxa])
-        new(lineage)
-    end
-    function Lineage(l1::Lineage, l2::Lineage)
-        # ntaxa(l1) == ntaxa(l2) || error("l1 and l2 have different lengths.")
-        new(l1.lineage .|| l2.lineage)
-    end
-    function Lineage()
-        new([])
-    end
+    Lineage(i::Real) = new([i])
+    Lineage(l1::Lineage, l2::Lineage) = new([l1.lineage, l2.lineage])
+    Lineage() = new([])
 end
 
 # Helper methods
 ntaxa(lineage::Lineage) = length(lineage.lineage)
 Base.coalesce(l1::Lineage, l2::Lineage) = Lineage(l1, l2)
-Base.coalesce(ls::AbstractVector{Lineage}) = reduce(coalesce, ls)
 
-const LDict = Dict{PhyloNetworks.Node, Union{LineageNode, Nothing}}
+# Returns all possible combinations of `ls` *in which all of the lineages
+# end up coalescing*
+#
+# Order matters, so we can't just go from [1, 2, 3] -> [123]
+# we need to instead go [1, 2, 3] -> [[1, 2], 3], [1, [2, 3]], [[1, 3], 2]
+function Base.coalesce(ls::AbstractVector{Lineage})
+    if length(ls) == 1 return ls end
+    if length(ls) == 2 return Vector{Lineage}([Lineage(ls[1], ls[2])]) end
+
+    choose2sets = partitions(ls, 2)
+    retlist = Vector{Lineage}()
+    for set in choose2sets
+        subsetsi = coalesce(set[1])
+        subsetsj = coalesce(set[2])
+        # subsetsi = ifelse(length(set[1]) > 2, coalesce(set[1]), set[1])
+        # subsetsj = ifelse(length(set[2]) > 2, coalesce(set[2]), set[2])
+
+        for opti in subsetsi
+            for optj in subsetsj
+                push!(retlist, Lineage(opti, optj))
+            end
+        end
+    end
+    return retlist
+end
