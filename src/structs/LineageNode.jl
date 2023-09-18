@@ -60,7 +60,7 @@ Base.show(io::IO, m::MIME"text/plain", x::LineageNode) = print(io, prettyformat(
 function prettyformat(outputs)
     ret = ""
     for (i, output) in enumerate(outputs)
-        ret *= replace(replace(replace(replace(string(output), "Any" => ""), "Vector" => ""), "{" => ""), "}" => "")
+        ret *= replace(string(output), "Any" => "", "Vector" => "", "{" => "", "}" => "")
         if i != length(outputs)
             ret *= "\n"
         end
