@@ -5,49 +5,59 @@
 
 using PhyloNetworks
 import Combinatorics: powerset
-import DataStructures: Queue
+using DataStructures
 
 
 function getParentalTrees(net::HybridNetwork; safe::Bool=true)
     if safe net = deepcopy(net) end
 
     # NETWORK PRE-PROCESSING
-    lineagedict = LDict()   # nodes & nets will be deep copied, 
-                                                                            # so this never needs to be deep copied
+    ldict = LDict()   # nodes & nets will be deep copied, 
+                            # so this never needs to be deep copied
     i = 1
     for node in net.node
         if node.leaf
-            ldict[node] = LineageNode(i, net.numTaxa)
+            ldict[node] = LineageNode(i)
             i += 1
         else
             ldict[node] = nothing
         end
     end
 
-    return _getParentalTrees(net, lineagedict)
+    return _getParentalTrees(net, ldict)
 end
 
-function _getParentalTrees(net::HybridNetwork, lineagedict::LDict)
+function _getParentalTrees(initnet::HybridNetwork, lineagedict::LDict)
     workingset = Queue{HybridNetwork}()
-    enqueue!(workingset, net)
+    enqueue!(workingset, initnet)
     parentaltrees = Vector{HybridNetwork}()
 
-    while !empty(workingset)
+    while !isempty(workingset)
         net = dequeue!(workingset)
+
+        # 0. No more hybrids? This net is done!
+        if length(net.hybrid) == 0
+            push!(parentaltrees, net)
+            continue
+        end
 
         # 1. Find a hybrid node with no other hybrids below it
         node = _getNextHybrid(net)
         divisions = Vector{HybridNetwork}()
-    
+
         # 2a. If there is already a LineageNode associated with this node,
         #     then we are ready to condition on the reticulation
         if lineagedict[node] !== nothing
+            print("Conditioning on reticulations - ")
             divisions = _conditionOnReticulation(net, node, lineagedict)
+            println("done.")
 
         # 2b. If there is not a LineageNode associated with thisnode,
         #     we must first condition on the coalescent events
         else
+            print("Conditioning on coalescences - ")
             divisions = _conditionOnCoalescences(net, node, lineagedict)
+            println("done.")
         end
 
         # 3. Repeat with the resultant networks
@@ -62,6 +72,7 @@ function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode, 
     # If everything is moving as expected, the children should be exclusively
     # one leaf node (signifying a single lineage) or one LineageNode
     child = lineagedict[getchild(hyb)]   # this will throw an error if more than 1 child exists
+    hybidx = findfirst(net.node .== [hyb])
 
     retlist = Vector{HybridNetwork}()
     for set in powerset([1:nlineages(child);])
@@ -71,12 +82,14 @@ function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode, 
         rightline = LineageNode(lineages(child)[setdiff(1:nlineages(child), set)])
 
         newnet = deepcopy(net)
+        newhyb = newnet.node[hybidx]
         copyldictcontents!(net, newnet, lineagedict)
 
         # Split the reticulation into 2 tree-like splits
-        outcomes = splitreticulation(newnet, hyb, leftline, rightline, lineagedict)
-        for outcome in outcomes push!(retlist, outcome) end
+        splitreticulation!(newnet, newhyb, leftline, rightline, lineagedict)
+        push!(retlist, newnet)
     end
+    return retlist
 end
 
 # Conditions the given network on the various coalescent possibilities below `node`
@@ -117,8 +130,6 @@ function _conditionOnCoalescences(net::HybridNetwork, node::PhyloNetworks.ANode,
         
         for (i, opti) in enumerate(opts1)
             for (j, optj) in enumerate(opts2)
-                # TODO: WARNING: STILL NEED TO WRITE CODE TO CONNECT THE LINEAGENODES
-                #       SO THAT NECESSARY INFO IS NOT LOST IN THE DEEPCOPY
                 newnet = deepcopy(tempnet)
                 copyldictcontents!(tempnet, newnet, lineagedict)
 
