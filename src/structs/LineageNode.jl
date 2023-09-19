@@ -1,4 +1,5 @@
 using PhyloNetworks
+using DataStructures
 import Combinatorics: partitions
 
 # We use these nodes to hold the information that, at the point of the node,
@@ -33,20 +34,54 @@ lineages(node::LineageNode) = node.lineages
 # the lineages in `l.lineages`
 function getcoalescentcombos(l::LineageNode)
     parts = partitions(lineages(l))
-    returnlist = Array{LineageNode}(undef, length(parts))
+    partq = Queue{Any}()
+    for part in parts enqueue!(partq, part) end
 
-    for (i, sets) in enumerate(parts)
-        templin = LineageNode()
-        for set in sets
-            coal = coalesce(set)
-            if typeof(coal) <: LineageNode
-                push!(lineages(templin), coalesce(set))
-            else
-                for co in coal push!(lineages(templin), co) end
+    returnlist = Vector{LineageNode}()
+    while !isempty(partq)
+        sets = dequeue!(partq)
+
+        continuewhile = false
+        for (i, set) in enumerate(sets)
+            if length(set) > 2
+                # If this grouping has > 2 taxa then we need to break it up further
+                outcomes = coalesce(set)
+                for (j, outcome) in enumerate(outcomes)
+                    dupsets = ifelse(j == length(outcomes), sets, deepcopy(sets))
+                    dupsets[i] = [outcome]
+                    # re-queue the new copies
+                    enqueue!(partq, dupsets)
+                end
+
+                # We've re-queued the updated objects, so move on in the queue
+                continuewhile = true
+                break
             end
         end
-        returnlist[i] = templin
+
+        if continuewhile continue end
+
+        # If we didn't get caught in the above loop, that means this partition is good to be pushed
+        templin = LineageNode()
+        for lin in sets
+            push!(lineages(templin), Lineage(lin)) 
+        end
+        push!(returnlist, templin)
     end
+
+    # for (i, sets) in enumerate(parts)
+    #     templin = LineageNode()
+
+    #     for set in sets
+    #         coal = coalesce(set)
+    #         if typeof(coal) <: LineageNode
+    #             push!(lineages(templin), coalesce(set))
+    #         else
+    #             for co in coal push!(lineages(templin), co) end
+    #         end
+    #     end
+    #     returnlist[i] = templin
+    # end
 
     return returnlist
 end
