@@ -8,6 +8,8 @@ import Combinatorics: powerset
 using DataStructures
 
 
+# Gets the parental trees for the given network.
+# !! TREES MAY NOT BE UNIQUE !!
 function getParentalTrees(net::HybridNetwork; safe::Bool=true)
     if safe net = deepcopy(net) end
 
@@ -24,7 +26,7 @@ function getParentalTrees(net::HybridNetwork; safe::Bool=true)
         end
     end
 
-    return _getParentalTrees(net, ldict)
+    return _getParentalTrees(net, ldict), ldict
 end
 
 function _getParentalTrees(initnet::HybridNetwork, lineagedict::LDict)
@@ -60,7 +62,9 @@ function _getParentalTrees(initnet::HybridNetwork, lineagedict::LDict)
             println("done.")
         end
 
-        # 3. Repeat with the resultant networks
+        # 3 (?). Condense the divisions down to their unique set
+
+        # 4. Repeat with the resultant networks
         for d in divisions enqueue!(workingset, d) end
     end
 
@@ -71,7 +75,7 @@ end
 function _conditionOnReticulation(net::HybridNetwork, hyb::PhyloNetworks.ANode, lineagedict::LDict)
     # If everything is moving as expected, the children should be exclusively
     # one leaf node (signifying a single lineage) or one LineageNode
-    child = lineagedict[getchild(hyb)]   # this will throw an error if more than 1 child exists
+    child = lineagedict[hyb]   # this will throw an error if more than 1 child exists
     hybidx = findfirst(net.node .== [hyb])
 
     retlist = Vector{HybridNetwork}()
