@@ -5,11 +5,12 @@
 struct Lineage
     # Fields
     # lineage::Vector{Union{Int64, Vector}}
-    lineage::Union
+    lineage::Vector
     
     # Constructors
     Lineage(i::Real) = new([i])
     Lineage(l1::Lineage, l2::Lineage) = new([l1.lineage, l2.lineage])
+    Lineage(ls::AbstractVector{Lineage}) = new(ls)
     Lineage() = new([])
 end
 
@@ -24,10 +25,10 @@ Base.coalesce(l1::Lineage, l2::Lineage) = Lineage(l1, l2)
 # we need to instead go [1, 2, 3] -> [[1, 2], 3], [1, [2, 3]], [[1, 3], 2]
 function Base.coalesce(ls::AbstractVector{Lineage})
     if length(ls) == 1 return ls end
-    if length(ls) == 2 return Vector{Lineage}([Lineage(ls[1], ls[2])]) end
+    if length(ls) == 2 return [Lineage(ls[1], ls[2])] end
 
     choose2sets = partitions(ls, 2)
-    retlist = Vector{Lineage}()
+    retlist = []
     for set in choose2sets
         subsetsi = coalesce(set[1])
         subsetsj = coalesce(set[2])
