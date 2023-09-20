@@ -1,5 +1,6 @@
 using PhyloNetworks
 using DataStructures
+import Base: ==
 import Combinatorics: partitions
 
 # We use these nodes to hold the information that, at the point of the node,
@@ -103,16 +104,34 @@ function prettyformat(outputs)
     return ret
 end
 
-function condense(ls)
-    if typeof(ls) <: Lineage 
-        return condense(ls.lineage)
-    elseif typeof(ls) <: Vector && length(ls) == 1
-        if typeof(ls[1]) <: Lineage
-            return condense(ls[1])
+condense(l1::Lineage, l2::Lineage) = condense([l1, l2])
+
+function Base.:(==)(l1::LineageNode, l2::LineageNode)
+    if length(lineages(l1)) != length(lineages(l2)) return false end
+    if length(lineages(l1)) == 1 return lineages(l1)[1] == lineages(l2)[1] end
+
+    l2idxs = collect(eachindex(lineages(l2)))
+    for i in eachindex(lineages(l1))
+        if i == length(lineages(l1)) break end
+        foundequality = -1
+        for j in l2idxs
+            if lineages(l1)[i] == lineages(l2)[j]
+                foundequality = j
+                break
+            end
         end
-        return ls[1]
+        if foundequality == -1 return false end
+        deleteat!(l2idxs, foundequality)
     end
-    return [condense(l) for l in ls]
+
+    return true
 end
 
-condense(l1::Lineage, l2::Lineage) = condense([l1, l2])
+
+ln1 = LineageNode(Lineage(Lineage(Lineage(1), Lineage(2)), Lineage(3)))
+ln2 = LineageNode(Lineage(Lineage(3), Lineage(Lineage(1), Lineage(2)))) 
+ln3 = LineageNode(Lineage(Lineage(1), Lineage(Lineage(3), Lineage(2))))
+
+ln1 == ln2 || error("LineageNode equality test failed.")
+ln1 != ln3 || error("LineageNode equality test failed.")
+ln2 != ln3 || error("LineageNode equality test failed.")
