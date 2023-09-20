@@ -16,15 +16,16 @@ for node in net.node
     end
 end
 
-output = _conditionOnCoalescences(net, net.hybrid[1], ldict)
+output = _conditiononcoalescences(net, net.hybrid[1], ldict)
 # Looks good! (9 outputs)
 
-n = output[1]   # only 1 lineage going into the retic, but splits into 4 trees
-_conditionOnReticulation(n, n.hybrid[1], ldict)
+output = _condensedivisions(output, [out.hybrid[1] for out in output], ldict)
 
-output = [_conditionOnReticulation(tempnet, tempnet.hybrid[1], ldict) for tempnet in output]
+_conditiononreticulation(output[1], output[1].hybrid[1], ldict)
 
-ptrees, ldict = getParentalTrees(readTopology("((A,((B,(C,D)))#H1),(#H1,E));"))
+output = [_conditiononreticulation(tempnet, tempnet.hybrid[1], ldict) for tempnet in output]
+
+ptrees, ldict = getparentaltrees(readTopology("((A,((B,(C,D)))#H1),(#H1,E));"))
 t = ptrees[1]   # all lineages go RIGHT in this tree
 n = t.node[t.root]
 ldict[getchildren(getchildren(n)[1])[2]]    # this USED to lead to the stale SPLIT-H1 node, but now that doesn't exist
