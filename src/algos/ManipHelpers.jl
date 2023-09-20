@@ -1,9 +1,6 @@
 import DataStructures: Queue
 # Helper functions for manipulating PhyloNetworks network structures
 
-const Node = PhyloNetworks.Node
-const Edge = PhyloNetworks.EdgeT{Node}
-
 function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict::LDict)
     for (newnode, oldnode) in zip(newnet.node, oldnet.node)
         ldict[newnode] = ldict[oldnode]
@@ -50,7 +47,7 @@ function splitreticulation!(net::HybridNetwork, retic::PhyloNetworks.Node, leftl
     ldict[newleftnode] = leftline
     ldict[newrightnode] = rightline
 
-    return net
+    return newleftnode, newrightnode
 end
 
 
