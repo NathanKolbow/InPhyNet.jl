@@ -69,6 +69,10 @@ function _getparentaltrees(initnet::HybridNetwork, lineagedict::LDict)
     return parentaltrees
 end
 
+# DOES NOT WORK AS WRITTEN
+# Problem: investigates `divisions` ONLY at each node in `nodes`
+#          if 2 divisions are identical **at this node** but distinct elsewhere,
+#          they will be merged here
 function _condensedivisions(divisions::Vector{HybridNetwork}, nodes::Vector{Node}, ldict::LDict)
     println("\nCondensing")
     if length(divisions) < 2 return divisions end
@@ -178,8 +182,8 @@ function _conditiononcoalescences(net::HybridNetwork, node::PhyloNetworks.ANode,
         end
     end
 
-    # Condense down to unique parental trees
-    _condensedivisions(retlist, markednodes, lineagedict)
+    # # Condense down to unique parental trees
+    # _condensedivisions(retlist, markednodes, lineagedict)
     return retlist
 end
 
