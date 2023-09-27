@@ -1,4 +1,3 @@
-import DataStructures: Queue
 # Helper functions for manipulating PhyloNetworks network structures
 
 function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict::LDict)
