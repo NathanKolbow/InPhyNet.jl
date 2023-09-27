@@ -3,10 +3,6 @@
 #               HybridNetwork, Vector{LineageNode} is just a 1-to-1
 #               vector mapping onto net.node
 
-using PhyloNetworks
-import Combinatorics: powerset
-using DataStructures
-
 
 # Gets the parental trees for the given network.
 # !! TREES MAY NOT BE UNIQUE !!
