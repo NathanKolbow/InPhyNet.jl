@@ -1,5 +1,3 @@
-import Base: ==
-
 # Contains info for which species/taxa/etc. this lineage is an ancestor for
 # while preserving coalescent order; e.g. [[3, 2], [1]]
 # means that this is an ancestor of A, B, and C, and that BC must be
