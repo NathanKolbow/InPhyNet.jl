@@ -3,6 +3,7 @@
 function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict::LDict)
     for (newnode, oldnode) in zip(newnet.node, oldnet.node)
         ldict[newnode] = ldict[oldnode]
+        println(repr(UInt64(pointer_from_objref(oldnode)))*" ==> "*repr(UInt64(pointer_from_objref(newnode))))
     end
 end
 
@@ -12,10 +13,9 @@ end
 #
 # "left" and "right" don't actually hold any meaning here,
 # they are just a useful naming convention to keep things clear
-function splitreticulation!(net::HybridNetwork, retic::PhyloNetworks.Node, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
-    println("\nNet address: "*repr(UInt64(pointer_from_objref(net))))
-    println("retic address: "*repr(UInt64(pointer_from_objref(retic))))
-    println()
+function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
+    println("\nSPLITTING\nSPLITTING\nSPLITTING\nSPLITTING\nSPLITTING")
+    
     majoredge = getparentedge(retic)
     minoredge = getparentedgeminor(retic)
 
@@ -24,31 +24,66 @@ function splitreticulation!(net::HybridNetwork, retic::PhyloNetworks.Node, major
     majoredge.gamma = 1.0
     minoredge.gamma = 1.0
 
-    # TOOD: WARNING: MAY NOT BE UPDATING ALL NECESSARY 
+    # TODO: WARNING: MAY NOT BE UPDATING ALL NECESSARY 
     # ATTRIBUTES TO MAINTAIN TOPOLOGICAL CONSISTENCY
     retic.name = "s_"*retic.name
-    newleftnode = deepcopy(retic)
-    newrightnode = deepcopy(retic)
-
-    replacenodeinedge!(majoredge, retic, newleftnode)
-    replacenodeinedge!(minoredge, retic, newrightnode)
+    newleftnode = retic
 
     removehybridreference!(net, retic)
+    if nlineages(majorline) != 0
+        println("majorline processed")
 
-    if nlineages(majorline) == 0
-        # remove the redundant node
-        # -- fuse edges
-        removenodeandedge!(majoredge, newleftnode)
-    elseif nlineages(minorline) == 0
-        # remove the redundant node
-        # -- fuse edges
-        removenodeandedge!(minoredge, newrightnode)
+        # Swap this node for retic on the major edge
+        replacenodeinedge!(majoredge, retic, newleftnode)
+        net.node[reticidx] = newleftnode
+        
+        # Add to lineage dict
+        ldict[newleftnode] = majorline
+    end
+    if nlineages(minorline) != 0
+        println("minorline processed")
+        
+        # Copy the retic node
+        newrightnode = deepcopy(retic)
+
+        # Swap this node for retic on the minor edge
+        replacenodeinedge!(minoredge, retic, newrightnode)
+
+        # If majorline is empty, some housekeeping
+        if nlineages(majorline) == 0
+            net.node[reticidx] = newrightnode
+        else
+            newrightnode.number = minimum([node.number for node in net.node]) - 1
+            push!(net.node, newrightnode)
+        end
+        
+        # Add to lineage dict
+        ldict[newrightnode] = minorline
     end
 
-    ldict[newleftnode] = majorline
-    ldict[newrightnode] = minorline
 
-    return newleftnode, newrightnode
+
+    # if nlineages(majorline) == 0
+    #     # remove the redundant node
+    #     # -- fuse edges
+    #     newleftnode.name = "REMOVED"*newleftnode.name
+    #     removenodeandedge!(majoredge, newleftnode)
+    #     deleteat!(net.node, findfirst([net.node .== [newleftnode]]))
+    # elseif nlineages(minorline) == 0
+    #     # remove the redundant node
+    #     # -- fuse edges
+    #     newrightnode.name = "REMOVED"*newrightnode.name
+    #     removenodeandedge!(minoredge, newrightnode)
+    #     deleteat!(net.node, findfirst([net.node .== [newrightnode]]))
+    # end
+
+    # println("\nNet address: "*repr(UInt64(pointer_from_objref(net))))
+    # println("retic address: "*repr(UInt64(pointer_from_objref(retic))))
+    # println("newleftnode address: "*repr(UInt64(pointer_from_objref(newleftnode))))
+    # println("newrightnode address: "*repr(UInt64(pointer_from_objref(newrightnode))))
+    # println()
+
+    return nothing
 end
 
 
