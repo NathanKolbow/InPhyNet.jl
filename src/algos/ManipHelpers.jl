@@ -12,39 +12,41 @@ end
 #
 # "left" and "right" don't actually hold any meaning here,
 # they are just a useful naming convention to keep things clear
-function splitreticulation!(net::HybridNetwork, retic::PhyloNetworks.Node, leftline::LineageNode, rightline::LineageNode, ldict::LDict)
+function splitreticulation!(net::HybridNetwork, retic::PhyloNetworks.Node, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
     println("\nNet address: "*repr(UInt64(pointer_from_objref(net))))
     println("retic address: "*repr(UInt64(pointer_from_objref(retic))))
     println()
-    leftedge = getparentedge(retic)
-    rightedge = getparentedgeminor(retic)
+    majoredge = getparentedge(retic)
+    minoredge = getparentedgeminor(retic)
 
     retic.hybrid = false
     retic.gammaz = -1.
+    majoredge.gamma = 1.0
+    minoredge.gamma = 1.0
 
     # TOOD: WARNING: MAY NOT BE UPDATING ALL NECESSARY 
     # ATTRIBUTES TO MAINTAIN TOPOLOGICAL CONSISTENCY
-    retic.name = "SPLIT-"*retic.name
+    retic.name = "s_"*retic.name
     newleftnode = deepcopy(retic)
     newrightnode = deepcopy(retic)
 
-    replacenodeinedge!(leftedge, retic, newleftnode)
-    replacenodeinedge!(rightedge, retic, newrightnode)
+    replacenodeinedge!(majoredge, retic, newleftnode)
+    replacenodeinedge!(minoredge, retic, newrightnode)
 
     removehybridreference!(net, retic)
 
-    if nlineages(leftline) == 0
+    if nlineages(majorline) == 0
         # remove the redundant node
         # -- fuse edges
-        removenodeandedge!(leftedge, newleftnode)
-    elseif nlineages(rightline) == 0
+        removenodeandedge!(majoredge, newleftnode)
+    elseif nlineages(minorline) == 0
         # remove the redundant node
         # -- fuse edges
-        removenodeandedge!(rightedge, newrightnode)
+        removenodeandedge!(minoredge, newrightnode)
     end
 
-    ldict[newleftnode] = leftline
-    ldict[newrightnode] = rightline
+    ldict[newleftnode] = majorline
+    ldict[newrightnode] = minorline
 
     return newleftnode, newrightnode
 end
