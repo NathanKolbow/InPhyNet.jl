@@ -4,6 +4,11 @@
 #               vector mapping onto net.node
 
 
+function getparentaltrees(newick::AbstractString; safe::Bool=true)
+    return getparentaltrees(readTopology(newick))
+end
+
+
 # Gets the parental trees for the given network.
 # !! TREES MAY NOT BE UNIQUE !!
 function getparentaltrees(net::HybridNetwork; safe::Bool=true)
@@ -31,9 +36,18 @@ function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     ipt = IPT(net)
     ptrees = _getparentaltrees(ipt, ldict)
 
+    # Expand the parental trees from `ldict` so that the `HybridNetwork`
+    # topology reflects the actual parental tree topology
+    ptrees = [_expandIPT(pt, ldict) for pt in ptrees]
+
     # TODO: Condense non-unique parental trees
 
-    # TODO: put the original leaf labels back on the trees
+    # Put the original leaf labels back on the trees
+    for pt in ptrees
+        for leaf in top(pt).leaf
+            leaf.name = leaflabs[parse(Int64, leaf.name)]
+        end
+    end
 
     return ptrees, ldict
 end
@@ -118,8 +132,9 @@ end
 
 # Takes an incomplete parental tree and expands its stored LineageNode attributes
 # into a complete parental tree (returned as a `HybridNetwork` object)
+# TODO: implement this
 function _expandIPT(tree::IPT, ldict::LDict)
-
+    return tree
 end
 
 # DOES NOT WORK AS WRITTEN
@@ -190,12 +205,10 @@ function _conditiononreticulation(ipt::IPT, hyb::Node, lineagedict::LDict)
         copyldictcontents!(net, newnet, lineagedict)
 
         # Split the reticulation into 2 tree-like splits
-        splitreticulation!(newnet, newhyb, majorline, minorline, lineagedict)
+        splitreticulation!(newnet, newhyb, hybidx, majorline, minorline, lineagedict)
         push!(retlist, IPT(newnet, newprob))
     end
-
-    # # Condense down to unique parental trees
-    # _condensedivisions(retlist, replacementnodes, lineagedict)
+    
     return retlist
 end
 
@@ -233,6 +246,7 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
         # potentially has any pairing of `opts1` and `opts2`
         opts1, probs1 = getcoalescentcombos(lineagedict[children[1]], getparentedge(children[1]).length)
         if length(children) > 1
+            println("children[2] address: "*repr(UInt64(pointer_from_objref(children[2]))))
             opts2, probs2 = getcoalescentcombos(lineagedict[children[2]], getparentedge(children[2]).length)
         else
             opts2 = [LineageNode()]
