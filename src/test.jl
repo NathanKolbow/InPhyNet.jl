@@ -3,11 +3,12 @@
 # ---> 23 total parental trees (I believe, if output shows differently then may have to re-sketch)
 include("./main.jl")
 
-net = readTopology("((A,((B,(C,D)))#H1),(#H1,E));")
+ipt = IPT(readTopology("((A,((B,(C,D)))#H1),(#H1,E));"))
+_overwritemissinggammas!(top(ipt))
 
 ldict = LDict()
 i = 1
-for node in net.node
+for node in top(ipt).node
     if node.leaf
         ldict[node] = LineageNode(i)
         i += 1
@@ -16,12 +17,19 @@ for node in net.node
     end
 end
 
-output = _conditiononcoalescences(net, net.hybrid[1], ldict)
+output = _conditiononcoalescences(ipt, top(ipt).hybrid[1], ldict)
 # Looks good! (9 outputs)
 
-output = _condensedivisions(output, [out.hybrid[1] for out in output], ldict)
+# output = _condensedivisions(output, [out.hybrid[1] for out in output], ldict)
 
-_conditiononreticulation(output[1], output[1].hybrid[1], ldict)
+output = [_conditiononreticulation(out, top(out).hybrid[1], ldict) for out in output]
+for (j, set) in enumerate(output)
+    probsum = sum([prob(ipt) for ipt in set])
+    if probsum != 1.
+        println(set)
+        error("output["*string(j)*"] summed to "*string(probsum))
+    end
+end
 
 output = [_conditiononreticulation(tempnet, tempnet.hybrid[1], ldict) for tempnet in output]
 
