@@ -3,7 +3,6 @@
 function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict::LDict)
     for (newnode, oldnode) in zip(newnet.node, oldnet.node)
         ldict[newnode] = ldict[oldnode]
-        println(repr(UInt64(pointer_from_objref(oldnode)))*" ==> "*repr(UInt64(pointer_from_objref(newnode))))
     end
 end
 
