@@ -208,7 +208,7 @@ function _conditiononreticulation(ipt::IPT, hyb::Node, lineagedict::LDict)
         splitreticulation!(newnet, newhyb, hybidx, majorline, minorline, lineagedict)
         push!(retlist, IPT(newnet, newprob))
     end
-    
+
     return retlist
 end
 
@@ -246,7 +246,7 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
         # potentially has any pairing of `opts1` and `opts2`
         opts1, probs1 = getcoalescentcombos(lineagedict[children[1]], getparentedge(children[1]).length)
         if length(children) > 1
-            println("children[2] address: "*repr(UInt64(pointer_from_objref(children[2]))))
+            # println("children[2] address: "*repr(UInt64(pointer_from_objref(children[2]))))
             opts2, probs2 = getcoalescentcombos(lineagedict[children[2]], getparentedge(children[2]).length)
         else
             opts2 = [LineageNode()]

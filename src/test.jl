@@ -40,6 +40,7 @@ ptrees, _ = getparentaltrees(readTopology("(((A,B),#H1), (((C,(D,#H2)))#H1,((E)#
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 
 ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(4,((5,6),(7,(8,#H1)))))))#H2))))root;")
+abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 # Need coal probs to cover (N,O) := (4,1)
 
 
