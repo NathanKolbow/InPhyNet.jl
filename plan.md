@@ -54,3 +54,7 @@ Aims 1 and 2 are coding projects with straightforward objective, so algorithm de
 
 1. This algorithm will likely not address reticulations high up in the final merged network, between taxa that came from different pre-estimated networks. A natural extension would be to figure out how to efficiently infer such reticulations.
 2. Reconciling differences in parental trees is a good starting point, but it may not be enough on its own. Parental trees provide full information on their network under the MSNC, so a more involved algorithm could be developed that leverages these relationships.
+
+## Other Miscellaneous Ideas
+
+- Input networks $\{N_i\}$ with parental trees $\{P_{ij}\}$, get quartets from each $P_{ij}$ weighted by the probability of $P_{ij}$ under network $i$. Feed those quartets to `SNaQ`
