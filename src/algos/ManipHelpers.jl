@@ -27,6 +27,9 @@ function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, maj
     # ATTRIBUTES TO MAINTAIN TOPOLOGICAL CONSISTENCY
     retic.name = "s_"*retic.name
     newleftnode = retic
+    newrightnode = ifelse(nlineages(majorline) == 0, retic, deepcopy(retic))
+
+    # TODO: GIVE MORE ATTENTION TO MAINTAINING TOPOLOGY AND FIELDS HERE
 
     removehybridreference!(net, retic)
     if nlineages(majorline) != 0
@@ -41,17 +44,17 @@ function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, maj
     end
     if nlineages(minorline) != 0
         println("minorline processed")
-        
-        # Copy the retic node
-        newrightnode = deepcopy(retic)
-
-        # Swap this node for retic on the minor edge
-        replacenodeinedge!(minoredge, retic, newrightnode)
-
         # If majorline is empty, some housekeeping
         if nlineages(majorline) == 0
+            newrightnode = retic
             net.node[reticidx] = newrightnode
+            
+            # Swap this node for retic on the minor edge
+            replacenodeinedge!(minoredge, retic, newrightnode)
         else
+            # Copy the retic node
+            newrightnode = deepcopy(retic)
+
             newrightnode.number = minimum([node.number for node in net.node]) - 1
             push!(net.node, newrightnode)
         end
@@ -59,28 +62,6 @@ function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, maj
         # Add to lineage dict
         ldict[newrightnode] = minorline
     end
-
-
-
-    # if nlineages(majorline) == 0
-    #     # remove the redundant node
-    #     # -- fuse edges
-    #     newleftnode.name = "REMOVED"*newleftnode.name
-    #     removenodeandedge!(majoredge, newleftnode)
-    #     deleteat!(net.node, findfirst([net.node .== [newleftnode]]))
-    # elseif nlineages(minorline) == 0
-    #     # remove the redundant node
-    #     # -- fuse edges
-    #     newrightnode.name = "REMOVED"*newrightnode.name
-    #     removenodeandedge!(minoredge, newrightnode)
-    #     deleteat!(net.node, findfirst([net.node .== [newrightnode]]))
-    # end
-
-    # println("\nNet address: "*repr(UInt64(pointer_from_objref(net))))
-    # println("retic address: "*repr(UInt64(pointer_from_objref(retic))))
-    # println("newleftnode address: "*repr(UInt64(pointer_from_objref(newleftnode))))
-    # println("newrightnode address: "*repr(UInt64(pointer_from_objref(newrightnode))))
-    # println()
 
     return nothing
 end
