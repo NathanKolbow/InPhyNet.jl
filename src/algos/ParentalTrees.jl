@@ -16,24 +16,7 @@ function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     _overwritemissinggammas!(net)
     _overwritemissingbranchlengths!(net)
 
-    # Save original leaf labels
-    leaflabs = [leaf.name for leaf in net.leaf]
-
-    # NETWORK PRE-PROCESSING
-    ldict = LDict()   # nodes & nets will be deep copied, 
-                            # so this never needs to be deep copied
-    i = 1
-    for node in net.node
-        if node.leaf
-            ldict[node] = LineageNode(i)
-            node.name = string(i)
-            i += 1
-        else
-            ldict[node] = nothing
-        end
-    end
-
-    ipt = IPT(net)
+    ipt, ldict, labelmap = _initparentaltreealgo(net)
     ptrees = _getparentaltrees(ipt, ldict)
 
     # Expand the parental trees from `ldict` so that the `HybridNetwork`
@@ -45,11 +28,49 @@ function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     # Put the original leaf labels back on the trees
     for pt in ptrees
         for leaf in top(pt).leaf
-            leaf.name = leaflabs[parse(Int64, leaf.name)]
+            leaf.name = labelmap[parse(Int64, leaf.name)]
         end
     end
 
     return ptrees, ldict
+end
+
+"""
+    _initparentaltreealgo(net::HybridNetwork)
+
+Takes the given network and returns initialization values for the parental tree algorithm.
+
+# Return Values
+1. InterimParentalTree generated from the given network
+2. Initialized LDict
+"""
+function _initparentaltreealgo(net::HybridNetwork)
+    # Save original leaf labels
+    labelmap = Dict{Int64, String}()
+
+    # NETWORK PRE-PROCESSING
+    ldict = LDict()   # nodes & nets will be deep copied, 
+                      # so this never needs to be deep copied
+    i = 1
+    for node in net.node
+        if node.leaf
+            # Save the tip label
+            labelmap[i] = node.name
+
+            # Initialize the LDict
+            ldict[node] = LineageNode(i)
+
+            # Overwrite the name (not really necessary)
+            node.name = string(i)
+            # Increment
+            i += 1
+        else
+            # Initialize the LDict entry
+            ldict[node] = nothing
+        end
+    end
+
+    return IPT(net), ldict, labelmap
 end
 
 function _getparentaltrees(initnet::IPT, lineagedict::LDict)
