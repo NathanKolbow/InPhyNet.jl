@@ -38,8 +38,7 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real)
     N >= O > 0 || error("`N` must be >= `O` and both must be greater than 0")
 
     # Pre-computed probas
-    # functions for all outcomes with N=5: https://www.desmos.com/calculator/oeys2tjwlu
-    # something is broken for N=5, but everything works up to N=4 :(
+    # functions for all outcomes with N=4: https://www.desmos.com/calculator/oeys2tjwlu
     if N == O
         return exp(-binomial(N,2)*bl)
     elseif N - O == 1
