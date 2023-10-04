@@ -1,37 +1,8 @@
 # Good example net to work with: ((A,((B,(C,D)))#H1),(#H1,E));
 # ---> _conditionOnCoalescences on the hybrid should give ? outputs (used to be 7, but now it's clear that's not the case)
-# ---> 23 total parental trees (I believe, if output shows differently then may have to re-sketch)
+# ---> 23 total UNIQUE parental trees (fairly certain, not 100% though)
 include("./main.jl")
 
-# ipt = IPT(readTopology("(10,(#H2,(1,(2,(((9)#H1,(3,(4,((5,6),(7,(8,#H1)))))))#H2))))root;"))
-# _overwritemissinggammas!(top(ipt))
-
-# ldict = LDict()
-# i = 1
-# for node in top(ipt).node
-#     if node.leaf
-#         ldict[node] = LineageNode(i)
-#         i += 1
-#     else
-#         ldict[node] = nothing
-#     end
-# end
-
-# output = _conditiononcoalescences(ipt, top(ipt).hybrid[1], ldict)
-# # Looks good! (9 outputs)
-
-# # output = _condensedivisions(output, [out.hybrid[1] for out in output], ldict)
-
-# output = [_conditiononreticulation(out, top(out).hybrid[1], ldict) for out in output]
-# for (j, set) in enumerate(output)
-#     probsum = sum([prob(ipt) for ipt in set])
-#     if probsum != 1.
-#         println(set)
-#         error("output["*string(j)*"] summed to "*string(probsum))
-#     end
-# end
-
-# output = [_conditiononreticulation(tempnet, tempnet.hybrid[1], ldict) for tempnet in output]
 
 ptrees, _ = getparentaltrees(readTopology("((A,((B,(C,D)))#H1),(#H1,E));"))
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
@@ -39,9 +10,12 @@ abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabil
 ptrees, _ = getparentaltrees(readTopology("(((A,B),#H1), (((C,(D,#H2)))#H1,((E)#H2,F)));"))
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 
-ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(4,((5,6),(7,(8,#H1)))))))#H2))))root;")
+ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(7,(8,#H1))))#H2))))root;")
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
-# Need coal probs to cover (N,O) := (4,1)
+
+ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(4,(5,((6,7),(8,#H1)))))))#H2))))root;")
+abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
+# Need coal probs to cover (N,O) := (5,1) and (6,1)
 
 
 
