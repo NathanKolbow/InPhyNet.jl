@@ -3,11 +3,11 @@
 struct InterimParentalTree
     # Fields
     net::HybridNetwork  # does not necessarily reflect the actual topology of the IPT
-    p::Real             # probability *thus far* for this IPT
+    p::BigFloat         # probability *thus far* for this IPT
 
     # Constructors
-    InterimParentalTree(net::HybridNetwork) = new(net, 1)
-    InterimParentalTree(net::HybridNetwork, p::Real) = new(net, p)
+    InterimParentalTree(net::HybridNetwork) = new(net, BigFloat(1.))
+    InterimParentalTree(net::HybridNetwork, p::Real) = new(net, BigFloat(p))
 end
 const IPT = InterimParentalTree
 
