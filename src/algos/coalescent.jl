@@ -7,7 +7,7 @@
 # returns a tuple (A, B)
 # A: list of all possible coalescent combos
 # B: the probability associated with the corresponding entry of A
-function getcoalescentcombos(l::LineageNode, bl::Real)
+function getcoalescentcombos(l::LineageNode, bl::Real; complog::Union{CompDict,Nothing}=nothing)
     parts = partitions(lineages(l))
     partq = Queue{Any}()
     for part in parts enqueue!(partq, part) end
@@ -41,7 +41,7 @@ function getcoalescentcombos(l::LineageNode, bl::Real)
         if continuewhile continue end
 
         # Calculate the probability of this outcome `part`
-        prob = _calculatecoalescentprobability(N, length(part), bl)
+        prob = _calculatecoalescentprobability(N, length(part), bl, complog=complog)
 
         # We need to make sure we're counting things like [1, 2], [3, 4] twice
         # or [1, 2], [3, 4], [5, 6] six times b/c order of coalescence is not
