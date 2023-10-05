@@ -13,59 +13,134 @@ end
 # "left" and "right" don't actually hold any meaning here,
 # they are just a useful naming convention to keep things clear
 function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
-    println("\nSPLITTING\nSPLITTING\nSPLITTING\nSPLITTING\nSPLITTING")
-    
     majoredge = getparentedge(retic)
     minoredge = getparentedgeminor(retic)
 
     retic.hybrid = false
     retic.gammaz = -1.
     majoredge.gamma = 1.0
-    minoredge.gamma = 1.0
+    minoredge.gamma = -1.
+    majoredge.hybrid = false
+    minoredge.hybrid = false
+    minoredge.isMajor = true
 
     # TODO: WARNING: MAY NOT BE UPDATING ALL NECESSARY 
     # ATTRIBUTES TO MAINTAIN TOPOLOGICAL CONSISTENCY
     retic.name = "s_"*retic.name
-    newleftnode = retic
-    newrightnode = ifelse(nlineages(majorline) == 0, retic, deepcopy(retic))
 
     # TODO: GIVE MORE ATTENTION TO MAINTAINING TOPOLOGY AND FIELDS HERE
-
+    # TODO: PROBABLY JUST FULLY RE-WRITE THIS FUNCTION
     removehybridreference!(net, retic)
+
+    delnode = nothing   # redundant node that crops up when one of the lineages is empty
+    # Adjust the topology
     if nlineages(majorline) != 0
-        println("majorline processed")
+        # Make the new node
+        newmajornode = retic
 
-        # Swap this node for retic on the major edge
-        replacenodeinedge!(majoredge, retic, newleftnode)
-        net.node[reticidx] = newleftnode
-        
-        # Add to lineage dict
-        ldict[newleftnode] = majorline
+        # Detach the minor edge
+        detachedge!(newmajornode, minoredge)
+        majoredge.isChild1 = majoredge.node[1] == newmajornode
+        minoredge.isChild1 = false
+
+        # Update ldict
+        ldict[newmajornode] = majorline
+    else
+        # Set the delnode
+        delnode = getparent(majoredge)
+
+        # Delete major edge
+        detachedge!(retic, majoredge)
+        majoredge.isChild1 = false
+
+        for node in majoredge.node detachedge!(node, majoredge) end
+        PhyloNetworks.deleteEdge!(net, majoredge)
     end
-    if nlineages(minorline) != 0
-        println("minorline processed")
-        # If majorline is empty, some housekeeping
-        if nlineages(majorline) == 0
-            newrightnode = retic
-            net.node[reticidx] = newrightnode
-            
-            # Swap this node for retic on the minor edge
-            replacenodeinedge!(minoredge, retic, newrightnode)
-        else
-            # Copy the retic node
-            newrightnode = deepcopy(retic)
 
-            newrightnode.number = minimum([node.number for node in net.node]) - 1
-            push!(net.node, newrightnode)
+    if nlineages(minorline) != 0
+        if nlineages(majorline) != 0
+            # Make the new node while attaching it to the minor edge
+            newminornode = Node(minimum([node.number for node in net.node]) - 1, false, false, [minoredge])
+
+            # Connect minor edge to the new node
+            # `retic/newmajornode` has already been disconnected from `minoredge`
+            push!(minoredge.node, newminornode)
+            minoredge.isChild1 = minoredge.node[1] == newminornode
+
+            # Add minor node to `net`
+            PhyloNetworks.pushNode!(net, newminornode)
+        else
+            # Update edge settings
+            minoredge.isChild1 = minoredge.node[1] == retic
+
+            # Major edge removed and handled above, now just need to update ldict
+            ldict[retic] = minorline
         end
-        
-        # Add to lineage dict
-        ldict[newrightnode] = minorline
+    else
+        # Set the delnode
+        delnode = getparent(minoredge)
+
+        # Major edge dealt with, we just need to remove references from minoredge
+        detachedge!(retic, minoredge)
+
+        for node in minoredge.node detachedge!(node, minoredge) end
+        PhyloNetworks.deleteEdge!(net, minoredge)
+    end
+
+    # Remove the redundant node if it exists
+    if delnode !== nothing
+        length(delnode.edge) == 2 || error("`delnode` has "*string(length(delnode.edge))*" edges.")
+
+        pedge = getparentedge(delnode)
+        cedge = getchildedge(delnode)
+        cnode = getchild(delnode)
+        pnode = getparent(delnode)
+
+        # Keep `pedge`, delete `cedge`
+        pedge.length += cedge.length
+        delnode.edge = []
+        detachedge!(delnode, pedge)
+        detachedge!(delnode, cedge)
+        detachedge!(cnode, cedge)
+
+        # Remove references from deleted items
+        PhyloNetworks.deleteEdge!(net, cedge)
+        PhyloNetworks.deleteNode!(net, delnode)
+
+        # Attach `pedge` to `cnode`
+        push!(pedge.node, cnode)
+        push!(cnode.edge, pedge)
+
+        # Update attributes
+        pedge.isChild1 = cnode == pedge.node[1]
     end
 
     return nothing
 end
 
+"""
+    detachedge!(node::Node, edge::Edge)
+
+Used after `splitreticulation!`. Before the function, `node` has 2 parent edges
+but we want it to only have 1 now; namely not `edge`.
+"""
+function detachedge!(node::Node, edge::Edge)
+    # Remove the node from the edge's node list
+    for (i, tempnode) in enumerate(edge.node)
+        if tempnode == node
+            deleteat!(edge.node, i)
+            break
+        end
+    end
+
+    # Remove the edge from the node's edge list
+    for (i, tempedge) in enumerate(node.edge)
+        if tempedge == edge
+            deleteat!(node.edge, i)
+            break
+        end
+    end
+end
 
 function removenodeandedge!(edge::Edge, node::Node)
     # 1. remove `edge` from the other node that it is attached to
@@ -83,4 +158,7 @@ function replacenodeinedge!(edge::Edge, oldnode::Node, newnode::Node)
     edge.node[findfirst(edge.node .== [oldnode])] = newnode
 end
 
-removehybridreference!(net::HybridNetwork, retic::Node) = filter!(s -> s ≠ retic, net.hybrid)
+function removehybridreference!(net::HybridNetwork, retic::Node)
+    filter!(s -> s ≠ retic, net.hybrid)
+    net.numHybrids -= 1
+end
