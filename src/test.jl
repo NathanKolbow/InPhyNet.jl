@@ -20,3 +20,15 @@ ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(4,(5,((6,7),(8,#H1))))
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 # Need coal probs to cover (N,O) := (5,1) and (6,1)
 
+
+
+# Computation log efficiency improvement test
+using BenchmarkTools
+
+function benchfunc(complog::Bool)
+    ipt, ldict, _ = _initparentaltreealgo(readTopology("(10,(#H2,(1,(2,(((9)#H1,(3,(6,(8,#H1)))))#H2))))root;"), neverwarn=true)
+    _ = _getparentaltrees(ipt, ldict, usecomplog=complog)
+end
+
+@benchmark benchfunc(false)     # 243ms +- 12.5ms
+@benchmark benchfunc(true)      # 231ms +- 8.32ms
