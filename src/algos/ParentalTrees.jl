@@ -1,13 +1,6 @@
-# New approach: have tuples with (HybridNetwork, Vector{LineageNode})
-#               so that instead of making fundamental changes to
-#               HybridNetwork, Vector{LineageNode} is just a 1-to-1
-#               vector mapping onto net.node
-
-
 function getparentaltrees(newick::AbstractString; safe::Bool=true)
     return getparentaltrees(readTopology(newick))
 end
-
 
 # Gets the parental trees for the given network.
 # !! TREES MAY NOT BE UNIQUE !!
