@@ -60,9 +60,13 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Un
         c2 = binomial(N-1, 2)
         c3 = binomial(O, 2)
         
-        # TODO: simplify the computation below
-        num = ((c2-c1)*exp(c2*bl+c1*bl)+((c3-c2)*exp(c2*bl)+(c1-c3)*exp(c1*bl))*exp(c3*bl))*exp(-(c1+c2+c3)*bl)
-        denom = (c2-c1)*(c3^2-(c1+c2)*c3+c1*c2)
+        c1bl = exp(c1*bl)
+        c2bl = exp(c2*bl)
+        c3bl = exp(c3*bl)
+        
+        # num = ((c2-c1)*exp(c2*bl+c1*bl)+((c3-c2)*exp(c2*bl)+(c1-c3)*exp(c1*bl))*exp(c3*bl))*exp(-(c1+c2+c3)*bl)
+        num = ((c2-c1)*c1bl*c2bl+((c3-c2)*c2bl+(c1-c3)*c1bl)*c3bl)
+        denom = (c2-c1)*(c3^2-(c1+c2)*c3+c1*c2)*c1bl*c2bl*c3bl
 
         retval = num/denom
     elseif N - O == 3
@@ -71,8 +75,14 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Un
         c3 = binomial(N-2, 2)
         c4 = binomial(O, 2)
 
-        num = (((((exp(bl*c2)-exp(bl*c1))*c3-c2*exp(bl*c2)+c1*exp(bl*c1))*exp(bl*c3)+(exp(bl*c1)*c2-c1*exp(bl*c1))*exp(bl*c2))*c4^2+(((exp(bl*c1)-exp(bl*c2))*c3^2+c2^2*exp(bl*c2)-c1^2*exp(bl*c1))*exp(bl*c3)+(c1^2*exp(bl*c1)-exp(bl*c1)*c2^2)*exp(bl*c2))*c4+((c2*exp(bl*c2)-c1*exp(bl*c1))*c3^2+(c1^2*exp(bl*c1)-c2^2*exp(bl*c2))*c3)*exp(bl*c3)+(c1*exp(bl*c1)*c2^2-c1^2*exp(bl*c1)*c2)*exp(bl*c2))*exp(bl*c4)+((c1*exp(bl*c1)-exp(bl*c1)*c2)*exp(bl*c2)*c3^2+(exp(bl*c1)*c2^2-c1^2*exp(bl*c1))*exp(bl*c2)*c3+(c1^2*exp(bl*c1)*c2-c1*exp(bl*c1)*c2^2)*exp(bl*c2))*exp(bl*c3))*exp(-(c1+c2+c3+c4)*bl)
-        denom = (c2-c1)*(c3^2-(c1+c2)*c3+c1*c2)*(c4^3-(c1+c2+c3)*c4^2+((c1+c2)*c3+c1*c2)*c4-c1*c2*c3)
+        c1bl = exp(c1*bl)
+        c2bl = exp(c2*bl)
+        c3bl = exp(c3*bl)
+        c4bl = exp(c4*bl)
+
+        # num = (((((exp(bl*c2)-exp(bl*c1))*c3-c2*exp(bl*c2)+c1*exp(bl*c1))*exp(bl*c3)+(exp(bl*c1)*c2-c1*exp(bl*c1))*exp(bl*c2))*c4^2+(((exp(bl*c1)-exp(bl*c2))*c3^2+c2^2*exp(bl*c2)-c1^2*exp(bl*c1))*exp(bl*c3)+(c1^2*exp(bl*c1)-exp(bl*c1)*c2^2)*exp(bl*c2))*c4+((c2*exp(bl*c2)-c1*exp(bl*c1))*c3^2+(c1^2*exp(bl*c1)-c2^2*exp(bl*c2))*c3)*exp(bl*c3)+(c1*exp(bl*c1)*c2^2-c1^2*exp(bl*c1)*c2)*exp(bl*c2))*exp(bl*c4)+((c1*exp(bl*c1)-exp(bl*c1)*c2)*exp(bl*c2)*c3^2+(exp(bl*c1)*c2^2-c1^2*exp(bl*c1))*exp(bl*c2)*c3+(c1^2*exp(bl*c1)*c2-c1*exp(bl*c1)*c2^2)*exp(bl*c2))*exp(bl*c3))*exp(-(c1+c2+c3+c4)*bl)
+        num = (((((c2bl-c1bl)*c3-c2*c2bl+c1*c1bl)*c3bl+(c1bl*c2-c1*c1bl)*c2bl)*c4^2+(((c1bl-c2bl)*c3^2+c2^2*c2bl-c1^2*c1bl)*c3bl+(c1^2*c1bl-c1bl*c2^2)*c2bl)*c4+((c2*c2bl-c1*c1bl)*c3^2+(c1^2*c1bl-c2^2*c2bl)*c3)*c3bl+(c1*c1bl*c2^2-c1^2*c1bl*c2)*c2bl)*c4bl+((c1*c1bl-c1bl*c2)*c2bl*c3^2+(c1bl*c2^2-c1^2*c1bl)*c2bl*c3+(c1^2*c1bl*c2-c1*c1bl*c2^2)*c2bl)*c3bl)
+        denom = (c2-c1)*(c3^2-(c1+c2)*c3+c1*c2)*(c4^3-(c1+c2+c3)*c4^2+((c1+c2)*c3+c1*c2)*c4-c1*c2*c3)*c1bl*c2bl*c3bl*c4bl
 
         retval = num/denom
     else
