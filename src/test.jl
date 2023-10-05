@@ -30,5 +30,5 @@ function benchfunc(complog::Bool)
     _ = _getparentaltrees(ipt, ldict, usecomplog=complog)
 end
 
-@benchmark benchfunc(false)     # 243ms +- 12.5ms
-@benchmark benchfunc(true)      # 231ms +- 8.32ms
+@benchmark benchfunc(false)     # 238ms +- 16.ms (15.34 MiB, 196292 allocs)
+@benchmark benchfunc(true)      # 229ms +- 3.3ms (14.76 MiB, 185945 allocs)
