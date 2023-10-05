@@ -13,69 +13,10 @@ abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabil
 ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(7,(8,#H1))))#H2))))root;")
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 
+ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(6,(8,#H1)))))#H2))))root;")
+abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
+
 ptrees, _ = getparentaltrees("(10,(#H2,(1,(2,(((9)#H1,(3,(4,(5,((6,7),(8,#H1)))))))#H2))))root;")
 abs(sum([prob(t) for t in ptrees]) - 1) < 1e-12 || error("Parental tree probabilities do not sum to 1.")
 # Need coal probs to cover (N,O) := (5,1) and (6,1)
 
-
-
-ipt = IPT(readTopology("(10,(#H2,(1,(2,(((9)#H1,(3,(4,((5,6),(7,(8,#H1)))))))#H2))))root;"))
-_overwritemissinggammas!(top(ipt))
-_overwritemissingbranchlengths!(top(ipt))
-
-ldict = LDict()
-i = 1
-for node in top(ipt).node
-    if node.leaf
-        ldict[node] = LineageNode(i)
-        i += 1
-    else
-        ldict[node] = nothing
-    end
-end
-
-node, nodeidx = _getnexthybrid(top(ipt))
-divisions = _conditiononcoalescences(ipt, node, ldict)
-ipt = divisions[1]
-node, nodeidx = _getnexthybrid(top(ipt))
-net = top(ipt)
-# After this point...
-
-# Split reticulation seems to work as expected
-splitreticulation!(net, node, findfirst(net.node .== [node]), LineageNode(Lineage(1)), LineageNode(Lineage(2)), ldict)
-findall([node.name == "s_H1" for node in net.node])
-ldict[net.node[5]]
-ldict[net.node[24]]
-
-# But conditioning on retic then coalescence breaks things
-findall([node.name == "H1" for node in net.node])
-divisions1 = _conditiononreticulation(ipt, node, ldict)         # KEY ERROR
-ipt = divisions1[1]     # divisions1[2] *might* work, but runs into coalescent probability error [(N,O) := (4,1)]
-net = top(ipt)
-findall([node.name == "H1" for node in net.node])
-findall([node.name == "s_H1" for node in net.node])     # only 1 result for [1] and [2] ????
-node, nodeidx = _getnexthybrid(top(ipt))
-divisions2 = _conditiononcoalescences(ipt, node, ldict)
-
-
-# registered in `ldict` from the `net.node` list
-listnode = net.node[5]
-ldict[listnode]
-
-# registered in `ldict` when following the topology
-fromtop = getchildren(getchildren(getchildren(getchildren(getchildren(getchildren(getchildren(net.hybrid[1])[1])[1])[2])[2])[2])[2])[2]
-ldict[fromtop]
-
-# but these are NOT the same node, which is likely the source of the error
-fromtop == listnode
-
-
-
-
-
-badnode = top(ipt).node[5]                                      # only 1 node remains from the split; `s_H1`
-badnode2 = getchildren(getchildren(getchildren(getchildren(getchildren(getchildren(getchildren(node)[1])[1])[2])[2])[2])[2])[2]
-getchildren(badnode)
-getchildren(badnode2)
-
-println(repr(UInt64(pointer_from_objref(top(ipt).node[5]))))
