@@ -13,8 +13,6 @@ end
 # !! TREES MAY NOT BE UNIQUE !!
 function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     if safe net = deepcopy(net) end
-    _overwritemissinggammas!(net)
-    _overwritemissingbranchlengths!(net)
 
     ipt, ldict, labelmap = _initparentaltreealgo(net)
     ptrees = _getparentaltrees(ipt, ldict)
@@ -45,6 +43,13 @@ Takes the given network and returns initialization values for the parental tree 
 2. Initialized LDict
 """
 function _initparentaltreealgo(net::HybridNetwork)
+    # Fill in missing gammas and branch lengths
+    _overwritemissinggammas!(net)
+    _overwritemissingbranchlengths!(net)
+
+    # Fuse redundant edges
+    _fuseredundantedges!(net)
+
     # Save original leaf labels
     labelmap = Dict{Int64, String}()
 
@@ -73,6 +78,18 @@ function _initparentaltreealgo(net::HybridNetwork)
     return IPT(net), ldict, labelmap
 end
 
+"""
+    _fuseredundantedges!(net::HybridNetwork)
+
+Removes redundant edges from `net` so that we don't do unnecessary calculations
+E.g., (A,(B)) --> (A,B)
+"""
+function _fuseredundantedges!(net::HybridNetwork)
+    # TODO: implement me
+    return nothing
+end
+_fuseredundantedges!(ipt::IPT) = _fuseredundantedges!(top(ipt))
+
 function _getparentaltrees(initnet::IPT, lineagedict::LDict)
     workingset = Queue{IPT}()
     enqueue!(workingset, initnet)
@@ -95,16 +112,29 @@ function _getparentaltrees(initnet::IPT, lineagedict::LDict)
         # 2a. If there is already a LineageNode associated with this node,
         #     then we are ready to condition on the reticulation
         if lineagedict[node] !== nothing
-            print("Conditioning on reticulations - ")
+            println("Conditioning on reticulation ("*string(nlineages(lineagedict[node]))*" lineages) - ")
             divisions = _conditiononreticulation(ipt, node, lineagedict)
-            println("done.")
 
+            newsum = sum([prob(t) for t in divisions])
+            oldprob = prob(ipt)
+            abs(newsum - oldprob) < 1e-16 || error("Probs don't line up after splitting retics; newsum="*string(newsum)*", oldprob="*string(oldprob))
+
+            # `_conditiononreticulations` has potential to create redundant edges (esp. when only 1 lineage is going into the retic.)
+            # so let's clear out those redundant edges
+            #
+            # TODO: `divisions, nodes = _conditiononreticulation(ipt, node, lineagedict)` 
+            #       and then `for (ipt, iptnode) in zip(divisions, nodes) _fuseredundantedges!(ipt, iptnode)`
+            #       so that we don't have to traverse the _entire_ tree topology here
+            for ipt in divisions _fuseredundantedges!(ipt) end
         # 2b. If there is not a LineageNode associated with thisnode,
         #     we must first condition on the coalescent events
         else
-            print("Conditioning on coalescences - ")
+            println("Conditioning on coalescences under "*node.name)
             divisions = _conditiononcoalescences(ipt, node, lineagedict)
-            println("done.")
+
+            newsum = sum([prob(t) for t in divisions])
+            oldprob = prob(ipt)
+            abs(newsum - oldprob) < 1e-16 || error("Probs don't line up after coalescing from node"*string(node.name)*"; newsum="*string(newsum)*", oldprob="*string(oldprob)*". length(divisions): "*string(length(divisions)))
         end
 
         # 4. Repeat with the resultant networks
@@ -252,7 +282,6 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
 
     # In the simplest case, this only has 1 net and `node` is above 2 leaves
     retlist = Vector{IPT}()
-    # markednodes = Vector{Node}()    # used for condensing later
     for tempipt in ipts
         tempnet = top(tempipt)
 
@@ -267,13 +296,26 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
         # potentially has any pairing of `opts1` and `opts2`
         opts1, probs1 = getcoalescentcombos(lineagedict[children[1]], getparentedge(children[1]).length)
         if length(children) > 1
-            # println("children[2] address: "*repr(UInt64(pointer_from_objref(children[2]))))
             opts2, probs2 = getcoalescentcombos(lineagedict[children[2]], getparentedge(children[2]).length)
         else
             opts2 = [LineageNode()]
-            probs2 = [1]
+            probs2 = [BigFloat(1.)]
         end
         
+        ######## DEBUG ########
+        sumtest = 0
+        for probi in probs1
+            for probj in probs2
+                sumtest += probi * probj
+            end
+        end
+        if abs(sumtest - 1.) > 1e-16
+            println(lineagedict[children[1]])
+            println(nlineages(lineagedict[children[1]]))
+            error("sumtest: "*string(sumtest))
+        end
+        ######################
+
         for (i, (opti, probi)) in enumerate(zip(opts1, probs1))
             for (j, (optj, probj)) in enumerate(zip(opts2, probs2))
                 newnet = deepcopy(tempnet)
@@ -282,13 +324,10 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
 
                 lineagedict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
                 push!(retlist, IPT(newnet, newprob))
-                # push!(markednodes, newnet.node[tempnodeidx])
             end
         end
     end
 
-    # # Condense down to unique parental trees
-    # _condensedivisions(retlist, markednodes, lineagedict)
     return retlist
 end
 
@@ -306,6 +345,7 @@ end
 
 # Finds a hybrid node with no other hybrid nodes below it
 function _getnexthybrid(net::HybridNetwork)
+    if length(net.hybrid) == 1 return net.hybrid[1], 1 end
     for (i, hyb) in enumerate(net.hybrid)
         if _noreticsbelow(hyb)
             return hyb, i
@@ -314,6 +354,7 @@ function _getnexthybrid(net::HybridNetwork)
 
     return nothing
 end
+_getnexthybrid(ipt::IPT) = _getnexthybrid(top(ipt))
 
 # Checks whether there are any hybrid nodes below `hyb` in the network
 function _noreticsbelow(node::Node)
