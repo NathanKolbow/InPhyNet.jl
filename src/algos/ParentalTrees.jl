@@ -8,7 +8,7 @@ function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     if safe net = deepcopy(net) end
 
     ipt, ldict, labelmap = _initparentaltreealgo(net)
-    ptrees = _getparentaltrees(ipt, ldict)
+    ptrees, complog = _getparentaltrees(ipt, ldict, usecomplog=true)
 
     # Expand the parental trees from `ldict` so that the `HybridNetwork`
     # topology reflects the actual parental tree topology
@@ -35,10 +35,10 @@ Takes the given network and returns initialization values for the parental tree 
 1. InterimParentalTree generated from the given network
 2. Initialized LDict
 """
-function _initparentaltreealgo(net::HybridNetwork)
+function _initparentaltreealgo(net::HybridNetwork; neverwarn=true)
     # Fill in missing gammas and branch lengths
-    _overwritemissinggammas!(net)
-    _overwritemissingbranchlengths!(net)
+    _overwritemissinggammas!(net, neverwarn=neverwarn)
+    _overwritemissingbranchlengths!(net, neverwarn=neverwarn)
 
     # Fuse redundant edges
     _fuseredundantedges!(net)
@@ -74,19 +74,20 @@ end
 """
     _fuseredundantedges!(net::HybridNetwork)
 
-Removes redundant edges from `net` so that we don't do unnecessary calculations
-E.g., (A,(B)) --> (A,B)
+Traverses `net` for redundant nodes & edges. E.g. (A:1,(B:1):1) is
+redundant and (A:1,B:2) makes things computationally more efficient.
+Used when initializing the parental tree algorithm. Care is taken
+not to create more redundant nodes & edges throughout the algorithm.
 """
 function _fuseredundantedges!(net::HybridNetwork)
-    # TODO: implement me
     return nothing
 end
-_fuseredundantedges!(ipt::IPT) = _fuseredundantedges!(top(ipt))
 
-function _getparentaltrees(initnet::IPT, lineagedict::LDict)
+function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
     workingset = Queue{IPT}()
     enqueue!(workingset, initnet)
     parentaltrees = Vector{IPT}()
+    complog = ifelse(usecomplog, CompDict(), nothing)   # for re-using computations
 
     while !isempty(workingset)
         ipt = dequeue!(workingset)
@@ -104,26 +105,16 @@ function _getparentaltrees(initnet::IPT, lineagedict::LDict)
 
         # 2a. If there is already a LineageNode associated with this node,
         #     then we are ready to condition on the reticulation
-        if lineagedict[node] !== nothing
-            println("Conditioning on reticulation ("*string(nlineages(lineagedict[node]))*" lineages) - ")
-            divisions = _conditiononreticulation(ipt, node, lineagedict)
+        if ldict[node] !== nothing
+            divisions = _conditiononreticulation(ipt, node, ldict)
 
             newsum = sum([prob(t) for t in divisions])
             oldprob = prob(ipt)
             abs(newsum - oldprob) < 1e-16 || error("Probs don't line up after splitting retics; newsum="*string(newsum)*", oldprob="*string(oldprob))
-
-            # `_conditiononreticulations` has potential to create redundant edges (esp. when only 1 lineage is going into the retic.)
-            # so let's clear out those redundant edges
-            #
-            # TODO: `divisions, nodes = _conditiononreticulation(ipt, node, lineagedict)` 
-            #       and then `for (ipt, iptnode) in zip(divisions, nodes) _fuseredundantedges!(ipt, iptnode)`
-            #       so that we don't have to traverse the _entire_ tree topology here
-            for ipt in divisions _fuseredundantedges!(ipt) end
         # 2b. If there is not a LineageNode associated with thisnode,
         #     we must first condition on the coalescent events
         else
-            println("Conditioning on coalescences under "*node.name)
-            divisions = _conditiononcoalescences(ipt, node, lineagedict)
+            divisions = _conditiononcoalescences(ipt, node, ldict, complog=complog)
 
             newsum = sum([prob(t) for t in divisions])
             oldprob = prob(ipt)
@@ -134,11 +125,11 @@ function _getparentaltrees(initnet::IPT, lineagedict::LDict)
         for d in divisions enqueue!(workingset, d) end
     end
 
-    return parentaltrees
+    return parentaltrees, complog
 end
 
 # Overwrites any missing/unspecified gammas for hybrids in `net`
-function _overwritemissinggammas!(net::HybridNetwork)
+function _overwritemissinggammas!(net::HybridNetwork; neverwarn::Bool=true)
     invalidgamma(edge::Edge) = edge.gamma == -1. || edge.gamma > 1. || edge.gamma < 0.
     
     warn = false
@@ -159,10 +150,10 @@ function _overwritemissinggammas!(net::HybridNetwork)
         end
     end
 
-    if warn @warn "One or more invalid gammas found and replaced in original topology." end
+    if !neverwarn && warn @warn "One or more invalid gammas found and replaced in original topology." end
 end
 
-function _overwritemissingbranchlengths!(net::HybridNetwork; replacement::Real=1.)
+function _overwritemissingbranchlengths!(net::HybridNetwork; replacement::Real=1., neverwarn::Bool=true)
     warn = false
     for edge in net.edge
         if edge.length < 0.
@@ -171,7 +162,7 @@ function _overwritemissingbranchlengths!(net::HybridNetwork; replacement::Real=1
         end
     end
 
-    if warn @warn "One or more branch lengths were unspecified and have been replaced with 1.0." end
+    if !neverwarn && warn @warn "One or more branch lengths were unspecified and have been replaced with 1.0." end
 end
 
 # Takes an incomplete parental tree and expands its stored LineageNode attributes
@@ -181,49 +172,19 @@ function _expandIPT(tree::IPT, ldict::LDict)
     return tree
 end
 
-# DOES NOT WORK AS WRITTEN
-# Problem: investigates `divisions` ONLY at each node in `nodes`
-#          if 2 divisions are identical **at this node** but distinct elsewhere,
-#          they will be merged here
-function _condensedivisions(divisions::Vector{HybridNetwork}, nodes::Vector{Node}, ldict::LDict)
-    println("\nCondensing")
-    if length(divisions) < 2 return divisions end
-    println("Past length 1 check")
-
-    # Compare the LineageNode entries for each division at `node`
-    # Merges divisions w/ unique `ldict[node]` entries
-    i = 1
-    j = 2
-    while true
-        # print("(", i, ",", j, "): ")
-        # print(ldict[nodes[i]])
-        # print(" == ")
-        # println(ldict[nodes[j]])
-        if ldict[nodes[i]] == ldict[nodes[j]]
-            # MERGE PROBABILITIES HERE
-            deleteat!(nodes, j)
-            deleteat!(divisions, j)
-            # println("Deleted")
-        else
-            j += 1
-        end
-
-        if j > length(divisions)
-            i += 1
-            j = i + 1
-            if i >= length(divisions) break end
-        end
-    end
-
-    return divisions
+# Used to use this, but was implemented improperly.
+# Awaiting reimplementation.
+# Arguments need not remain the same.
+function _condensedivisions(something)
+    return nothing
 end
 
 # Conditions the given network on the given reticulation
-function _conditiononreticulation(ipt::IPT, hyb::Node, lineagedict::LDict)
+function _conditiononreticulation(ipt::IPT, hyb::Node, ldict::LDict)
     # If everything is moving as expected, the children should be exclusively
     # one leaf node (signifying a single lineage) or one LineageNode
     net = top(ipt)
-    child = lineagedict[hyb]   # this will throw an error if more than 1 child exists
+    child = ldict[hyb]   # this will throw an error if more than 1 child exists
     hybidx = findfirst(net.node .== [hyb])
 
     retlist = Vector{IPT}()
@@ -246,10 +207,10 @@ function _conditiononreticulation(ipt::IPT, hyb::Node, lineagedict::LDict)
 
         newnet = deepcopy(net)
         newhyb = newnet.node[hybidx]
-        copyldictcontents!(net, newnet, lineagedict)
+        copyldictcontents!(net, newnet, ldict)
 
         # Split the reticulation into 2 tree-like splits
-        splitreticulation!(newnet, newhyb, hybidx, majorline, minorline, lineagedict)
+        splitreticulation!(newnet, newhyb, hybidx, majorline, minorline, ldict)
         push!(retlist, IPT(newnet, newprob))
     end
 
@@ -257,20 +218,20 @@ function _conditiononreticulation(ipt::IPT, hyb::Node, lineagedict::LDict)
 end
 
 # Conditions the given network on the various coalescent possibilities below `node`
-function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
+function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::Union{CompDict,Nothing}=nothing)
     net = top(ipt)
-    if lineagedict[node] !== nothing return ipt end    # this means we'll never hit leaves
+    if ldict[node] !== nothing return ipt end    # this means we'll never hit leaves
     
     children = getchildren(node)
     length(children) <= 2 || error("Polytomies are not accounted for. Found "*string(length(children))*" children of node #"*string(node.number))
 
     # Check that the children are good; if not, recurse
     ipts = Vector{IPT}([ipt])
-    if lineagedict[children[1]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[1], lineagedict) for ipt in ipts])
+    if ldict[children[1]] === nothing
+        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[1], ldict, complog=complog) for ipt in ipts])
     end
-    if length(children) > 1 && lineagedict[children[2]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[2], lineagedict) for ipt in ipts])
+    if length(children) > 1 && ldict[children[2]] === nothing
+        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[2], ldict, complog=complog) for ipt in ipts])
     end
 
     # In the simplest case, this only has 1 net and `node` is above 2 leaves
@@ -287,35 +248,21 @@ function _conditiononcoalescences(ipt::IPT, node::Node, lineagedict::LDict)
         # From that perspective, all the lineages in each of the children nodes have _separate_
         # chances to merge while moving up their branch. So, the resultant node `tempnode`
         # potentially has any pairing of `opts1` and `opts2`
-        opts1, probs1 = getcoalescentcombos(lineagedict[children[1]], getparentedge(children[1]).length)
+        opts1, probs1 = getcoalescentcombos(ldict[children[1]], getparentedge(children[1]).length, complog=complog)
         if length(children) > 1
-            opts2, probs2 = getcoalescentcombos(lineagedict[children[2]], getparentedge(children[2]).length)
+            opts2, probs2 = getcoalescentcombos(ldict[children[2]], getparentedge(children[2]).length, complog=complog)
         else
             opts2 = [LineageNode()]
             probs2 = [BigFloat(1.)]
         end
-        
-        ######## DEBUG ########
-        sumtest = 0
-        for probi in probs1
-            for probj in probs2
-                sumtest += probi * probj
-            end
-        end
-        if abs(sumtest - 1.) > 1e-16
-            println(lineagedict[children[1]])
-            println(nlineages(lineagedict[children[1]]))
-            error("sumtest: "*string(sumtest))
-        end
-        ######################
 
         for (i, (opti, probi)) in enumerate(zip(opts1, probs1))
             for (j, (optj, probj)) in enumerate(zip(opts2, probs2))
                 newnet = deepcopy(tempnet)
-                copyldictcontents!(tempnet, newnet, lineagedict)
+                copyldictcontents!(tempnet, newnet, ldict)
                 newprob = prob(tempipt) * probi * probj
 
-                lineagedict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
+                ldict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
                 push!(retlist, IPT(newnet, newprob))
             end
         end
