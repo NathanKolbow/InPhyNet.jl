@@ -86,7 +86,9 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Un
 
         retval = num/denom
     else
-        error("Coalescent probabilities only implemented up to an in-out difference of 3; received (N,O) := ("*string(N)*","*string(O)*")")
+        # Pass the job to the less efficient algorithm 
+        # that can work on arbitrary (N,O)
+        retval = g(N, O, bl)
     end
 
     if complog !== nothing complog[N, O, bl] = retval end
