@@ -115,7 +115,3 @@ end
 fintegrate(f::fobj) = foneobj(f.t+1, f.a, f.b, f.invcoef * (f.b - f.a))
 evaluate(f::foneobj, bl::BigFloat) = BigFloat(1.) / f.invcoef * (exp((f.b - f.a) * bl) - 1)
 evaluate(f::foneobj, bl::Real) = evaluate(f, BigFloat(bl))
-
-
-
-
