@@ -2,8 +2,14 @@ function getparentaltrees(newick::AbstractString; safe::Bool=true)
     return getparentaltrees(readTopology(newick))
 end
 
-# Gets the parental trees for the given network.
-# !! TREES MAY NOT BE UNIQUE !!
+"""
+    getparentaltrees(net::HybridNetwork; safe::Bool=true)
+
+Gets the set of parental trees for network `net` and their associated
+probabilities under the multispecies network coalescent (MSNC) model.
+
+Trees may not be unique.
+"""
 function getparentaltrees(net::HybridNetwork; safe::Bool=true)
     if safe net = deepcopy(net) end
 

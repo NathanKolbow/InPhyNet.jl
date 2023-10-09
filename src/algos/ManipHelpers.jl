@@ -28,12 +28,8 @@ function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, maj
     minoredge.hybrid = false
     minoredge.isMajor = true
 
-    # TODO: WARNING: MAY NOT BE UPDATING ALL NECESSARY 
-    # ATTRIBUTES TO MAINTAIN TOPOLOGICAL CONSISTENCY
     retic.name = "s_"*retic.name
 
-    # TODO: GIVE MORE ATTENTION TO MAINTAINING TOPOLOGY AND FIELDS HERE
-    # TODO: PROBABLY JUST FULLY RE-WRITE THIS FUNCTION
     removehybridreference!(net, retic)
 
     delnode = nothing   # redundant node that crops up when one of the lineages is empty
