@@ -1,4 +1,4 @@
-include("./main.jl")
+include("../main.jl")
 
 """
 Tests the above probabilities for `N` input lineages
