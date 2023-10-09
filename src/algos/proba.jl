@@ -94,3 +94,9 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Un
     if complog !== nothing complog[N, O, bl] = retval end
     return retval
 end
+
+
+# TODO: push `cs` into this so we don't redo a ton of binomials
+function _calculatetotalcoalescentprobability(N::Real, O::Real, bl::Real; complog::Union{CompDict,Nothing}=nothing, cs::Nothing=nothing)
+    return _calculatecoalescentprobability(N, O, bl, complog=complog) * prod([binomial(i, 2) for i=(O+1):N])
+end
