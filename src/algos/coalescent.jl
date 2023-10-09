@@ -9,45 +9,21 @@
 # B: the probability associated with the corresponding entry of A
 function getcoalescentcombos(l::LineageNode, bl::Real; complog::Union{CompDict,Nothing}=nothing)
     parts = partitions(lineages(l))
-    partq = Queue{Any}()
-    for part in parts enqueue!(partq, part) end
 
     N = nlineages(l)
 
     lineagelist = Vector{LineageNode}()
     problist = Vector{BigFloat}()
-    while !isempty(partq)
-        part = dequeue!(partq)
-
-        continuewhile = false
-        for (i, set) in enumerate(part)
-            if length(set) > 2
-                # If this grouping has > 2 taxa then we need to break it up further
-                outcomes = coalesce(set)
-                for (j, outcome) in enumerate(outcomes)
-                    duppart = ifelse(j == length(outcomes), part, deepcopy(part))
-                    duppart[i] = [outcome]
-
-                    # re-queue the new copies
-                    enqueue!(partq, duppart)
-                end
-
-                # We've re-queued the updated objects, so move on in the queue
-                continuewhile = true
-                break
-            end
-        end
-
-        if continuewhile continue end
-
+    for part in parts
         # Calculate the probability of this outcome `part`
-        prob = _calculatecoalescentprobability(N, length(part), bl, complog=complog)
+        prob = _calculatetotalcoalescentprobability(N, length(part), bl, complog=complog)
+        prob /= sum([length(p) == length(part) for p in parts])
 
         # We need to make sure we're counting things like [1, 2], [3, 4] twice
         # or [1, 2], [3, 4], [5, 6] six times b/c order of coalescence is not
         # taken into account in the above `prob` calculation
-        totalcoalevents = _findtotalcoaleventsinpart(part)
-        prob *= totalcoalevents
+        # totalcoalevents = _findtotalcoaleventsinpart(part)
+        # prob *= totalcoalevents
         
         push!(problist, prob)
 
@@ -93,17 +69,17 @@ function _findtotalcoaleventsinpartrecur(part)
 end
 
 
-bigl = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
-_findtotalcoaleventsinpart(bigl)
-_findtotalcoaleventsinpart([[1, 2], [3]])
-_findtotalcoaleventsinpart([[1, 2], [3, 4]])
-_findtotalcoaleventsinpart([[1, 2], [3, 4], [5, 6]])
-_findtotalcoaleventsinpart([[1, 2], [3, 4], [5, 6, 7]])
-_findtotalcoaleventsinpart([[1, 2], [3, 4, 8], [5, 6, 7]])
-_findtotalcoaleventsinpart([[1, 2], 3, 4])
-_findtotalcoaleventsinpart([[1, [2, 3]], 3])
-_findtotalcoaleventsinpart([1, 2, [3, 4]])
-_findtotalcoaleventsinpart([1, 2, 3, 4])
+# bigl = [[1, 2, 3], [1, 2, 3], [1, 2, 3]]
+# _findtotalcoaleventsinpart(bigl)
+# _findtotalcoaleventsinpart([[1, 2], [3]])
+# _findtotalcoaleventsinpart([[1, 2], [3, 4]])
+# _findtotalcoaleventsinpart([[1, 2], [3, 4], [5, 6]])
+# _findtotalcoaleventsinpart([[1, 2], [3, 4], [5, 6, 7]])
+# _findtotalcoaleventsinpart([[1, 2], [3, 4, 8], [5, 6, 7]])
+# _findtotalcoaleventsinpart([[1, 2], 3, 4])
+# _findtotalcoaleventsinpart([[1, [2, 3]], 3])
+# _findtotalcoaleventsinpart([1, 2, [3, 4]])
+# _findtotalcoaleventsinpart([1, 2, 3, 4])
 
 # Next on the TODO list: run `probatoptest(4, 1.)` in arbitrary-proba.jl and look for incorrect things in the probs output
 
