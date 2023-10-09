@@ -9,11 +9,13 @@ they must be castable to integer.
 - `N::Real`: the number of "i**N**put" lineages; the nubmer of lineages at the beginning of the branch
 - `O::Real`: the number of "**O**utput" lineages; the nubmer of lineages at the beginning of the branch
 - `bl::Real`: length of the branch that the coalescence is happening in
+- `cs`: precomputed binomial(i, 2) (i.e. the c_j values)
+- `complog`: used to store computations so they can be reused
 
 # Return Value
 Real value in (0, 1]; the probability of the coalescence under the given parameters happening.
 """
-function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Union{CompDict,Nothing}=nothing)
+function _calculatecoalescentprobability(N::Real, O::Real, bl::Real, cs::AbstractArray; complog::Union{CompDict,Nothing}=nothing)
     # Make sure `N` and `O` are castable as `Real`
     try 
         N = Int64(N)
@@ -76,7 +78,7 @@ function _calculatecoalescentprobability(N::Real, O::Real, bl::Real; complog::Un
     else
         # Pass the job to the less efficient algorithm 
         # that can work on arbitrary (N,O)
-        retval = g(N, O, bl)
+        retval = g(N, O, bl, cs)
     end
 
     if complog !== nothing complog[N, O, bl] = retval end
@@ -85,6 +87,6 @@ end
 
 
 # TODO: push `cs` into this so we don't redo a ton of binomials
-function _calculatetotalcoalescentprobability(N::Real, O::Real, bl::Real; complog::Union{CompDict,Nothing}=nothing, cs::Nothing=nothing)
-    return _calculatecoalescentprobability(N, O, bl, complog=complog) * prod([binomial(i, 2) for i=(O+1):N])
+function _calculatetotalcoalescentprobability(N::Real, O::Real, bl::Real, cs::AbstractArray; complog::Union{CompDict,Nothing}=nothing)
+    return _calculatecoalescentprobability(N, O, bl, cs, complog=complog) * prod([cs[i] for i=(O+1):N])
 end
