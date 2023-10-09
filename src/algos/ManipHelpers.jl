@@ -1,8 +1,12 @@
 # Helper functions for manipulating PhyloNetworks network structures
 
+# TODO: keep track of relevant `ldict` nodes in the IPT structure and then only copy THOSE
+#       here, not every single node
 function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict::LDict)
     for (newnode, oldnode) in zip(newnet.node, oldnet.node)
-        ldict[newnode] = ldict[oldnode]
+        if haskey(ldict, oldnode)
+            ldict[newnode] = ldict[oldnode]
+        end
     end
 end
 
