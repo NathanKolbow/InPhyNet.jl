@@ -268,6 +268,11 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::U
         end
     end
 
+    # TODO: condense the retlist right here! everything in `retlist` came from the same initial `ipt` so will
+    #       be identical up to their differences at `node`. So, we can condense anything that is the same there
+    #       AND we can condense the ambiguous coalescences out (e.g. [[1, 2, 3]] w/ prob 0.3 split out to [[1, 2], 3],
+    #       [[1, 3], 2], [1, [2, 3]] giving probability 0.1 to each)
+
     return retlist
 end
 
