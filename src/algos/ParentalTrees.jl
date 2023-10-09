@@ -263,6 +263,7 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::U
                 newprob = prob(tempipt) * probi * probj
 
                 ldict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
+                for child in getchildren(newnet.node[tempnodeidx]) delete!(ldict, child) end
                 push!(retlist, IPT(newnet, newprob))
             end
         end
