@@ -14,18 +14,20 @@ function benchfunc()
     _ = _getparentaltrees(ipt, ldict)
 end
 
-# Pre-computed binoms
-@benchmark benchfunc()     # 143ms +- 4.9ms (8.74 MiB, 117499 allocs)
-# Not pre-computed binoms
-@benchmark benchfunc()     # 142ms +- 3.8ms (8.78 MiB, 117509 allocs)
+@benchmark benchfunc()
 
 
 ####################
 # Previous results #
 ####################
 
+# Using `_combinedivisions!` after `_conditiononcoalescences`
+# Results:
+# - with:       98ms  +- 4.1ms (6.00 MiB, 82352 allocs)
+# - without:    145ms +- 6.7ms (8.71 MiB, 117113 allocs)
+#
 # Using `complog` in `_calculatetotalcoalescentprobability`
 #
 # Results:
-# - without:    238ms +- 16.ms (15.34 MiB, 196292 allocs)
 # - with:       229ms +- 3.3ms (14.76 MiB, 185945 allocs)
+# - without:    238ms +- 16.ms (15.34 MiB, 196292 allocs)
