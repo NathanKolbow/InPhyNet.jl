@@ -58,18 +58,6 @@ function Base.coalesce(ls::AbstractVector{Lineage})
         for opti in subsetsi
             for optj in subsetsj
                 push!(retlist, Lineage(opti, optj))
-                
-                # If set[1] AND set[2] BOTH have more than 2
-                # lineages, then there are actually 2x the options
-                # because there are 2 orders in which they can coalesce
-                # i.e. set[1] coalesces first or set[2] coalesces first
-                # TODO: if these numbers are > 2 (e.g. 3) this might need
-                #       to be done more than 2x b/c of all the different
-                #       orders within set[1] and set[2], but this might
-                #       also just be handled for us with recursion
-                if length(set[1]) >= 2 && length(set[2]) >= 2
-                    push!(retlist, Lineage(opti, optj))
-                end
             end
         end
     end
