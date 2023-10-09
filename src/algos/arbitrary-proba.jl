@@ -75,12 +75,8 @@ Base.:-(f::fobj) = fobj(f.t, f.a, f.b, -f.invcoef)
 # All integration functions #
 #############################
 
-function g(N::Integer, O::Integer, bl::BigFloat)
+function g(N::Integer, O::Integer, bl::BigFloat, cs::AbstractArray)
     N - O > 1 || error("N - O > 1 required.")
-
-    # Pre-compute necessary c's
-    cs = Array{BigInt}(undef, N-O+1)
-    for i=1:(N-O+1) cs[i] = binomial(N-i+1, 2) end
     
     prevg = foneobj(2, cs[1], cs[2], cs[2]-cs[1])
     for i=2:(N-O)
