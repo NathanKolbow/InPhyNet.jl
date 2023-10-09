@@ -1,15 +1,3 @@
-# Calculates the probability of coalescent outcome `sets`
-# when there are `N` total lineages in a branch of length `bl`
-# function _calculatecoalescentprobability(sets, N::Real, bl::Real)
-#     if length(sets) == N
-#         return exp(-N*bl)
-#     end
-#     return 0
-# end
-
-# TODO: instead of setting as globals, keep these variables in the main algo and pass them to this function
-# TODO: make sure all inputs to `exp` functions and all else are `BigFloat`s
-
 """
     _calculatecoalescentprobability(N::Real, O::Real, bl::Real)
 
