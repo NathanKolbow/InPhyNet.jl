@@ -122,7 +122,8 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
         # 2b. If there is not a LineageNode associated with thisnode,
         #     we must first condition on the coalescent events
         else
-            divisions = _conditiononcoalescences(ipt, node, ldict, binoms, complog=complog)
+            divisions, nodes = _conditiononcoalescences(ipt, node, ldict, binoms, complog=complog)
+            _combinedivisions!(divisions, nodes, ldict)
 
             newsum = sum([prob(t) for t in divisions])
             oldprob = prob(ipt)
@@ -134,6 +135,25 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
     end
 
     return parentaltrees, complog
+end
+
+"""
+Looks at all of the divisions in `divisions` and combines identical ones and their probabilities.
+"""
+function _combinedivisions!(divisions::Vector{IPT}, newnodes::Vector{Node}, ldict::LDict)
+    i = 1
+    while i < length(divisions)
+        for j = reverse((i+1):length(divisions))
+            # iterating `j` in reverse so that we can safely delete items from `divisions`
+            if ldict[newnodes[i]] == ldict[newnodes[j]]
+                divisions[i] = IPT(top(divisions[i]), prob(divisions[i]) + prob(divisions[j]))
+                deleteat!(divisions, j)
+                deleteat!(newnodes, j)
+            end
+        end
+        i += 1
+    end
+    return divisions
 end
 
 # Overwrites any missing/unspecified gammas for hybrids in `net`
@@ -236,14 +256,15 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict, binoms::Ab
     # Check that the children are good; if not, recurse
     ipts = Vector{IPT}([ipt])
     if ldict[children[1]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[1], ldict, binoms, complog=complog) for ipt in ipts])
+        ipts, _ = reduce(vcat, [_conditiononcoalescences(ipt, children[1], ldict, binoms, complog=complog) for ipt in ipts])
     end
     if length(children) > 1 && ldict[children[2]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[2], ldict, binoms, complog=complog) for ipt in ipts])
+        ipts, _ = reduce(vcat, [_conditiononcoalescences(ipt, children[2], ldict, binoms, complog=complog) for ipt in ipts])
     end
 
     # In the simplest case, this only has 1 net and `node` is above 2 leaves
     retlist = Vector{IPT}()
+    newnodes = Vector{Node}()
     for tempipt in ipts
         tempnet = top(tempipt)
 
@@ -273,16 +294,16 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict, binoms::Ab
                 ldict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
                 for child in getchildren(newnet.node[tempnodeidx]) delete!(ldict, child) end
                 push!(retlist, IPT(newnet, newprob))
+                push!(newnodes, newnet.node[tempnodeidx])
             end
         end
     end
 
-    # TODO: condense the retlist right here! everything in `retlist` came from the same initial `ipt` so will
-    #       be identical up to their differences at `node`. So, we can condense anything that is the same there
-    #       AND we can condense the ambiguous coalescences out (e.g. [[1, 2, 3]] w/ prob 0.3 split out to [[1, 2], 3],
-    #       [[1, 3], 2], [1, [2, 3]] giving probability 0.1 to each)
+    # TODO: condense the retlist right here! not sure if we can resolve things like
+    #       [[1, 2, 3]] w/ prob 0.3 getting split into [[1, 2], 3], ... giving each +0.1 prob,
+    #       but we CAN resolve identical items in `divisions`
 
-    return retlist
+    return retlist, newnodes
 end
 
 # Gets all the _deep_ children of `hyb`. I.e., not the nodes immediately proceeding it,
