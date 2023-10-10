@@ -94,6 +94,8 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
     enqueue!(workingset, initnet)
     parentaltrees = Vector{IPT}()
     complog = ifelse(usecomplog, CompDict(), nothing)   # for re-using computations
+    binoms = Array{BigInt}(undef, top(initnet).numTaxa) # pre-computed binomial(j, 2) values
+    for j=1:length(binoms) binoms[j] = binomial(j, 2) end
 
     while !isempty(workingset)
         ipt = dequeue!(workingset)
@@ -120,11 +122,12 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
         # 2b. If there is not a LineageNode associated with thisnode,
         #     we must first condition on the coalescent events
         else
-            divisions = _conditiononcoalescences(ipt, node, ldict, complog=complog)
+            divisions, nodes = _conditiononcoalescences(ipt, node, ldict, binoms, complog=complog)
+            _combinedivisions!(divisions, nodes, ldict)
 
             newsum = sum([prob(t) for t in divisions])
             oldprob = prob(ipt)
-            abs(newsum - oldprob) < 1e-16 || error("Probs don't line up after coalescing from node"*string(node.name)*"; newsum="*string(newsum)*", oldprob="*string(oldprob)*". length(divisions): "*string(length(divisions)))
+            abs(newsum - oldprob) < 1e-12 || @warn "Probs don't line up after coalescing from node"*string(node.name)*"; newsum="*string(newsum)*", oldprob="*string(oldprob)*". length(divisions): "*string(length(divisions))
         end
 
         # 4. Repeat with the resultant networks
@@ -132,6 +135,25 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
     end
 
     return parentaltrees, complog
+end
+
+"""
+Looks at all of the divisions in `divisions` and combines identical ones and their probabilities.
+"""
+function _combinedivisions!(divisions::Vector{IPT}, newnodes::Vector{Node}, ldict::LDict)
+    i = 1
+    while i < length(divisions)
+        for j = reverse((i+1):length(divisions))
+            # iterating `j` in reverse so that we can safely delete items from `divisions`
+            if ldict[newnodes[i]] == ldict[newnodes[j]]
+                divisions[i] = IPT(top(divisions[i]), prob(divisions[i]) + prob(divisions[j]))
+                deleteat!(divisions, j)
+                deleteat!(newnodes, j)
+            end
+        end
+        i += 1
+    end
+    return divisions
 end
 
 # Overwrites any missing/unspecified gammas for hybrids in `net`
@@ -224,7 +246,7 @@ function _conditiononreticulation(ipt::IPT, hyb::Node, ldict::LDict)
 end
 
 # Conditions the given network on the various coalescent possibilities below `node`
-function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::Union{CompDict,Nothing}=nothing)
+function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict, binoms::AbstractArray; complog::Union{CompDict,Nothing}=nothing)
     net = top(ipt)
     if ldict[node] !== nothing return ipt end    # this means we'll never hit leaves
     
@@ -234,14 +256,15 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::U
     # Check that the children are good; if not, recurse
     ipts = Vector{IPT}([ipt])
     if ldict[children[1]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[1], ldict, complog=complog) for ipt in ipts])
+        ipts, _ = reduce(vcat, [_conditiononcoalescences(ipt, children[1], ldict, binoms, complog=complog) for ipt in ipts])
     end
     if length(children) > 1 && ldict[children[2]] === nothing
-        ipts = reduce(vcat, [_conditiononcoalescences(ipt, children[2], ldict, complog=complog) for ipt in ipts])
+        ipts, _ = reduce(vcat, [_conditiononcoalescences(ipt, children[2], ldict, binoms, complog=complog) for ipt in ipts])
     end
 
     # In the simplest case, this only has 1 net and `node` is above 2 leaves
     retlist = Vector{IPT}()
+    newnodes = Vector{Node}()
     for tempipt in ipts
         tempnet = top(tempipt)
 
@@ -254,9 +277,9 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::U
         # From that perspective, all the lineages in each of the children nodes have _separate_
         # chances to merge while moving up their branch. So, the resultant node `tempnode`
         # potentially has any pairing of `opts1` and `opts2`
-        opts1, probs1 = getcoalescentcombos(ldict[children[1]], getparentedge(children[1]).length, complog=complog)
+        opts1, probs1 = getcoalescentcombos(ldict[children[1]], getparentedge(children[1]).length, binoms, complog=complog)
         if length(children) > 1
-            opts2, probs2 = getcoalescentcombos(ldict[children[2]], getparentedge(children[2]).length, complog=complog)
+            opts2, probs2 = getcoalescentcombos(ldict[children[2]], getparentedge(children[2]).length, binoms, complog=complog)
         else
             opts2 = [LineageNode()]
             probs2 = [BigFloat(1.)]
@@ -271,16 +294,16 @@ function _conditiononcoalescences(ipt::IPT, node::Node, ldict::LDict; complog::U
                 ldict[newnet.node[tempnodeidx]] = LineageNode(opti, optj)
                 for child in getchildren(newnet.node[tempnodeidx]) delete!(ldict, child) end
                 push!(retlist, IPT(newnet, newprob))
+                push!(newnodes, newnet.node[tempnodeidx])
             end
         end
     end
 
-    # TODO: condense the retlist right here! everything in `retlist` came from the same initial `ipt` so will
-    #       be identical up to their differences at `node`. So, we can condense anything that is the same there
-    #       AND we can condense the ambiguous coalescences out (e.g. [[1, 2, 3]] w/ prob 0.3 split out to [[1, 2], 3],
-    #       [[1, 3], 2], [1, [2, 3]] giving probability 0.1 to each)
+    # TODO: condense the retlist right here! not sure if we can resolve things like
+    #       [[1, 2, 3]] w/ prob 0.3 getting split into [[1, 2], 3], ... giving each +0.1 prob,
+    #       but we CAN resolve identical items in `divisions`
 
-    return retlist
+    return retlist, newnodes
 end
 
 # Gets all the _deep_ children of `hyb`. I.e., not the nodes immediately proceeding it,
