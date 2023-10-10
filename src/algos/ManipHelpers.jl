@@ -10,12 +10,19 @@ function copyldictcontents!(oldnet::HybridNetwork, newnet::HybridNetwork, ldict:
     end
 end
 
-# Splits the given reticulation into 2 tree-like edges
-# Creates a deep copy of the net in the process
-# `retic` is the hybrid node that 2 edges point into
-#
-# "left" and "right" don't actually hold any meaning here,
-# they are just a useful naming convention to keep things clear
+"""
+    splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
+
+Splits `net` into two other networks. The hybrid node `retic` is turned into a non-hybrid edge in each resultant network.
+Resultant networks may have tree topologies.
+
+# Arguments
+- `net`: the network to be split
+- `retic`: the place to split `net` into two
+- `reticidx`: the index of `retic`; passed as an argument to save time searching for it in deep copied networks
+- `majorline/minorline`: the lineages the will be attributed to the major and minor edges of `retic` after splitting
+- `ldict`: lineage dictionary
+"""
 function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, majorline::LineageNode, minorline::LineageNode, ldict::LDict)
     majoredge = getparentedge(retic)
     minoredge = getparentedgeminor(retic)
