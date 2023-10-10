@@ -1,4 +1,4 @@
-include("./main.jl")
+include("../main.jl")
 
 """
 Tests the above probabilities for `N` input lineages
@@ -40,3 +40,4 @@ probatoptest(4, 1.)
 probatoptest(5, 1.)
 probatoptest(6, 1.)
 probatoptest(7, 1.)
+probatoptest(8, 1.)
