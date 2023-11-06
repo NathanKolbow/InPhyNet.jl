@@ -65,3 +65,10 @@ function increment(choices, idx)
     1. Take only the hybrid relationships w/ the best $p$-values and ignore the resultant decomposition subsets
     2. Look at all hybrid relationships w/ *acceptable* $p$-values and take the ones that lead to decomposition subsets that we expect to have the smallest overall runtime
     3. A hybrid of (1) and (2) that doesn't care exclusively about either $p$-values or runtimes, but instead takes a tradeoff somewhere in the middle
+
+Step 4 (MSCQuartets; quartets):
+- unsure at the moment, need to review how MSCQuartets works
+
+Step 6:
+- NJMerge but respect and maintain reticulations
+- Choice: if taxa $A$ and $B$ are siblings only via reticulation, should they be allowed to merge via proposal? Kevin and I think probably, but could try playing with this.
