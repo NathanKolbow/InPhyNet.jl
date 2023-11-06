@@ -3,11 +3,11 @@ include("constants.jl")
 include("structs/InterimParentalTree.jl")
 include("structs/Lineage.jl")
 include("structs/LineageNode.jl")
-include("algos/proba.jl")
-include("algos/coalescent.jl")
-include("algos/arbitrary-proba.jl")
-include("algos/ParentalTrees.jl")
-include("algos/ManipHelpers.jl")
+include("algos/ptrees/proba.jl")
+include("algos/ptrees/coalescent.jl")
+include("algos/ptrees/arbitrary-proba.jl")
+include("algos/ptrees/ParentalTrees.jl")
+include("algos/ptrees/ManipHelpers.jl")
 
 export Lineage,
     LineageNode,
