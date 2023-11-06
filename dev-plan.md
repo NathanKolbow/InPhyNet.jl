@@ -74,6 +74,8 @@ function increment(choices, idx)
 
 Step 4 (MSCQuartets; quartets):
 - unsure at the moment, need to review how MSCQuartets works
+- [MSCQuartets](https://academic.oup.com/bioinformatics/article/37/12/1766/5919582)
+- [theory behind MSCQuartets](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7643865/)
 
 Step 6:
 - NJMerge but respect and maintain reticulations
