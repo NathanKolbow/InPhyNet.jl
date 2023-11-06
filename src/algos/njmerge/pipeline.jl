@@ -32,3 +32,25 @@ function runpipeline(msa, Dfxn::Fxn, Tfxn::Fxn, Rfxn::Fxn, Sfxn::Fxn, Nfxn::Fxn,
         supernet = mergefxn(msa=msa, D=D, T=supernet, R=retics, S=subsets, N=constraints)
     end
 end
+
+const NA = nothing
+
+# Dfxn
+AGID(; msa=NA) = error("not implemented")
+
+# Tfxn
+nj(; msa=NA, D=NA) = PhyloNetworks.nj!(fixup(D), names(msa))
+fixup(D) = error("not implemented")
+
+# Rfxn
+MSCQuartets(; msa=NA, D=NA, T=NA) = error("not implemented")
+
+# Sfxn
+decompose(; msa=NA, D=NA, T=NA, R=NA) = error("not implemented")
+
+# Nfxn
+runsnaq(; msa=NA, D=NA, T=NA, R=NA, S=NA) = PhyloNetworks.snaq!(nj(D=D), getqcfinfo(msa, S))
+getqcfinfo(msa, S) = error("not implemented")   # build gene trees w/ msa on subsets S
+
+# mergefxn
+supernet(; msa=NA, D=NA, T=NA, R=NA, S=NA, N=NA) = error("not implemented")
