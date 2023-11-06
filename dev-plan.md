@@ -129,7 +129,7 @@ while not all nodes connected
         else
             relabel j as x
 
-for retic in H
+for retic in keys(H)
     draw edge from H[retic][1] to H[retic][2]
 ```
 
