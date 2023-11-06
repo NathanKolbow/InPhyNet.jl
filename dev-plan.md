@@ -1,6 +1,10 @@
-# Development Plan
+## Table of contents
+- [Algorithm overview](#algorithm-overview)
+- [Step details](#step-details)
+- [High level pseudo-code](#high-level-pseudo-code)
+- [Roadmap](#roadmap)
 
-## Algorithm Overview:
+# Algorithm overview
 
 Input: MSA for $n$ species
 
@@ -14,7 +18,7 @@ Output: supernetwork with all $n$ species
 6. Merge the set $\mathbf{N}_\text{C}$ into supernetwork $N_\text{super}$ from constraints $\mathbf{N}_\text{C}$
 7. If desired, use $N_\text{super}$ in place of $T$ and repeat
 
-## Step details
+# Step details
 
 | Step | Input | Output | Main method | Other prospective methods | Where is main method? |
 | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
@@ -26,7 +30,7 @@ Output: supernetwork with all $n$ species
 | 6 | $\mathbf{N}_\text{C}$, $D$ | $N_\text{super}$ | `novel` | None | DNE |
 | 7 | $N_\text{super}$, $R$ | $\mathbf{S}$ | ----- | ----- | ----- |
 
-## High level pseudo-code
+# High level pseudo-code
 
 Step 1: [this paper](https://academic.oup.com/sysbio/article/60/5/661/1644054?login=false)
 
@@ -72,3 +76,69 @@ Step 4 (MSCQuartets; quartets):
 Step 6:
 - NJMerge but respect and maintain reticulations
 - Choice: if taxa $A$ and $B$ are siblings only via reticulation, should they be allowed to merge via proposal? Kevin and I think probably, but could try playing with this.
+
+```
+D = distance matrix
+H = dict[constraintedge] = (fromedge, toedge); dict that keeps track of where retics are linked
+    - constraintedge is the edge object from the original constraint network
+    - fromedge is the edge in mergednet where the reticulation will be going out from
+    - toedge is the edge in mergednet where the reticulation will be going into
+
+constraints = vector of constraint networks
+mergednet = set of m disconnected nodes; merging them as we go
+
+function initializeH(H, constraints)
+    for net in constraints
+        for retic in net
+            H[retic] = (null, null)
+
+function retainretics(i, j, ei, ej)
+    if exists OUTGOING retic r directly above i
+        H[r][1] = ei
+    else if exists INCOMING retic r directly above i
+        H[r][2] = ei
+
+    if exists OUTGOING retic r directly above j
+        H[r][1] = ej
+    else if exists INCOMING retic r directly above j
+        H[r][2] = ej
+
+while not all nodes connected
+    compute Q from D
+    define x a placeholder for the new name of the subset containing merged taxa
+    pairvalid = false
+    for pairing (i, j) in sort(Q)
+        for const_net in constraints
+            if (i, j) in const_net AND (i, j) not siblings
+                pairvalid = false
+                skip (i, j)
+            else
+                pairvalid = true
+        
+    if !pairvalid error
+
+    merge (i, j) in mergednet into x
+        - ei the new edge coming up from i
+        - ej the new edge coming up from j
+    for const_net in constraints that contains i or j
+        if const_net contains i AND j
+            retainretics(i, j, ei, ej)
+            merge (i, j) into x in const_net
+        else if const_net contains i
+            relabel i as x
+        else
+            relabel j as x
+
+for retic in H
+    draw edge from H[retic][1] to H[retic][2]
+```
+
+# Roadmap
+
+- [ ] Review MSCQuartets and fill in its pseudo-code implementation
+- [X] Sketch high-level pseudo-code for our network version of NJMerge above
+- [ ] Sketch low-level pseudo-code for our network version of NJMerge above
+- [ ] Implement our network version of NJMerge in `julia`
+- [ ] Put together a high-level `pipeline` construct in `julia` where you can plug in the various options above
+- [ ] Implement AGID matrix calculation in `julia` (perhaps w/ gene trees as inputs)
+- [ ] Implement taxa decomposition schema in `julia`
