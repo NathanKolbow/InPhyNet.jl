@@ -46,7 +46,7 @@ fixup(D) = error("not implemented")
 MSCQuartets(; msa=NA, D=NA, T=NA) = error("not implemented")
 
 # Sfxn
-decompose(; msa=NA, D=NA, T=NA, R=NA) = error("not implemented")
+decompose(; msa=NA, D=NA, T=NA, R=NA) = decomposeFromQuartets(T, R)
 
 # Nfxn
 runsnaq(; msa=NA, D=NA, T=NA, R=NA, S=NA) = PhyloNetworks.snaq!(nj(D=D), getqcfinfo(msa, S))
