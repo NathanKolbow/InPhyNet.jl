@@ -34,7 +34,8 @@ Output: supernetwork with all $n$ species
 
 # High level pseudo-code
 
-Step 1: [this paper](https://academic.oup.com/sysbio/article/60/5/661/1644054?login=false)
+Step 1:
+- [How to calculate AGID](https://academic.oup.com/sysbio/article/60/5/661/1644054#115080675)
 
 Step 4 (HyDe; triplets):
 - $\mathbf{T}$ the set of all triplets from HyDe with $p$-value at most $p$; $T_{i,j}$ the $j$-th triplet where taxa $H_i$ is marked as a hybrid
