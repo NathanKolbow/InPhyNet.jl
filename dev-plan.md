@@ -4,6 +4,8 @@
 - [High level pseudo-code](#high-level-pseudo-code)
 - [Roadmap](#roadmap)
 
+&nbsp;
+
 # Algorithm overview
 
 Input: MSA for $n$ species
