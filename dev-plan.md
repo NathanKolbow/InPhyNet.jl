@@ -139,6 +139,6 @@ for retic in keys(H)
 - [X] Sketch high-level pseudo-code for our network version of NJMerge above
 - [ ] Sketch low-level pseudo-code for our network version of NJMerge above
 - [ ] Implement our network version of NJMerge in `julia`
-- [ ] Put together a high-level `pipeline` construct in `julia` where you can plug in the various options above
+- [X] Put together a high-level `pipeline` construct in `julia` where you can plug in the various options above
 - [ ] Implement AGID matrix calculation in `julia` (perhaps w/ gene trees as inputs)
 - [ ] Implement taxa decomposition schema in `julia`
