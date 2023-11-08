@@ -1,3 +1,5 @@
+# module netmerging
+
 include("imports.jl")
 include("constants.jl")
 include("structs/InterimParentalTree.jl")
@@ -17,3 +19,5 @@ export Lineage,
     getParentalTrees,
     ntaxa,
     coalesce
+
+# end module
