@@ -9,18 +9,19 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     if isempty(names)
         names = string.(1:n)
     end
+    if length(names) != n
+        m = length(names)
+        throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
+    end
 
     # Empty network
-    nodes = [Node(i, true) for i in 1:n]
-    for (i, node) in enumerate(net.node) node.name = names[i] end
+    subnets = [SubNet(i, names) for i in 1:n]
     edgenum = 0
     reticnum = 0
-    reticmap = Vector{Tuple{Node, Node}}()
-    net = HybridNetwork(nodes, Edge[])
+    reticmap = Vector{Tuple{Edge, Edge}}()
 
     # Keeping track of the algorithm
     possible_siblings = findvalidpairs(constraints, names)
-    active_nodes = copy(nodes)
 
     # Used to efficiently compute Q
     Dsums = sum(D, dims=1)
@@ -33,7 +34,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         # TODO: before implementing this section, sketch out
         #       what it should look like to connect 2 subnets
         #       (review nj! code)
-        error("This section not implemented")
+        subnets[i] = mergesubnets!(subnets[i], subnets[j])
 
         # collapse taxa i into j
         for l in 1:n
@@ -41,25 +42,22 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
                 D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
             end
         end
-        idxfilter = [1:j; (j+1):n]
-        D = view(D, idxfilter, idxfilter)   # remove j from D
 
-        # update active nodes
-        active_nodes[i] = node_k
-        active_nodes = view(active_nodes, idxfilter)
+        # Remove data elements that corresponded to `j`
+        idxfilter = [1:(j-1); (j+1):n]
+        D = view(D, idxfilter, idxfilter)   # remove j from D
+        subnets = view(subnets, idxfilter)
 
         n -= 1
     end
-end
 
+    finalnet = mergesubnets!(subnets[i], subnets[j])
+    finalnet = HybridNetwork(finalnet)
 
-"""
+    # Place the reticulations we've been keeping track of
+    placeretics!(finalnet, reticmap)
 
-Helper function that takes the two unrooted subnets that have been
-    selected for pairing. Returns a single merged network
-"""
-function connectsubnets!(n1::HybridNetwork, n2::HybridNetwork)
-
+    return finalnet
 end
 
 
