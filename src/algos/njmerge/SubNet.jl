@@ -6,10 +6,13 @@ struct SubNet
     # some field for where to add next piece?
     # maybe the last node in `nodes` can just be used as reference?
     SubNet() = error("not yet implemented")
-    SubNet(i, names) = error("not yet implemented")
+    function SubNet(i, name)
+        node = Node(i, true)
+        node.name = name
+    end
 end
 
-# Fundamental methods; the reason this struct exists
+
 """
 
 Merges two unrooted SubNets into a single unrooted SubNet
@@ -20,6 +23,7 @@ IMPORTANT: this function should NOT make copies of edges or
 function mergesubnets!(n1::SubNet, n2::SubNet)
     error("Not implemented yet")
     
+    return mergednet
 end
 
 
@@ -30,4 +34,6 @@ Converts the final SubNet in the net nj merge algo into a
 """
 function HybridNetwork(subnet::SubNet)
     error("Not implemented")
+
+    # Remember to re-number edges
 end
