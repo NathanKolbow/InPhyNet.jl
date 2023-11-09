@@ -5,6 +5,8 @@ struct SubNet
     edges::Vector{Edge}
     # some field for where to add next piece?
     # maybe the last node in `nodes` can just be used as reference?
+    SubNet() = error("not yet implemented")
+    SubNet(i, names) = error("not yet implemented")
 end
 
 # Fundamental methods; the reason this struct exists
