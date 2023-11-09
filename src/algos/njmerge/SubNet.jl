@@ -11,6 +11,9 @@ end
 """
 
 Merges two unrooted SubNets into a single unrooted SubNet
+IMPORTANT: this function should NOT make copies of edges or
+           nodes, object references are stored and used in
+           the main merging algorithm
 """
 function mergesubnets!(n1::SubNet, n2::SubNet)
     error("Not implemented yet")
