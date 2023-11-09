@@ -15,10 +15,10 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     end
 
     # Empty network
-    subnets = [SubNet(i, names) for i in 1:n]
+    subnets = Vector{SubNet}([SubNet(i, names) for i in 1:n])
     edgenum = 0
     reticnum = 0
-    reticmap = Vector{Tuple{Edge, Edge}}()
+    reticmap = ReticMap()
 
     # Keeping track of the algorithm
     possible_siblings = findvalidpairs(constraints, names)
@@ -35,6 +35,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         #       what it should look like to connect 2 subnets
         #       (review nj! code)
         subnets[i] = mergesubnets!(subnets[i], subnets[j])
+        updateconstraints!(names[i], names[j], constraints, reticmap)
 
         # collapse taxa i into j
         for l in 1:n
@@ -58,6 +59,29 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     placeretics!(finalnet, reticmap)
 
     return finalnet
+end
+
+
+"""
+
+Updates `net` to include the reticulations that we've kept track of along the way
+in our algo but haven't placed yet.
+"""
+function placeretics!(net::HybridNetwork, reticmap::ReticMap)
+
+end
+
+
+"""
+
+Updates constraint networks after (i, j) with names (nodenamei, nodenamej) have been
+merged. Also updates `reticmap` to keep track of any reticulations that get removed
+in this process.
+"""
+function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
+    constraints::Vector{HybridNetwork}, reticmap::ReticMap)
+
+    error("Not implemented yet")
 end
 
 
