@@ -1,29 +1,58 @@
+using PhyloNetworks
+
 struct SubNet
-    # TODO: Sketch out how merging subnets is going to work
-    #       *in detail* before finalizing and using this struct
+    # Fields
     nodes::Vector{Node}
     edges::Vector{Edge}
-    # some field for where to add next piece?
-    # maybe the last node in `nodes` can just be used as reference?
+    linkpoint::Node
+    id::Int64
+
+    # Constructors
     SubNet() = error("not yet implemented")
-    function SubNet(i, name)
-        node = Node(i, true)
-        node.name = name
+    function SubNet(id, name::AbstractString)
+        taxanode = Node(0, true)
+        taxanode.name = name
+
+        new(id, [taxanode], [], taxanode)
     end
+    SubNet(nodes::Vector{Node}, edges::Vector{Edge}, link::Node) = new(nodes, edges, link)
 end
 
 
 """
 
 Merges two unrooted SubNets into a single unrooted SubNet
+Returns the merged subnet AND the edges in the merged net
+    corresponding to where reticulations will be placed if there
+    are corresponding reticulations discovered in the constraints.
+
 IMPORTANT: this function should NOT make copies of edges or
-           nodes, object references are stored and used in
-           the main merging algorithm
+    nodes, object references are stored and used in
+    the main merging algorithm
 """
-function mergesubnets!(n1::SubNet, n2::SubNet)
-    error("Not implemented yet")
-    
-    return mergednet
+function mergesubnets!(n1::SubNet, n2::SubNet; newid::Int64=n1.id)
+    newlink = Node(0, false)
+    e1 = connectnodes!(newlink, n1.linkpoint)
+    e2 = connectnodes!(newlink, n2.linkpoint)
+
+    return SubNet(newid, [n1.nodes; n2.nodes; newlink], [n1.edges; n2.edges; e1; e2], newlink), e1, e2
+end
+
+
+"""
+Deals with all the overhead of connecting two nodes with an edge.
+Returns the edge used to connect the nodes.
+
+TODO: add option to make the connection a hybrid connection
+"""
+function connectnodes!(child::Node, parent::Node)
+    edge = Edge(0, -1.)
+    edge.node = [child, parent]
+    push!(child.edge, edge)
+    push!(parent.edge, edge)
+    edge.containRoot = false
+    edge.isChild1 = true
+    return edge
 end
 
 
@@ -36,4 +65,25 @@ function HybridNetwork(subnet::SubNet)
     error("Not implemented")
 
     # Remember to re-number edges
+
+    #
+    nn = HybridNetwork(subnet.nodes, subnet.edges)
+    
+    # PhyloNetworks needs the net to be rooted, so try nodes until one is rooted...
+    worked = false
+    for i in 1:length(subnet.nodes)
+        try
+            nn.root = i
+            writeTopology(nn)
+            worked = true
+        catch e
+            if typeof(e) <: PhyloNetworks.RootMismatch
+                continue
+            else
+                throw(e)
+            end
+        end
+    end
+    if !worked @warn "A suitable root was not detected." end
+    return nn
 end
