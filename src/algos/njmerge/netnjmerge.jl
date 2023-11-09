@@ -15,9 +15,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     end
 
     # Empty network
-    subnets = Vector{SubNet}([SubNet(i, names) for i in 1:n])
-    edgenum = 0
-    reticnum = 0
+    subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
     reticmap = ReticMap()
 
     # Keeping track of the algorithm
@@ -34,7 +32,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         # TODO: before implementing this section, sketch out
         #       what it should look like to connect 2 subnets
         #       (review nj! code)
-        subnets[i] = mergesubnets!(subnets[i], subnets[j])
+        subnets[i] = mergesubnets!(subnets[i], subnets[j], edgenum)
         updateconstraints!(names[i], names[j], constraints, reticmap)
 
         # collapse taxa i into j
