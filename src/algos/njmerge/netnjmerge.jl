@@ -13,6 +13,9 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     # Empty network
     nodes = [Node(i, true) for i in 1:n]
     for (i, node) in enumerate(net.node) node.name = names[i] end
+    edgenum = 0
+    reticnum = 0
+    reticmap = Vector{Tuple{Node, Node}}()
     net = HybridNetwork(nodes, Edge[])
 
     # Keeping track of the algorithm
@@ -24,7 +27,25 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
 
     while n > 2
         # Find optimal (i, j) idx pair for matrix Q
-        minidx = findoptQidx(D, idxpairs)
+        i, j = findoptQidx(D, idxpairs)
+
+        # create new edges, nodes, update tree, keep track of retics
+        error("This section not implemented")
+
+        # collapse taxa i into j
+        for l in 1:n
+            if l != i && l != j
+                D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
+            end
+        end
+        idxfilter = [1:j; (j+1):n]
+        D = view(D, idxfilter, idxfilter)   # remove j from D
+
+        # update active nodes
+        active_nodes[i] = node_k
+        active_nodes = view(active_nodes, idxfilter)
+
+        n -= 1
     end
 end
 
@@ -35,9 +56,24 @@ end
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
 function findoptQidx(D::Matrix{Float64}, idxpairs::Vector{Tuple{<:Integer, <:Integer}})
-    error("Not implemented yet")
-    sums = sum(D, dims=1)
+    if length(idxpairs) == 0
+        throw(ArgumentError("No valid idx pairs received in `findoptQidx`."))
+    end
 
+    n = size(D)[1]
+    sums = sum(D, dims=1)
+    best = Inf
+    minidx = (-1, -1)
+
+    for (i, j) in idxpairs
+        qij = (n-2) * D[i,j] - sums[i] - sums[j]
+        if qij < best
+            best = qij
+            minidx = (i, j)
+        end
+    end
+    
+    return minidx
 end
 
 
@@ -93,9 +129,11 @@ findvalidpairs(net::HybridNetwork, names::AbstractVector{<:AbstractString}) = fi
 
 
 """
-
+    findsiblingpairs(net::HybridNetwork)
 
 Finds sibling pairings for all the leaves in a single network.
+These pairs are valid for `net` but may not be valid when the
+    other constraint networks are also considered.
 Returns a vector of tuples of nodes corresponding to siblings.
 """
 function findsiblingpairs(net::HybridNetwork)
