@@ -29,7 +29,10 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         # Find optimal (i, j) idx pair for matrix Q
         i, j = findoptQidx(D, idxpairs)
 
-        # create new edges, nodes, update tree, keep track of retics
+        # connect subnets i and j
+        # TODO: before implementing this section, sketch out
+        #       what it should look like to connect 2 subnets
+        #       (review nj! code)
         error("This section not implemented")
 
         # collapse taxa i into j
@@ -47,6 +50,16 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
 
         n -= 1
     end
+end
+
+
+"""
+
+Helper function that takes the two unrooted subnets that have been
+    selected for pairing. Returns a single merged network
+"""
+function connectsubnets!(n1::HybridNetwork, n2::HybridNetwork)
+
 end
 
 
