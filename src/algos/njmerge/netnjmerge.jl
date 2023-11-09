@@ -1,3 +1,5 @@
+import PhyloNetworks: deleteNode!, deleteEdge!
+
 # Source for the network version of NJ merge
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     names::AbstractVector{<:AbstractString}=String[])
@@ -12,11 +14,13 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     if length(names) != n
         m = length(names)
         throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
+    elseif length(unique(names)) != length(names)
+        throw(ArgumentError("Names must be unique."))
     end
 
     # Empty network
     subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
-    reticmap = ReticMap()
+    reticmap = ReticMap(constraints)
 
     # Keeping track of the algorithm
     possible_siblings = findvalidpairs(constraints, names)
@@ -32,8 +36,8 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         # TODO: before implementing this section, sketch out
         #       what it should look like to connect 2 subnets
         #       (review nj! code)
-        subnets[i] = mergesubnets!(subnets[i], subnets[j], edgenum)
-        updateconstraints!(names[i], names[j], constraints, reticmap)
+        subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
+        updateconstraints!(names[i], names[j], constraints, reticmap, edgei, edgej)
 
         # collapse taxa i into j
         for l in 1:n
@@ -66,7 +70,7 @@ Updates `net` to include the reticulations that we've kept track of along the wa
 in our algo but haven't placed yet.
 """
 function placeretics!(net::HybridNetwork, reticmap::ReticMap)
-
+    error("not yet implemented")
 end
 
 
@@ -75,11 +79,86 @@ end
 Updates constraint networks after (i, j) with names (nodenamei, nodenamej) have been
 merged. Also updates `reticmap` to keep track of any reticulations that get removed
 in this process.
+
+By convention we keep `nodenamei` and replace node names with `nodenamej`
 """
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
-    constraints::Vector{HybridNetwork}, reticmap::ReticMap)
+    constraints::Vector{HybridNetwork}, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
 
-    error("Not implemented yet")
+    for net in constraints
+        idxi = -1
+        idxj = -1
+        for (nodeidx, node) in enumerate(net.node)
+            if node.name == nodenamei idxi = nodeidx
+            elseif node.name == nodenamej idxj = nodeidx
+            end
+        end
+
+        hasi = idxi != -1
+        hasj = idxj != -1
+        # if hasi && !hasj:  do nothing
+        # if !hasi && !hasj: do nothing
+        if hasj && !hasi
+            net.node[idxj].name = nodenamei
+        elseif hasi && hasj
+            nodei = net.node[idxi]
+            nodej = net.node[idxj]
+
+            mergeconstraintnodes!(net, nodei, nodej, reticmap, subnetedgei, subnetedgej)
+        end
+    end
+end
+
+
+function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
+    parentsi = getnodes(nodei)
+    parentsj = getnodes(nodej)
+    length(parentsi) == 1 || error("Found >1 nodes above a leaf?")    # sanity check, remove when finalized
+    length(parentsj) == 1 || error("Found >1 nodes above a leaf?")    # sanity check; remove when finalized
+    parentsi = parentsi[1]
+    parentsj = parentsj[1]
+
+    if parentsi == parentsj
+        # no reticulations: just merge the nodes
+        parent = parentsi
+        
+        # 1. remove the edge connecting nodej and its parent
+        deleteEdge!(net, nodej.edge[1], part=false)
+        parent.edge = filter(e -> e != nodej.edge[1], parent.edge)
+
+        # 2. remove node j entirely
+        deleteNode!(net, nodej)
+
+        internal = [node for node in getnodes(parent) if node != nodei && node != nodej][1]
+        edge1 = nodei.edge[1]
+        edge2 = ifelse(parent.edge[1] == edge1, parent.edge[2], parent.edge[1])
+
+        # 3. the links are now: (internal) --edge2-- (parent) --edge1-- (nodei)
+        #              we want: (internal) --edge2-- (nodei)
+        #    a) remove parent
+        #    b) remove edge1
+        #    c) remove edge2
+        #    c) connect internal and nodei w/ a new edge
+        deleteNode!(net, parent)
+        
+        deleteEdge!(net, edge1)
+        deleteEdge!(net, edge2)
+        internal.edge = filter(e -> e != edge1 && e != edge2, internal.edge)
+        nodei.edge = filter(e -> e != edge1 && e != edge2, nodei.edge)
+
+        connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
+    else
+        # reticulations: make our way up and log retics in `reticmap`
+
+        # just traverse away from nodes i and j, marking nodes as visited as we go,
+        # and when we come to a node w/ 2 parents taking the `isMajor` edge, otherwise
+        # the node will have 1 parent and we can just continue onwards
+        #
+        # prevnode = ...
+        # currnode = ...
+        # nextnode = filter(e -> e != prevnode && (!e.hybrid || e.isMajor), getnodes(currnode))
+        error("not yet implemented")
+    end
 end
 
 
@@ -224,7 +303,7 @@ function getsiblingcandidates(leaf::Node)
             # If this case is met, the node `child` is an internal node that defined
             # a reticulation. In this case, sibling relationships can still exist 1
             # level deeper, so we iterate one level deeper.
-            ishybrid = [nextchild.hybrid for nextchild in nextchildren]
+            ishybrid = [nextchild.hybrid || any([e.hybrid for e in nextchild.edge]) for nextchild in nextchildren]
             isunvisited = .![nc in visited for nc in nextchildren]
 
             if child.hybrid || (any(ishybrid) & any(isunvisited))
@@ -238,7 +317,7 @@ function getsiblingcandidates(leaf::Node)
                 
                 idx = isunvisited
                 if followedhyb[i]
-                    idx .&= .![e.hybrid for e in child.edge]
+                    idx .&= .![e.hybrid && !e.isMajor for e in child.edge]
                 end
 
                 for (j, nextchild) in enumerate(nextchildren[idx])
