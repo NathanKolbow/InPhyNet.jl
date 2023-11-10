@@ -22,15 +22,14 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
 
-    # Keeping track of the algorithm
-    possible_siblings = findvalidpairs(constraints, names)
-
     # Used to efficiently compute Q
     Dsums = sum(D, dims=1)
 
     while n > 2
+        possible_siblings = findvalidpairs(constraints, names)
+        
         # Find optimal (i, j) idx pair for matrix Q
-        i, j = findoptQidx(D, idxpairs)
+        i, j = findoptQidx(D, possible_siblings)
 
         # connect subnets i and j
         # TODO: before implementing this section, sketch out
@@ -54,11 +53,13 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         n -= 1
     end
 
-    finalnet = mergesubnets!(subnets[i], subnets[j])
+    return mergesubnets!(subnets[1], subnets[2])[1]
+
+    finalnet, _, _ = mergesubnets!(subnets[1], subnets[2])
     finalnet = HybridNetwork(finalnet)
 
     # Place the reticulations we've been keeping track of
-    placeretics!(finalnet, reticmap)
+    # placeretics!(finalnet, reticmap)
 
     return finalnet
 end
@@ -123,8 +124,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         parent = parentsi
         
         # 1. remove the edge connecting nodej and its parent
-        deleteEdge!(net, nodej.edge[1], part=false)
         parent.edge = filter(e -> e != nodej.edge[1], parent.edge)
+        deleteEdge!(net, nodej.edge[1], part=false)
+        nodej.edge = []
 
         # 2. remove node j entirely
         deleteNode!(net, nodej)
@@ -139,6 +141,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         #    b) remove edge1
         #    c) remove edge2
         #    c) connect internal and nodei w/ a new edge
+        parent.edge = []
         deleteNode!(net, parent)
         
         deleteEdge!(net, edge1)
@@ -146,19 +149,83 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         internal.edge = filter(e -> e != edge1 && e != edge2, internal.edge)
         nodei.edge = filter(e -> e != edge1 && e != edge2, nodei.edge)
 
-        connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
+        newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
+        push!(net.edge, newedge)
     else
+        error("not tested yet")
+        error("this is gonna need a good amount of testing...")
+
         # reticulations: make our way up and log retics in `reticmap`
 
         # just traverse away from nodes i and j, marking nodes as visited as we go,
         # and when we come to a node w/ 2 parents taking the `isMajor` edge, otherwise
         # the node will have 1 parent and we can just continue onwards
-        #
-        # prevnode = ...
-        # currnode = ...
-        # nextnode = filter(e -> e != prevnode && (!e.hybrid || e.isMajor), getnodes(currnode))
-        error("not yet implemented")
+        prevnodei = nothing
+        curri = nodei
+        prevnodej = nothing
+        currj = nodej
+
+        visitedbyi = Vector{Node}([nodei])  # vectors instead of sets b/c order matters
+        visitedbyj = Vector{Node}([nodej])  # vectors instead of sets b/c order matters
+        edgepathi = Vector{Edge}()
+        edgepathj = Vector{Edge}()
+        newtip = nodei
+
+        while true
+            # Move to next node
+            curri, fromedgei = getnextmajornode(nodei, prevnodei, reticmap, subnetedgei)
+            currj, fromedgej = getnextmajornode(nodej, prevnodej, reticmap, subnetedgej)
+            push!(edgepathi, fromedgei)
+            push!(edgepathj, fromedgej)
+
+            # Add new nodes to visited sets
+            push!(visitedbyi, nodei)
+            push!(visitedbyj, nodej)
+
+            # If we've crossed paths, break
+            if curri in visitedbyj
+                newtip = curri
+                break
+            elseif currj in visitedbyi
+                newtip = currj
+                break
+            end
+        end
+
+        # now sever all the nodes we've passed through to this point from the network
+        tipidxini = findfirst(visitedbyi .== [newtip])
+        tipidxinj = findfirst(visitedbyj .== [newtip])
+        purgenodes = union(visitedbyi[1:(tipidxini-1)], visitedbyj[1:(tipidxinj-1)])
+        purgeedges = union(edgepathi[1:tipidxini], edgepathj[1:tipidxinj])
+
+        for node in purgenodes
+            deleteNode!(net, node)
+        end
+        for edge in purgeedges
+            for node in edge.node
+                node.edge = filter(e -> e != edge, node.edge)
+            end
+            deleteEdge!(net, edge)
+        end
+
+        newtip.leaf = true
+        newtip.name = nodei.name
     end
+end
+
+
+function getnextmajornode(currnode::Node, prevnode::Node, reticmap::ReticMap, subnetedge::Edge)
+    candidateedges = filter(e -> !(prevnode in e.node), node.edge)  # everything that doesn't go backwards
+    nextmajoredge = filter(e -> !e.hybrid || e.isMajor, candidateedges)
+    length(nextmajoredge) == 1 || error("Should only be 1 edge matching these conditions")  # sanity check
+
+    if nextmajoredge.hybrid
+        # then we need to push its minor edge partner to `reticmap`
+        nextminoredge = filter(e -> e.hybrid && !e.isMajor, candidateedges)
+        logretic(reticmap, nextminoredge, subnetedge)
+    end
+
+    return filter(n -> n != currnode, nextmajoredge.node)[1], nextmajoredge
 end
 
 
@@ -167,7 +234,8 @@ end
 
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
-function findoptQidx(D::Matrix{Float64}, idxpairs::Vector{Tuple{<:Integer, <:Integer}})
+function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
+    idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
         throw(ArgumentError("No valid idx pairs received in `findoptQidx`."))
     end

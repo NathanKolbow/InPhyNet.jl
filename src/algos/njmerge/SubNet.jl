@@ -13,9 +13,9 @@ struct SubNet
         taxanode = Node(0, true)
         taxanode.name = name
 
-        new(id, [taxanode], [], taxanode)
+        new([taxanode], [], taxanode, id)
     end
-    SubNet(nodes::Vector{Node}, edges::Vector{Edge}, link::Node) = new(nodes, edges, link)
+    SubNet(nodes::Vector{Node}, edges::Vector{Edge}, link::Node, newid::Int64) = new(nodes, edges, link, newid)
 end
 
 
@@ -35,7 +35,7 @@ function mergesubnets!(n1::SubNet, n2::SubNet; newid::Int64=n1.id)
     e1 = connectnodes!(newlink, n1.linkpoint)
     e2 = connectnodes!(newlink, n2.linkpoint)
 
-    return SubNet(newid, [n1.nodes; n2.nodes; newlink], [n1.edges; n2.edges; e1; e2], newlink), e1, e2
+    return SubNet([n1.nodes; n2.nodes; newlink], [n1.edges; n2.edges; e1; e2], newlink, newid), e1, e2
 end
 
 
