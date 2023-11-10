@@ -28,5 +28,19 @@ for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
 mergednet = netnj!(D, constraints, names=T.names)
 mergednet = HybridNetwork(mergednet.nodes, mergednet.edges)
 mergednet.root = mergednet.numNodes
-writeTopology(mergednet)
-hardwiredClusterDistance(T, mergednet, true)
+mergednet = readTopology(writeTopology(mergednet))
+
+writeTopology(mergednet)                        # identical up to root differences!
+hardwiredClusterDistance(T, mergednet, true)    # not 0 b/c of root differences, silly...
+
+mindist = Inf
+minidx = -1
+for i=1:mergednet.numNodes                                                                                                                                                                                                                                                                
+    mergednet.root = i                                                                                                                                                                                                                                                                    
+    if hardwiredClusterDistance(T, mergednet, false) < mindist                                                                                                                                                                                                                            
+        mindist = hardwiredClusterDistance(T, mergednet, false)                                                                                                                                                                                                                           
+        minidx = i                                                                                                                                                                                                                                                                        
+    end                                                                                                                                                                                                                                                                                   
+end
+mindist
+mindist == 0 || error("")
