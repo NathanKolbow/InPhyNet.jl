@@ -1,6 +1,6 @@
 include("../../main.jl")
 
-# Test w/ a tree example
+## Relatively simple test w/ a tree
 T = readTopology("((((A,B),C),(D,E)),(((F,G),(H,I)),((J,(K,L)),((M,N),O))));")
 constraints = [
     readTopology("(((A,B),C),(H,I));"),
@@ -25,7 +25,7 @@ D = Matrix{Float64}([
     -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. -1. 0.;
 ])
 for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
-mergednet = netnj!(D, constraints, names=T.names)
+mergednet = netnj!(D, constraints, names=[l.name for l in T.leaf])
 mergednet = HybridNetwork(mergednet.nodes, mergednet.edges)
 mergednet.root = mergednet.numNodes
 mergednet = readTopology(writeTopology(mergednet))
@@ -35,12 +35,33 @@ hardwiredClusterDistance(T, mergednet, true)    # not 0 b/c of root differences,
 
 mindist = Inf
 minidx = -1
-for i=1:mergednet.numNodes                                                                                                                                                                                                                                                                
-    mergednet.root = i                                                                                                                                                                                                                                                                    
-    if hardwiredClusterDistance(T, mergednet, false) < mindist                                                                                                                                                                                                                            
-        mindist = hardwiredClusterDistance(T, mergednet, false)                                                                                                                                                                                                                           
-        minidx = i                                                                                                                                                                                                                                                                        
-    end                                                                                                                                                                                                                                                                                   
+for i=1:mergednet.numNodes
+    mergednet.root = i
+    if hardwiredClusterDistance(T, mergednet, false) < mindist
+        mindist = hardwiredClusterDistance(T, mergednet, false)
+        minidx = i
+    end
+    mergednet.root = minidx
 end
 mindist
 mindist == 0 || error("")
+
+
+# Simple example w/ a network
+N = readTopology("(((A,B)#H1,((C,#H1),D)),((E,F)#H2,((G,#H2),H)));")
+constraints = [
+    readTopology("((A,B)#H1,((C,#H1),D));");
+    readTopology("((E,F)#H2,((G,#H2),H));")
+]
+D = Matrix{Float64}([   # major tree internode distances
+    0.  1.  3.  3.  5.  5.  5.  5.;
+    -1. 0.  3.  3.  5.  5.  5.  5.;
+    -1. -1. 0.  1.  5.  5.  5.  5.;
+    -1. -1. -1. 0.  5.  5.  5.  5.;
+    -1. -1. -1. -1. 0.  1.  3.  3.;
+    -1. -1. -1. -1. -1. 0.  3.  3.;
+    -1. -1. -1. -1. -1. -1. 0.  1.;
+    -1. -1. -1. -1. -1. -1. -1. 0.;
+])
+for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
+mnet = netnj!(D, constraints, names=sort([l.name for l in N.leaf]))
