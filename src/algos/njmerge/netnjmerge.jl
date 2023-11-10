@@ -1,4 +1,6 @@
-import PhyloNetworks: deleteNode!, deleteEdge!
+import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!
+using Graphs
+import Graphs: add_edge!
 
 # Source for the network version of NJ merge
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
@@ -22,10 +24,8 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
 
-    # Used to efficiently compute Q
-    Dsums = sum(D, dims=1)
-
     while n > 2
+        println(n)
         possible_siblings = findvalidpairs(constraints, names)
         
         # Find optimal (i, j) idx pair for matrix Q
@@ -49,19 +49,17 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         idxfilter = [1:(j-1); (j+1):n]
         D = view(D, idxfilter, idxfilter)   # remove j from D
         subnets = view(subnets, idxfilter)
+        names = view(names, idxfilter)
 
         n -= 1
     end
 
-    return mergesubnets!(subnets[1], subnets[2])[1]
-
-    finalnet, _, _ = mergesubnets!(subnets[1], subnets[2])
-    finalnet = HybridNetwork(finalnet)
+    mnet, _, _ = mergesubnets!(subnets[1], subnets[2])
 
     # Place the reticulations we've been keeping track of
-    # placeretics!(finalnet, reticmap)
+    placeretics!(mnet, reticmap)
 
-    return finalnet
+    return HybridNetwork(finalnet)
 end
 
 
@@ -70,8 +68,11 @@ end
 Updates `net` to include the reticulations that we've kept track of along the way
 in our algo but haven't placed yet.
 """
-function placeretics!(net::HybridNetwork, reticmap::ReticMap)
-    error("not yet implemented")
+function placeretics!(net::SubNet, reticmap::ReticMap)
+    @warn "Placing retics; directionality of reticulations not retained at the moment."
+    for retic in keys(reticmap.map)
+        addhybridedge!(net, reticmap.map[retic][1], reticmap.map[retic][2], false)
+    end
 end
 
 
@@ -119,7 +120,17 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
-    if parentsi == parentsj
+    if parentsi == parentsj && net.numNodes == 3
+        for edge in net.edge deleteEdge!(net, edge) end
+        deleteNode!(net, nodej)
+        net.node = [nodei]
+        net.edge = []
+        net.numTaxa = 1
+        net.numNodes = 1
+        net.numEdges = 0
+        net.root = 1
+        nodei.edge = []
+    elseif parentsi == parentsj
         # no reticulations: just merge the nodes
         parent = parentsi
         
@@ -152,80 +163,101 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
-        error("not tested yet")
-        error("this is gonna need a good amount of testing...")
-
         # reticulations: make our way up and log retics in `reticmap`
 
         # just traverse away from nodes i and j, marking nodes as visited as we go,
         # and when we come to a node w/ 2 parents taking the `isMajor` edge, otherwise
         # the node will have 1 parent and we can just continue onwards
-        prevnodei = nothing
-        curri = nodei
-        prevnodej = nothing
-        currj = nodej
 
-        visitedbyi = Vector{Node}([nodei])  # vectors instead of sets b/c order matters
-        visitedbyj = Vector{Node}([nodej])  # vectors instead of sets b/c order matters
-        edgepathi = Vector{Edge}()
-        edgepathj = Vector{Edge}()
-        newtip = nodei
+        # sketch out how to traverse, keep track of where we've been, which edges we've passed
+        # AND we need to have a way of getting only the retic edges we've passed on the
+        # FINAL ROUTE that we choose
+        #
+        # start w/ simple example, then move on
 
-        while true
-            # Move to next node
-            curri, fromedgei = getnextmajornode(nodei, prevnodei, reticmap, subnetedgei)
-            currj, fromedgej = getnextmajornode(nodej, prevnodej, reticmap, subnetedgej)
-            push!(edgepathi, fromedgei)
-            push!(edgepathj, fromedgej)
+        # current idea: using Graph.jl, build the constraint network as a SimpleGraph and then
+        #               use A* to find shortest path
+        # g = SimpleGraph(numNodes)
+        # add_edge!(g, fromidx, toidx) for each edge E
+        graph = SimpleGraph(net.numNodes)
+        for edge in net.edge
+            if edge.hybrid && !edge.isMajor continue end
+            nidx1 = findfirst(net.node .== [edge.node[1]])
+            nidx2 = findfirst(net.node .== [edge.node[2]])
 
-            # Add new nodes to visited sets
-            push!(visitedbyi, nodei)
-            push!(visitedbyj, nodej)
+            if nidx1 !== nothing && nidx2 !== nothing
+                add_edge!(graph, nidx1, nidx2)  # edges are undirected, don't need to add twice
+            end
+        end
 
-            # If we've crossed paths, break
-            if curri in visitedbyj
-                newtip = curri
-                break
-            elseif currj in visitedbyi
-                newtip = currj
+        idxnodei = findfirst(net.node .== [nodei])
+        idxnodej = findfirst(net.node .== [nodej])
+        edgepath = a_star(graph, idxnodei, idxnodej)
+
+        nodesinpath = Array{Node}(undef, length(edgepath)+1)
+        edgesinpath = Array{Edge}(undef, length(edgepath))
+        for (i, gedge) in enumerate(edgepath)
+            srcnode = net.node[gedge.src]
+            dstnode = net.node[gedge.dst]
+
+            if i == 1 nodesinpath[1] = net.node[gedge.src] end
+            nodesinpath[i+1] = dstnode
+
+            netedge = filter(e -> (srcnode in e.node) && (dstnode in e.node), dstnode.edge)[1]
+            edgesinpath[i] = netedge
+        end
+
+        # find the node that should be the new tip after merging
+        newtip = nothing
+        for node in nodesinpath
+            if node.leaf continue end
+            isnewtip = true
+            for edge in node.edge
+                if edge.hybrid && !edge.isMajor
+                    isnewtip = false
+                end
+            end
+            if isnewtip
+                newtip = node
                 break
             end
         end
 
-        # now sever all the nodes we've passed through to this point from the network
-        tipidxini = findfirst(visitedbyi .== [newtip])
-        tipidxinj = findfirst(visitedbyj .== [newtip])
-        purgenodes = union(visitedbyi[1:(tipidxini-1)], visitedbyj[1:(tipidxinj-1)])
-        purgeedges = union(edgepathi[1:tipidxini], edgepathj[1:tipidxinj])
+        # find the retics that we need to keep track of
+        # our a_star path goes from `i` to `j`, so any retics we find are relevant to `i` up
+        # until we cross the new tip, at which point they become relevant to `j`
+        relevanttoi = true
+        for node in nodesinpath
+            if node == newtip
+                relevanttoi = false
+                continue
+            end
+            for edge in node.edge
+                if edge.hybrid && !edge.isMajor
+                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej))
+                end
+            end
+        end
 
-        for node in purgenodes
+        # purge all the nodes we've passed through to this point from the network
+        for node in nodesinpath
+            if node == newtip continue end
             deleteNode!(net, node)
         end
-        for edge in purgeedges
-            for node in edge.node
-                node.edge = filter(e -> e != edge, node.edge)
+        for edge in edgesinpath
+            if !edge.hybrid
+                deleteEdge!(net, edge)
+                for node in edge.node
+                    node.edge = filter(e -> e != edge, node.edge)
+                end
             end
-            deleteEdge!(net, edge)
         end
 
         newtip.leaf = true
+        push!(net.leaf, newtip)
+        net.numTaxa += 1
         newtip.name = nodei.name
     end
-end
-
-
-function getnextmajornode(currnode::Node, prevnode::Node, reticmap::ReticMap, subnetedge::Edge)
-    candidateedges = filter(e -> !(prevnode in e.node), node.edge)  # everything that doesn't go backwards
-    nextmajoredge = filter(e -> !e.hybrid || e.isMajor, candidateedges)
-    length(nextmajoredge) == 1 || error("Should only be 1 edge matching these conditions")  # sanity check
-
-    if nextmajoredge.hybrid
-        # then we need to push its minor edge partner to `reticmap`
-        nextminoredge = filter(e -> e.hybrid && !e.isMajor, candidateedges)
-        logretic(reticmap, nextminoredge, subnetedge)
-    end
-
-    return filter(n -> n != currnode, nextmajoredge.node)[1], nextmajoredge
 end
 
 
@@ -277,6 +309,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, names::AbstractVecto
 
     # go through the constraint networks and validate/invalidate pairs
     for net in constraints
+        if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
 
         # Find valid sibling pairs
@@ -416,7 +449,7 @@ function getsiblingcandidates(leaf::Node)
     return children
 end
 
-getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for e in n.edge])
+getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for e in n.edge], init=Vector{Node}())
 
 # Test for `findsiblingpairs`
 # nn = readTopology("((A,(B,#H1)),((C)#H1,D));")
