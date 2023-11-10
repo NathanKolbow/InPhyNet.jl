@@ -62,28 +62,8 @@ Converts the final SubNet in the net nj merge algo into a
     HybridNetwork object.
 """
 function HybridNetwork(subnet::SubNet)
-    error("Not implemented")
-
     # Remember to re-number edges
-
-    #
-    nn = HybridNetwork(subnet.nodes, subnet.edges)
-    
-    # PhyloNetworks needs the net to be rooted, so try nodes until one is rooted...
-    worked = false
-    for i in 1:length(subnet.nodes)
-        try
-            nn.root = i
-            writeTopology(nn)
-            worked = true
-        catch e
-            if typeof(e) <: PhyloNetworks.RootMismatch
-                continue
-            else
-                throw(e)
-            end
-        end
-    end
-    if !worked @warn "A suitable root was not detected." end
-    return nn
+    net = HybridNetwork(subnet.nodes, subnet.edges)
+    net.root = net.numNodes
+    net = readTopology(writeTopology(net))  # lazy way of re-numbering
 end
