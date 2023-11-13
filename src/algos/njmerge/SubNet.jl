@@ -65,5 +65,4 @@ function HybridNetwork(subnet::SubNet)
     # Remember to re-number edges
     net = HybridNetwork(subnet.nodes, subnet.edges)
     net.root = net.numNodes
-    net = readTopology(writeTopology(net))  # lazy way of re-numbering
 end
