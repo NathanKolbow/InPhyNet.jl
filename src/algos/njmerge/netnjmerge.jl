@@ -7,6 +7,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     names::AbstractVector{<:AbstractString}=String[])
     
     PhyloNetworks.check_distance_matrix(D)
+    check_constraints(constraints)
     n = size(D, 1)
 
     # If names are not provided
@@ -32,9 +33,6 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         i, j = findoptQidx(D, possible_siblings)
 
         # connect subnets i and j
-        # TODO: before implementing this section, sketch out
-        #       what it should look like to connect 2 subnets
-        #       (review nj! code)
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
         updateconstraints!(names[i], names[j], constraints, reticmap, edgei, edgej)
 
@@ -60,6 +58,31 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     placeretics!(mnet, reticmap)
 
     return HybridNetwork(finalnet)
+end
+
+
+"""
+
+Checks validity of input constraints. So far, the only check is to make sure
+that all nodes have exactly 3 edges except for the root.
+"""
+function check_constraints(constraints::Vector{HybridNetwork})
+    for net in constraints
+        for node in net.node
+            nedge = length(node.edge)
+            if node.leaf
+                if length(node.edge) != 1
+                    throw(ArgumentError("Leaf nodes must have exactly 1 attached edge."))
+                end
+            elseif node == net.node[net.root]
+                if length(node.edge) != 2
+                    throw(ArgumentError("Root node must have exactly 2 attached edges."))
+                end
+            elseif length(node.edge) != 3
+                throw(ArgumentError("Internal nodes must have exactly 3 attached edges."))
+            end
+        end
+    end
 end
 
 
@@ -186,7 +209,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             nidx2 = findfirst(net.node .== [edge.node[2]])
 
             if nidx1 !== nothing && nidx2 !== nothing
-                add_edge!(graph, nidx1, nidx2)  # edges are undirected, don't need to add twice
+                add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
             end
         end
 
@@ -230,7 +253,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         for node in nodesinpath
             if node == newtip
                 relevanttoi = false
-                continue
+                #continue
             end
             for edge in node.edge
                 if edge.hybrid && !edge.isMajor
@@ -242,14 +265,13 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # purge all the nodes we've passed through to this point from the network
         for node in nodesinpath
             if node == newtip continue end
+            println("touched node #"*string(node.number))
             deleteNode!(net, node)
         end
         for edge in edgesinpath
-            if !edge.hybrid
-                deleteEdge!(net, edge)
-                for node in edge.node
-                    node.edge = filter(e -> e != edge, node.edge)
-                end
+            deleteEdge!(net, edge)
+            for node in edge.node
+                node.edge = filter(e -> e != edge, node.edge)
             end
         end
 
