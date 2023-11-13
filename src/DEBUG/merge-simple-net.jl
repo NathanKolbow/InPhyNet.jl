@@ -1,9 +1,9 @@
 include("../main.jl")
 # debugging simple network example
-N = readTopology("(((A,B)#H1,((C,#H1),D)),((E,F)#H2,((G,#H2),H)));")
+N = readTopology("(((A,(B)#H1),((C,#H1),D)),((E,(F)#H2),((G,#H2),H)));")
 constraints = [
-    readTopology("((A,B)#H1,((C,#H1),D));");
-    readTopology("((E,F)#H2,((G,#H2),H));")
+    readTopology("((A,(B)#H1),((C,#H1),D));");
+    readTopology("((E,(F)#H2),((G,#H2),H));")
 ]
 D = Matrix{Float64}([   # major tree internode distances
     0.  1.  3.  3.  5.  5.  5.  5.;
@@ -22,6 +22,7 @@ n = size(D, 1)
 names = sort([l.name for l in N.leaf])
 subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
 reticmap = ReticMap(constraints)
+# - nodes touching retic edges in constraints[1]: H1, -2, -5
 
 # infinite loop on second run
 ##########################################################################################################################################################
