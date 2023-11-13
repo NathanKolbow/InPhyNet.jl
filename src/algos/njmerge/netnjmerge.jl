@@ -456,7 +456,7 @@ function findsiblingpairs(net::HybridNetwork)
                 nodesinpath[i+1] = dstnode
             end
 
-            if length(edgepath) == 2 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
+            if length(edgepath) == 2 || length(edgepath) == 1 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
                 push!(pairs, (nodei, nodej))
                 break
             end
