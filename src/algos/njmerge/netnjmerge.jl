@@ -1,4 +1,4 @@
-import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!
+import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!, fuseedgesat!
 using Graphs
 import Graphs: add_edge!
 import Combinatorics: combinations
@@ -343,6 +343,25 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         push!(net.leaf, newtip)
         net.numTaxa += 1
         newtip.name = nodei.name
+
+        fuseredundantedges!(net)
+    end
+end
+
+
+"""
+
+Helper function to remove redundant edges (e.g. A --> (internal node) --> (internal node))
+that arise from one case of the function `mergeconstraintnodes!`.
+
+Redundant nodes in this case will always have only two edges while *not* being the root.
+"""
+function fuseredundantedges!(net::HybridNetwork)
+    for (i, node) in enumerate(net.node)
+        if node.leaf || node == net.node[net.root] continue end
+        if length(node.edge) == 2
+            fuseedgesat!(i, net)
+        end
     end
 end
 
