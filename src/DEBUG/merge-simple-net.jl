@@ -54,6 +54,53 @@ names = view(names, idxfilter)
 
 n -= 1
 ##########################################################################################################################################################
-mnet = mergesubnets!(subnets[1], subnets[2])[1]
-mnet = HybridNetwork(mnet)
-placeretics!(mnet, reticmap)
+
+mnet, _, _ = mergesubnets!(subnets[1], subnets[2])
+mnet = HybridNetwork(mnet.nodes, mnet.edges)
+mnet.root = mnet.numNodes
+mnet.node[mnet.root].name = "root"
+
+namepairs = []
+counter = 0
+for retic in keys(reticmap.map)
+    from = reticmap.map[retic][1]
+    to = reticmap.map[retic][2]
+    
+    if from.node[1].name == ""
+        from.node[1].name = "___internal"*string(counter+=1)
+    end
+    if from.node[2].name == ""
+        from.node[2].name = "___internal"*string(counter+=1)
+    end
+    
+    if to.node[1].name == ""
+        to.node[1].name = "___internal"*string(counter+=1)
+    end
+    if to.node[2].name == ""
+        to.node[2].name = "___internal"*string(counter+=1)
+    end
+
+    push!(namepairs, ((from.node[1].name, from.node[2].name), (to.node[1].name, to.node[2].name)))
+end
+savednewick = writeTopology(mnet)
+mnet = readTopology(savednewick)
+
+for ((fromname1, fromname2), (toname1, toname2)) in namepairs
+    fromedge = nothing
+    toedge = nothing
+
+    for edge in mnet.edge
+        nodenames = [n.name for n in edge.node]
+        if fromname1 in nodenames && fromname2 in nodenames
+            fromedge = edge
+        elseif toname1 in nodenames && toname2 in nodenames
+            toedge = edge
+        end
+    end
+    if fromedge == nothing error("from edge nothing")
+    elseif toedge == nothing error("to edge nothing") end
+
+    addhybridedge!(mnet, fromedge, toedge, true)
+    mnet.root = findfirst([n.name == "root" for n in mnet.node])
+end
+plot(mnet, shownodelabel=true)
