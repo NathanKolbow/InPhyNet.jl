@@ -1,6 +1,7 @@
 import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!
 using Graphs
 import Graphs: add_edge!
+import Combinatorics: combinations
 
 # Source for the network version of NJ merge
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
@@ -53,11 +54,12 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     end
 
     mnet, _, _ = mergesubnets!(subnets[1], subnets[2])
+    mnet = HybridNetwork(mnet.nodes, mnet.edges)
+    mnet.root = mnet.numNodes
+    mnet.node[mnet.root].name = "root"
 
-    # Place the reticulations we've been keeping track of
-    placeretics!(mnet, reticmap)
-
-    return HybridNetwork(finalnet)
+    mnet = placeretics!(mnet, reticmap)
+    return mnet
 end
 
 
@@ -91,11 +93,51 @@ end
 Updates `net` to include the reticulations that we've kept track of along the way
 in our algo but haven't placed yet.
 """
-function placeretics!(net::SubNet, reticmap::ReticMap)
-    @warn "Placing retics; directionality of reticulations not retained at the moment."
+function placeretics!(net::HybridNetwork, reticmap::ReticMap)
+    namepairs = []
+    counter = 0
     for retic in keys(reticmap.map)
-        addhybridedge!(net, reticmap.map[retic][1], reticmap.map[retic][2], false)
+        from = reticmap.map[retic][1]
+        to = reticmap.map[retic][2]
+        
+        if from.node[1].name == ""
+            from.node[1].name = "___internal"*string(counter+=1)
+        end
+        if from.node[2].name == ""
+            from.node[2].name = "___internal"*string(counter+=1)
+        end
+        
+        if to.node[1].name == ""
+            to.node[1].name = "___internal"*string(counter+=1)
+        end
+        if to.node[2].name == ""
+            to.node[2].name = "___internal"*string(counter+=1)
+        end
+
+        push!(namepairs, ((from.node[1].name, from.node[2].name), (to.node[1].name, to.node[2].name)))
     end
+    mnet = readTopology(writeTopology(net))
+
+    for ((fromname1, fromname2), (toname1, toname2)) in namepairs
+        fromedge = nothing
+        toedge = nothing
+
+        for edge in mnet.edge
+            nodenames = [n.name for n in edge.node]
+            if fromname1 in nodenames && fromname2 in nodenames
+                fromedge = edge
+            elseif toname1 in nodenames && toname2 in nodenames
+                toedge = edge
+            end
+        end
+        if fromedge == nothing error("from edge nothing")
+        elseif toedge == nothing error("to edge nothing") end
+
+        addhybridedge!(mnet, fromedge, toedge, true)
+        mnet.root = findfirst([n.name == "root" for n in mnet.node])
+    end
+
+    return mnet
 end
 
 
@@ -186,22 +228,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
-        # reticulations: make our way up and log retics in `reticmap`
-
-        # just traverse away from nodes i and j, marking nodes as visited as we go,
-        # and when we come to a node w/ 2 parents taking the `isMajor` edge, otherwise
-        # the node will have 1 parent and we can just continue onwards
-
-        # sketch out how to traverse, keep track of where we've been, which edges we've passed
-        # AND we need to have a way of getting only the retic edges we've passed on the
-        # FINAL ROUTE that we choose
-        #
-        # start w/ simple example, then move on
-
-        # current idea: using Graph.jl, build the constraint network as a SimpleGraph and then
-        #               use A* to find shortest path
-        # g = SimpleGraph(numNodes)
-        # add_edge!(g, fromidx, toidx) for each edge E
+        # Find shortest path from `nodei` to `nodej`
         graph = SimpleGraph(net.numNodes)
         for edge in net.edge
             if edge.hybrid && !edge.isMajor continue end
@@ -257,7 +284,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
             for edge in node.edge
                 if edge.hybrid && !edge.isMajor
-                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej))
+                    fromorto = ifelse(getchild(edge) == node, "to", "from")
+                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                 end
             end
         end
@@ -373,29 +401,106 @@ Returns a vector of tuples of nodes corresponding to siblings.
 """
 function findsiblingpairs(net::HybridNetwork)
     pairs = Vector{Tuple{Node, Node}}()
-    already_examined = Array{Node}(undef, net.numTaxa)
-    l = 0
-    
-    for leaf in net.leaf
-        # Get the list of potential siblings
-        children = getsiblingcandidates(leaf)
+    # Old, deprecated method
+    # if false
+    #     already_examined = Array{Node}(undef, net.numTaxa)
+    #     l = 0
+        
+    #     for leaf in net.leaf
+    #         # Get the list of potential siblings
+    #         children = getsiblingcandidates(leaf)
 
-        # Now hybrids have already been processed out, so we can treat
-        # any `child` in `children` as an actual potential sibling to `leaf`
-        for child in children
-            # If this child is (1.) also a leaf, (2.) not the node we're currently looking at
-            # and (3.) hasn't already been looked at (to avoid duplicates), then add it
-            if child.leaf && child != leaf && !(child in already_examined[1:l])
-                push!(pairs, (leaf, child))
+    #         # Now hybrids have already been processed out, so we can treat
+    #         # any `child` in `children` as an actual potential sibling to `leaf`
+    #         for child in children
+    #             # If this child is (1.) also a leaf, (2.) not the node we're currently looking at
+    #             # and (3.) hasn't already been looked at (to avoid duplicates), then add it
+    #             if child.leaf && child != leaf && !(child in already_examined[1:l])
+    #                 push!(pairs, (leaf, child))
+    #             end
+    #         end
+
+    #         # update the list of already examined leaves
+    #         already_examined[l+1] = leaf
+    #         l += 1
+    #     end
+    # end
+
+    # new, simpler method just using Graphs.jl
+    hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
+    if length(hybedges) == 0 hybedges = [nothing] end
+    for (nodei, nodej) in combinations(net.leaf, 2)
+        for hybedge in hybedges
+            graph = SimpleGraph(net.numNodes)
+            for edge in net.edge
+                if edge.hybrid && !edge.isMajor && edge != hybedge continue end
+                nidx1 = findfirst(net.node .== [edge.node[1]])
+                nidx2 = findfirst(net.node .== [edge.node[2]])
+        
+                if nidx1 !== nothing && nidx2 !== nothing
+                    add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
+                end
+            end
+            removeredundantedges!(graph)
+
+            idxnodei = findfirst(net.node .== [nodei])
+            idxnodej = findfirst(net.node .== [nodej])
+            edgepath = a_star(graph, idxnodei, idxnodej)
+
+            nodesinpath = Array{Node}(undef, length(edgepath)+1)
+            for (i, gedge) in enumerate(edgepath)
+                srcnode = net.node[gedge.src]
+                dstnode = net.node[gedge.dst]
+
+                if i == 1 nodesinpath[1] = net.node[gedge.src] end
+                nodesinpath[i+1] = dstnode
+            end
+
+            if length(edgepath) == 2 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
+                push!(pairs, (nodei, nodej))
+                break
             end
         end
-
-        # update the list of already examined leaves
-        already_examined[l+1] = leaf
-        l += 1
     end
 
     return pairs
+end
+
+
+"""
+
+Helper function that removes redundant edges in the graph that exist
+when some hybrids are pruned from the graph.
+"""
+function removeredundantedges!(graph::SimpleGraph)
+    redundantidxs = []
+    for (i, adjvec) in enumerate(graph.fadjlist)
+        if length(adjvec) == 2
+            push!(redundantidxs, i)
+        end
+    end
+
+    if length(redundantidxs) == 0 return end
+    for idx in redundantidxs
+        from = graph.fadjlist[idx][1]
+        to = graph.fadjlist[idx][2]
+        
+        vecreplace!(graph.fadjlist[from], idx, to)
+        vecreplace!(graph.fadjlist[to], idx, from)
+    end
+end
+
+
+"""
+
+Helper function for manipulating graph adjacency lists.
+"""
+function vecreplace!(vec::Vector{T}, pattern::T, with::T) where T
+    for (i, val) in enumerate(vec)
+        if val == pattern
+            vec[i] = with
+        end
+    end
 end
 
 

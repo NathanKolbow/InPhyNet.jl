@@ -48,10 +48,10 @@ mindist == 0 || error("")
 
 
 # Simple example w/ a network
-N = readTopology("(((A,B)#H1,((C,#H1),D)),((E,F)#H2,((G,#H2),H)));")
+N = readTopology("(((A,(B)#H1),((C,#H1),D)),((E,(F)#H2),((G,#H2),H)));")
 constraints = [
-    readTopology("((A,B)#H1,((C,#H1),D));");
-    readTopology("((E,F)#H2,((G,#H2),H));")
+    readTopology("((A,(B)#H1),((C,#H1),D));");
+    readTopology("((E,(F)#H2),((G,#H2),H));")
 ]
 D = Matrix{Float64}([   # major tree internode distances
     0.  1.  3.  3.  5.  5.  5.  5.;
