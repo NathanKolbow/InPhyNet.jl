@@ -228,17 +228,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
-        # Find shortest path from `nodei` to `nodej`
-        graph = SimpleGraph(net.numNodes)
-        for edge in net.edge
-            if edge.hybrid && !edge.isMajor continue end
-            nidx1 = findfirst(net.node .== [edge.node[1]])
-            nidx2 = findfirst(net.node .== [edge.node[2]])
-
-            if nidx1 !== nothing && nidx2 !== nothing
-                add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
-            end
-        end
+        # find shortest path from `nodei` to `nodej`
+        graph = Graph(net, includeminoredges=true)
 
         idxnodei = findfirst(net.node .== [nodei])
         idxnodej = findfirst(net.node .== [nodej])
@@ -265,12 +256,57 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             for edge in node.edge
                 if edge.hybrid && !edge.isMajor
                     isnewtip = false
+                    break
                 end
             end
             if isnewtip
                 newtip = node
                 break
             end
+        end
+        ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
+        if newtip === nothing && sum(ishybedge) == 1
+            # we follow a hybrid at some point; the new tip is the shared parent of the node at the beginning
+            # and the node at the end of the hybrid edge
+            hybedge = edgesinpath[ishybedge][1]
+
+            if getparent(hybedge.node[1]) == getparent(hybedge.node[2])
+                newtip = getparent(hybedge.node[1])
+                for edge in newtip.edge
+                    if hybedge.node[1] in edge.node
+                        push!(edgesinpath, edge)
+                    elseif hybedge.node[2] in edge.node
+                        push!(edgesinpath, edge)
+                    end
+                end
+            else
+                if length(getparents(hybedge.node[1])) == 2
+                    newtip = hybedge.node[2]
+                    for e in hybedge.node[1].edge
+                        if !(e in edgesinpath)
+                            push!(edgesinpath, e)
+                        end
+                    end
+                else
+                    newtip = hybedge.node[1]
+                    for e in hybedge.node[2].edge
+                        if !(e in edgesinpath)
+                            push!(edgesinpath, e)
+                        end
+                    end
+                end
+            end
+
+            # direction shouldn't lead to any rooting issues b/c we're at the leaves,
+            # but direction not being retained here is bad
+            # TODO: retain directionality here
+            # WARNING
+            logretic!(reticmap, hybedge, subnetedgei, "from")
+            logretic!(reticmap, hybedge, subnetedgej, "to")
+        elseif newtip === nothing && any(ishybedge)
+            error("Unknown case. Multiple hybrid edges in the path.")
+        elseif newtip === nothing
+            error("Unknown case. No newtip found but we also don't take a hybrid path.")
         end
 
         # find the retics that we need to keep track of
@@ -431,16 +467,7 @@ function findsiblingpairs(net::HybridNetwork)
     if length(hybedges) == 0 hybedges = [nothing] end
     for (nodei, nodej) in combinations(net.leaf, 2)
         for hybedge in hybedges
-            graph = SimpleGraph(net.numNodes)
-            for edge in net.edge
-                if edge.hybrid && !edge.isMajor && edge != hybedge continue end
-                nidx1 = findfirst(net.node .== [edge.node[1]])
-                nidx2 = findfirst(net.node .== [edge.node[2]])
-        
-                if nidx1 !== nothing && nidx2 !== nothing
-                    add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
-                end
-            end
+            graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
             removeredundantedges!(graph)
 
             idxnodei = findfirst(net.node .== [nodei])
@@ -488,6 +515,7 @@ function removeredundantedges!(graph::SimpleGraph)
         vecreplace!(graph.fadjlist[from], idx, to)
         vecreplace!(graph.fadjlist[to], idx, from)
     end
+    return redundantidxs
 end
 
 
@@ -577,6 +605,20 @@ function getsiblingcandidates(leaf::Node)
 end
 
 getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for e in n.edge], init=Vector{Node}())
+
+function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing)
+    graph = SimpleGraph(net.numNodes)
+    for edge in net.edge
+        if !includeminoredges && edge.hybrid && !edge.isMajor && edge != alwaysinclude continue end
+        nidx1 = findfirst(net.node .== [edge.node[1]])
+        nidx2 = findfirst(net.node .== [edge.node[2]])
+
+        if nidx1 !== nothing && nidx2 !== nothing
+            add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
+        end
+    end
+    return graph
+end
 
 # Test for `findsiblingpairs`
 # nn = readTopology("((A,(B,#H1)),((C)#H1,D));")
