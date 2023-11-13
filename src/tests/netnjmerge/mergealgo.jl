@@ -26,7 +26,6 @@ D = Matrix{Float64}([
 ])
 for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
 mergednet = netnj!(D, constraints, names=[l.name for l in T.leaf])
-mergednet = HybridNetwork(mergednet.nodes, mergednet.edges)
 mergednet.root = mergednet.numNodes
 mergednet = readTopology(writeTopology(mergednet))
 
