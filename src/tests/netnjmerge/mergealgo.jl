@@ -92,4 +92,4 @@ constraints = [     # N was built from the constraints as (c[1],(c[2],(c[3],c[4]
 ]
 D, names = majorinternodedistance(N)
 mnet = netnj!(D, constraints, names=names)
-hardwiredClusterDistance(mnet, N, false) == 0 || error("test failed")
+hardwiredClusterDistance(mnet, N, false) == 0 || error("test")
