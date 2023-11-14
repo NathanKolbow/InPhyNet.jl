@@ -76,4 +76,20 @@ constraints = [     # N was built from the constraints as (c[1],(c[2],(c[3],c[4]
 ]
 D, names = majorinternodedistance(N)
 mnet = netnj!(D, constraints, names=names)
-hardwiredClusterDistance(mnet, N, false)
+hardwiredClusterDistance(mnet, N, false) == 0 || error("test failed")
+
+# Same example as above but duplicated into (A,A)
+N = readTopology("(((((t1,(t2)#H1),((t3,#H1),t4)),((t5,(t6)#H2),((t7,#H2),t8))),((t9,(t10,((t11,#H3),(t12,(((t13,t14))#H3,(t15,(t16,t17))))))),(((t18,t19),(t20,(t21,(t22,(t23,t24))))),((((t25,t26),(t27,t28)),(((t29,t30),(t31,t32)),#H4)),((((t33,t34),(t35,t36)))#H4,((t37,t38),(t39,t40))))))),((((t41,(t42)#H5),((t43,#H5),t44)),((t45,(t46)#H6),((t47,#H6),t48))),((t49,(t50,((t51,#H7),(t52,(((t53,t54))#H7,(t55,(t56,t57))))))),(((t58,t59),(t60,(t61,(t62,(t63,t64))))),((((t65,t66),(t67,t68)),(((t69,t70),(t71,t72)),#H8)),((((t73,t74),(t75,t76)))#H8,((t77,t78),(t79,t80))))))));")
+constraints = [     # N was built from the constraints as (c[1],(c[2],(c[3],c[4])))
+    readTopology("(((t1,(t2)#H1),((t3,#H1),t4)),((t5,(t6)#H2),((t7,#H2),t8)));"),
+    readTopology("(t9,(t10,((t11,#H3),(t12,(((t13,t14))#H3,(t15,(t16,t17)))))));"),
+    readTopology("((t18,t19),(t20,(t21,(t22,(t23,t24)))));"),
+    readTopology("((((t25,t26),(t27,t28)),(((t29,t30),(t31,t32)),#H4)),((((t33,t34),(t35,t36)))#H4,((t37,t38),(t39,t40))));"),
+    readTopology("(((t41,(t42)#H1),((t43,#H1),t44)),((t45,(t46)#H2),((t47,#H2),t48)));"),
+    readTopology("(t49,(t50,((t51,#H3),(t52,(((t53,t54))#H3,(t55,(t56,t57)))))));"),
+    readTopology("((t58,t59),(t60,(t61,(t62,(t63,t64)))));"),
+    readTopology("((((t65,t66),(t67,t68)),(((t69,t70),(t71,t72)),#H4)),((((t73,t74),(t75,t76)))#H4,((t77,t78),(t79,t80))));")
+]
+D, names = majorinternodedistance(N)
+mnet = netnj!(D, constraints, names=names)
+hardwiredClusterDistance(mnet, N, false) == 0 || error("test failed")
