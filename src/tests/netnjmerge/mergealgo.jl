@@ -74,19 +74,6 @@ constraints = [     # N was built from the constraints as (c[1],(c[2],(c[3],c[4]
     readTopology("((t18,t19),(t20,(t21,(t22,(t23,t24)))));"),
     readTopology("((((t25,t26),(t27,t28)),(((t29,t30),(t31,t32)),#H4)),((((t33,t34),(t35,t36)))#H4,((t37,t38),(t39,t40))));")
 ]
-D = zeros(N.numTaxa, N.numTaxa)     # true major tree internode distance
-Ngraph = Graph(N, includeminoredges=false)
-removeredundantedges!(Ngraph)
-nodelistidx = [findfirst([n.name == "t"*string(i) for n in N.node]) for i=1:N.numTaxa]
-for i=1:(N.numTaxa-1)
-    nodenumi = nodelistidx[i]
-    nodei = N.node[nodenumi]
-    for j=(i+1):N.numTaxa
-        nodenumj = nodelistidx[j]
-        nodej = N.node[nodenumj]
-
-        D[i, j] = D[j, i] = length(a_star(Ngraph, nodenumi, nodenumj)) - 1
-    end
-end
-mnet = netnj!(D, constraints, names=[N.node[i].name for i in nodelistidx])
+D, names = majorinternodedistance(N)
+mnet = netnj!(D, constraints, names=names)
 hardwiredClusterDistance(mnet, N, false)
