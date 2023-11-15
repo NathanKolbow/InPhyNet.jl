@@ -54,15 +54,3 @@ function connectnodes!(child::Node, parent::Node)
     edge.isChild1 = true
     return edge
 end
-
-
-"""
-
-Converts the final SubNet in the net nj merge algo into a
-    HybridNetwork object.
-"""
-function HybridNetwork(subnet::SubNet)
-    # Remember to re-number edges
-    net = HybridNetwork(subnet.nodes, subnet.edges)
-    net.root = net.numNodes
-end
