@@ -2,18 +2,23 @@
 
 include("imports.jl")
 include("constants.jl")
-include("structs/InterimParentalTree.jl")
-include("structs/Lineage.jl")
-include("structs/LineageNode.jl")
+
 include("algos/njmerge/SubNet.jl")
 include("algos/njmerge/ReticMap.jl")
 include("algos/njmerge/netnjmerge.jl")
 include("algos/njmerge/internodedistance.jl")
-include("algos/ptrees/proba.jl")
-include("algos/ptrees/coalescent.jl")
-include("algos/ptrees/arbitrary-proba.jl")
-include("algos/ptrees/ParentalTrees.jl")
-include("algos/ptrees/ManipHelpers.jl")
+include("algos/njmerge/mscquartetsinterface.jl")
+include("algos/njmerge/subsetdecomp.jl")
+
+# include("structs/InterimParentalTree.jl")
+# include("structs/Lineage.jl")
+# include("structs/LineageNode.jl")
+
+# include("algos/ptrees/proba.jl")
+# include("algos/ptrees/coalescent.jl")
+# include("algos/ptrees/arbitrary-proba.jl")
+# include("algos/ptrees/ParentalTrees.jl")
+# include("algos/ptrees/ManipHelpers.jl")
 
 export Lineage,
     LineageNode,
