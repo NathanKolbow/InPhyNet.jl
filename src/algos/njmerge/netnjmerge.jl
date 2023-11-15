@@ -1,8 +1,3 @@
-import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!, fuseedgesat!
-using Graphs
-import Graphs: add_edge!
-import Combinatorics: combinations
-
 # Source for the network version of NJ merge
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     names::AbstractVector{<:AbstractString}=String[])
@@ -96,6 +91,7 @@ in our algo but haven't placed yet.
 function placeretics!(net::HybridNetwork, reticmap::ReticMap)
     namepairs = []
     counter = 0
+    println(reticmap)
     for retic in keys(reticmap.map)
         from = reticmap.map[retic][1]
         to = reticmap.map[retic][2]
@@ -185,7 +181,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
-    if parentsi == parentsj && net.numNodes == 3
+    if (parentsi == parentsj && length(net.leaf) == 3) || (parentsi == nodej && parentsj == nodei)
         for edge in net.edge deleteEdge!(net, edge) end
         deleteNode!(net, nodej)
         net.node = [nodei]
@@ -306,6 +302,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         elseif newtip === nothing && any(ishybedge)
             error("Unknown case. Multiple hybrid edges in the path.")
         elseif newtip === nothing
+            println(net)
+            println(nodei)
+            println(nodej)
             error("Unknown case. No newtip found but we also don't take a hybrid path.")
         end
 
