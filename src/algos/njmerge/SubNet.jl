@@ -1,5 +1,3 @@
-using PhyloNetworks
-
 struct SubNet
     # Fields
     nodes::Vector{Node}
