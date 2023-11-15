@@ -1,11 +1,17 @@
 
 function majorinternodedistance(N::HybridNetwork)
-    D = zeros(N.numTaxa, N.numTaxa)
-    names = [l.name for l in N.leaf]
+    return internodedistance(majorTree(N))
+end
 
-    Ngraph = Graph(N, includeminoredges=false)
+function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}}=nothing)
+    D = zeros(N.numTaxa, N.numTaxa)
+    if namelist == nothing
+        namelist = [l.name for l in N.leaf]
+    end
+
+    Ngraph = Graph(N)
     removeredundantedges!(Ngraph)
-    nodelistidx = [findfirst([n.name == name for n in N.node]) for name in names]
+    nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
 
     for i=1:(N.numTaxa-1)
         nodenumi = nodelistidx[i]
@@ -17,5 +23,13 @@ function majorinternodedistance(N::HybridNetwork)
             D[i, j] = D[j, i] = length(a_star(Ngraph, nodenumi, nodenumj)) - 1
         end
     end
-    return D, names
+    return D, namelist
+end
+
+function calculateAGID(Ns::AbstractVector{HybridNetwork})
+    D, namelist = internodedistance(Ns[1])
+    for j=2:length(Ns)
+        D .+= internodedistance(Ns[j], namelist=namelist)[1]
+    end
+    return D ./ length(Ns), namelist
 end
