@@ -29,6 +29,13 @@ function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector)
     check_quartets(R)
     reqsubsets = requiredhybridsubsets(namelist, R)
     treetaxa = [name for name in namelist if !inany(name, reqsubsets)]
+
+    # TODO: add some more heuristics here.
+    #   1. if some of the `reqsubsets` has only 4 taxa, expand it with the `treetaxa` set,
+    #      possibly using `D`
+    #   2. if some `reqsubsets` have only 4 taxa and `treetaxa` is empty, combine
+    #      some `reqsubsets` entry together
+
     return (reqsubsets, treetaxa)
 end
 
