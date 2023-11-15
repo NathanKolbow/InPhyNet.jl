@@ -1,41 +1,57 @@
 # Source for the network version of NJ merge
+function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork})
+    return netnj!(
+        deepcopy(D),
+        deepcopy(constraints)
+    )
+end
+
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
-    names::AbstractVector{<:AbstractString}=String[])
+    namelist::AbstractVector{<:AbstractString}=String[])
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints)
     n = size(D, 1)
 
-    # If names are not provided
-    if isempty(names)
-        names = string.(1:n)
+    # If namelist is not provided
+    if isempty(namelist)
+        namelist = string.(1:n)
     end
-    if length(names) != n
-        m = length(names)
+    if length(namelist) != n
+        m = length(namelist)
         throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
-    elseif length(unique(names)) != length(names)
+    elseif length(unique(namelist)) != length(namelist)
         throw(ArgumentError("Names must be unique."))
     end
 
     # Empty network
-    subnets = Vector{SubNet}([SubNet(i, names[i]) for i in 1:n])
+    subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
 
     while n > 2
-        println(n)
-        possible_siblings = findvalidpairs(constraints, names)
+        possible_siblings = findvalidpairs(constraints, namelist)
         
         # Find optimal (i, j) idx pair for matrix Q
         i, j = findoptQidx(D, possible_siblings)
 
         # connect subnets i and j
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
-        updateconstraints!(names[i], names[j], constraints, reticmap, edgei, edgej)
+        updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
 
         # collapse taxa i into j
         for l in 1:n
             if l != i && l != j
                 D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
+                
+                # try this triangle equality updating rule instead
+                # a = D[l, i]
+                # b = D[l, j]
+                # c = D[i, j]
+                # # J = acos(-(a^2-b^2-c^2)/(2*b*c))
+                # # d = sqrt(b^2 + (c/2)^2 - b*c*cos(J))
+                # d = sqrt(b^2/2 + a^2/2)
+
+                # D[l, i] = D[i, l] = d
             end
         end
 
@@ -43,12 +59,14 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
         idxfilter = [1:(j-1); (j+1):n]
         D = view(D, idxfilter, idxfilter)   # remove j from D
         subnets = view(subnets, idxfilter)
-        names = view(names, idxfilter)
+        namelist = view(namelist, idxfilter)
 
         n -= 1
     end
 
-    mnet, _, _ = mergesubnets!(subnets[1], subnets[2])
+    mnet, edgei, edgej = mergesubnets!(subnets[1], subnets[2])
+    updateconstraints!(namelist[1], namelist[2], constraints, reticmap, edgei, edgej)
+
     mnet = HybridNetwork(mnet.nodes, mnet.edges)
     mnet.root = mnet.numNodes
     mnet.node[mnet.root].name = "root"
@@ -91,7 +109,8 @@ in our algo but haven't placed yet.
 function placeretics!(net::HybridNetwork, reticmap::ReticMap)
     namepairs = []
     counter = 0
-    println(reticmap)
+    
+    check_reticmap(reticmap)
     for retic in keys(reticmap.map)
         from = reticmap.map[retic][1]
         to = reticmap.map[retic][2]
@@ -110,7 +129,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
             to.node[2].name = "___internal"*string(counter+=1)
         end
 
-        push!(namepairs, ((from.node[1].name, from.node[2].name), (to.node[1].name, to.node[2].name)))
+        push!(namepairs, ([from.node[1].name, from.node[2].name], [to.node[1].name, to.node[2].name]))
     end
     mnet = readTopology(writeTopology(net))
 
@@ -126,14 +145,27 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
                 toedge = edge
             end
         end
-        if fromedge == nothing error("from edge nothing")
-        elseif toedge == nothing error("to edge nothing") end
+        if fromedge === nothing error("from edge nothing")
+        elseif toedge === nothing error("to edge nothing") end
 
-        addhybridedge!(mnet, fromedge, toedge, true)
+        hybnode, _ = addhybridedge!(mnet, fromedge, toedge, true)
+        # namepairsreplace!(namepairs, hybnode.name, toname1, toname2)
         mnet.root = findfirst([n.name == "root" for n in mnet.node])
     end
 
     return mnet
+end
+
+
+function namepairsreplace!(namepairs::AbstractVector, newname::String, oldname1::String, oldname2::String)
+    for (_, topair) in namepairs
+        if topair[1] == oldname1 || topair[1] == oldname2
+            topair[1] = newname
+        end
+        if topair[2] == oldname1 || topair[2] == oldname2
+            topair[2] = newname
+        end
+    end
 end
 
 
@@ -147,7 +179,6 @@ By convention we keep `nodenamei` and replace node names with `nodenamej`
 """
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
     constraints::Vector{HybridNetwork}, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
-
     for net in constraints
         idxi = -1
         idxj = -1
@@ -176,12 +207,16 @@ end
 function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
     parentsi = getnodes(nodei)
     parentsj = getnodes(nodej)
-    length(parentsi) == 1 || error("Found >1 nodes above a leaf?")    # sanity check, remove when finalized
-    length(parentsj) == 1 || error("Found >1 nodes above a leaf?")    # sanity check; remove when finalized
+
+    length(parentsi) == 1 || length(net.node) == 1 || error("Found $(length(parentsi)) nodes above a leaf?")    # sanity check, remove when finalized
+    length(parentsj) == 1 || length(net.node) == 1 || error("Found $(length(parentsj)) nodes above a leaf?")    # sanity check; remove when finalized
+    
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
-    if (parentsi == parentsj && length(net.leaf) == 3) || (parentsi == nodej && parentsj == nodei)
+    if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
+        println("a: ($(nodei.name), $(nodej.name))")
+
         for edge in net.edge deleteEdge!(net, edge) end
         deleteNode!(net, nodej)
         net.node = [nodei]
@@ -192,6 +227,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         net.root = 1
         nodei.edge = []
     elseif parentsi == parentsj
+        println("b: ($(nodei.name), $(nodej.name))")
+
         # no reticulations: just merge the nodes
         parent = parentsi
         
@@ -224,6 +261,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
+        println("c: ($(nodei.name), $(nodej.name))")
+
         # find shortest path from `nodei` to `nodej`
         graph = Graph(net, includeminoredges=true)
 
@@ -261,6 +300,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
         end
         ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
+        hybedge = nothing
+        hybedgelogged = false
         if newtip === nothing && sum(ishybedge) == 1
             # we follow a hybrid at some point; the new tip is the shared parent of the node at the beginning
             # and the node at the end of the hybrid edge
@@ -295,8 +336,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
             # direction shouldn't lead to any rooting issues b/c we're at the leaves,
             # but direction not being retained here is bad
-            # TODO: retain directionality here
-            # WARNING
+            hybedgelogged = true
             logretic!(reticmap, hybedge, subnetedgei, "from")
             logretic!(reticmap, hybedge, subnetedgej, "to")
         elseif newtip === nothing && any(ishybedge)
@@ -315,12 +355,24 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         for node in nodesinpath
             if node == newtip
                 relevanttoi = false
-                #continue
             end
             for edge in node.edge
                 if edge.hybrid && !edge.isMajor
                     fromorto = ifelse(getchild(edge) == node, "to", "from")
-                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                    if subnetedgei == subnetedgej
+                        @error("equiv edges!!")
+                    end
+
+                    # works for constraints[2]
+                    # if sum(ishybedge) == 1 && edge != hybedge
+                    #     logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                    # end
+
+
+                    # works for constraints[1]
+                    if edge != hybedge || !hybedgelogged
+                        logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                    end
                 end
             end
         end
@@ -328,7 +380,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # purge all the nodes we've passed through to this point from the network
         for node in nodesinpath
             if node == newtip continue end
-            println("touched node #"*string(node.number))
             deleteNode!(net, node)
         end
         for edge in edgesinpath
@@ -394,15 +445,15 @@ end
 
 
 """
-    findvalidpairs(constraints::Vector{HybridNetwork}, names::AbstractVector{<:AbstractString})
+    findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
 
 Finds all valid sibling pairs among the constraint networks.
 """
-function findvalidpairs(constraints::Vector{HybridNetwork}, names::AbstractVector{<:AbstractString})
-    n = length(names)
+function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
+    n = length(namelist)
 
     # Shorthand functions for name lookups (we'll be doing a lot of these if there are many constraints)
-    namedict = Dict{AbstractString, Int64}([name => i for (i, name) in enumerate(names)])
+    namedict = Dict{AbstractString, Int64}([name => i for (i, name) in enumerate(namelist)])
     idx(name::AbstractString) = namedict[name]
 
     # initialize matrix
@@ -442,7 +493,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, names::AbstractVecto
 
     return validpairs
 end
-findvalidpairs(net::HybridNetwork, names::AbstractVector{<:AbstractString}) = findvalidpairs([net], names)
+findvalidpairs(net::HybridNetwork, namelist::AbstractVector{<:AbstractString}) = findvalidpairs([net], namelist)
 
 
 """
@@ -455,30 +506,6 @@ Returns a vector of tuples of nodes corresponding to siblings.
 """
 function findsiblingpairs(net::HybridNetwork)
     pairs = Vector{Tuple{Node, Node}}()
-    # Old, deprecated method
-    # if false
-    #     already_examined = Array{Node}(undef, net.numTaxa)
-    #     l = 0
-        
-    #     for leaf in net.leaf
-    #         # Get the list of potential siblings
-    #         children = getsiblingcandidates(leaf)
-
-    #         # Now hybrids have already been processed out, so we can treat
-    #         # any `child` in `children` as an actual potential sibling to `leaf`
-    #         for child in children
-    #             # If this child is (1.) also a leaf, (2.) not the node we're currently looking at
-    #             # and (3.) hasn't already been looked at (to avoid duplicates), then add it
-    #             if child.leaf && child != leaf && !(child in already_examined[1:l])
-    #                 push!(pairs, (leaf, child))
-    #             end
-    #         end
-
-    #         # update the list of already examined leaves
-    #         already_examined[l+1] = leaf
-    #         l += 1
-    #     end
-    # end
 
     # new, simpler method just using Graphs.jl
     hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
@@ -486,7 +513,7 @@ function findsiblingpairs(net::HybridNetwork)
     for (nodei, nodej) in combinations(net.leaf, 2)
         for hybedge in hybedges
             graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
-            removeredundantedges!(graph)
+            removeredundantedges!(graph, keeproot=net)
 
             idxnodei = findfirst(net.node .== [nodei])
             idxnodej = findfirst(net.node .== [nodej])
@@ -509,31 +536,6 @@ function findsiblingpairs(net::HybridNetwork)
     end
 
     return pairs
-end
-
-
-"""
-
-Helper function that removes redundant edges in the graph that exist
-when some hybrids are pruned from the graph.
-"""
-function removeredundantedges!(graph::SimpleGraph)
-    redundantidxs = []
-    for (i, adjvec) in enumerate(graph.fadjlist)
-        if length(adjvec) == 2
-            push!(redundantidxs, i)
-        end
-    end
-
-    if length(redundantidxs) == 0 return end
-    for idx in redundantidxs
-        from = graph.fadjlist[idx][1]
-        to = graph.fadjlist[idx][2]
-        
-        vecreplace!(graph.fadjlist[from], idx, to)
-        vecreplace!(graph.fadjlist[to], idx, from)
-    end
-    return redundantidxs
 end
 
 
@@ -636,6 +638,77 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         end
     end
     return graph
+end
+
+
+"""
+
+Helper function that removes redundant edges in the graph that exist
+when some hybrids are pruned from the graph.
+"""
+function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,HybridNetwork}=nothing)
+    rootidx = -1
+    if keeproot !== nothing
+        rootidx = keeproot.root
+    end
+
+    redundantidxs = []
+    for (i, adjvec) in enumerate(graph.fadjlist)
+        if length(adjvec) == 2 && i != rootidx
+            push!(redundantidxs, i)
+        end
+    end
+
+    if length(redundantidxs) == 0 return end
+    for idx in redundantidxs
+        from = graph.fadjlist[idx][1]
+        to = graph.fadjlist[idx][2]
+        
+        vecreplace!(graph.fadjlist[from], idx, to)
+        vecreplace!(graph.fadjlist[to], idx, from)
+        graph.fadjlist[idx] = []
+    end
+    return redundantidxs
+end
+
+
+"""
+
+Helper function that adds edges coming out from the root in `net` back into `graph`.
+"""
+function addrootedge!(graph::SimpleGraph, net::HybridNetwork)
+    totaladded = 0
+    rootnode = net.node[net.root]
+    rootedges = rootnode.edge
+
+    dst1 = ifelse(rootedges[1].node[1] == rootnode, rootedges[1].node[2], rootedges[1].node[1])
+    dst2 = ifelse(rootedges[2].node[1] == rootnode, rootedges[2].node[2], rootedges[2].node[1])
+    idxdst1 = findfirst(net.node .== [dst1])
+    idxdst2 = findfirst(net.node .== [dst2])
+    idxsrc = findfirst(net.node .== [rootnode])
+
+    remove_edge!(graph, idxdst1, idxdst2)
+    remove_edge!(graph, idxsrc, idxdst1)
+    remove_edge!(graph, idxsrc, idxdst2)
+
+    for edge in net.node[net.root].edge
+        nidx1 = findfirst(net.node .== [edge.node[1]])
+        nidx2 = findfirst(net.node .== [edge.node[2]])
+        
+        if !(nidx2 in graph.fadjlist[nidx1])
+            totaladded += 1
+            add_edge!(graph, nidx1, nidx2)
+        end
+    end
+    return totaladded
+end
+
+function remove_edge!(graph::SimpleGraph, idx1::Int64, idx2::Int64)
+    remidxs = findall(graph.fadjlist[idx1] .== idx2)
+    deleteat!(graph.fadjlist[idx1], remidxs)
+    
+    remidxs = findall(graph.fadjlist[idx2] .== idx1)
+    deleteat!(graph.fadjlist[idx2], remidxs)
 end
 
 # Test for `findsiblingpairs`
