@@ -1,5 +1,3 @@
-import Base: getindex, setindex!
-
 const EdgeOrNA = Union{Edge, Nothing}
 struct ReticMap
     map::Dict{Edge, Vector{EdgeOrNA}}
@@ -20,7 +18,25 @@ end
 function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
     if fromorto == "from"
         r.map[constraintedge][1] = subnetedge
+        if r.map[constraintedge][2] == subnetedge
+            throw(ErrorException("equiv edges"))
+        end
     else
         r.map[constraintedge][2] = subnetedge
+        if r.map[constraintedge][1] == subnetedge
+            @error("equiv edges")
+            throw(ErrorException("equiv edges"))
+        end
+    end
+end
+
+function check_reticmap(r::ReticMap)
+    for (i, key) in enumerate(keys(r.map))
+        if length(r.map[key]) != 2
+            error("ReticMap key $i has $(length(r.map[key])) attached edges.")
+        elseif sum(r.map[key] .!== nothing) != 2
+            println(r.map[key])
+            error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
+        end
     end
 end
