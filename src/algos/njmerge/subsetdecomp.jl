@@ -5,9 +5,15 @@ include("mscquartetsinterface.jl")
 
 Helper function that feeds into `decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector)`
 """
-function decomposeFromQuartets(filepath::AbstractString; cutoff::Float64=0.01)
+function decomposeFromQuartets(filepath::AbstractString; cutoff::Float64=0.01, kwargs...)
+    if !isfile(filepath)
+        throw(ArgumentError("File $filepath not found."))
+    elseif cutoff < 0 || cutoff > 1
+        throw(ArgumentError("Cutoff must be on range [0, 1]."))
+    end
+
     namelist, R = parsequartets(filepath, cutoff=cutoff)
-    return decomposeFromQuartets(namelist, R)
+    return decomposeFromQuartets(namelist, R; kwargs...)
 end
 
 """
@@ -25,18 +31,58 @@ estimated species tree and significant quartets from MSCquartets.
 Returns a tuple. The first entry is list of subsets that are required in order to indentify
 all relevant reticulations. The second entry is the remaining taxa that aren't in the first entry.
 """
-function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector)
+function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector; maxexpansionlen::Int64=10, minexpansionlen::Int64=5)
     check_quartets(R)
     hybsubsets = requiredhybridsubsets(namelist, R)
-    treetaxa = [name for name in namelist if !inany(name, reqsubsets)]
+    treetaxa = [name for name in namelist if !inany(name, hybsubsets)]
 
-    # TODO: add some more heuristics here.
-    #   1. if some of the `reqsubsets` has only 4 taxa, expand it with the `treetaxa` set,
-    #      possibly using `D`
-    #   2. if some `reqsubsets` have only 4 taxa and `treetaxa` is empty, combine
-    #      some `reqsubsets` entry together
+    expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=maxexpansionlen)
+    if length(treetaxa) < 5
+        # if we have very few taxa outside of the hybsubsets it's not worth keeping them separate
+        expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=Int64(1e12))
+    end
+
+    hyblengths = [length(sub) for sub in hybsubsets]
+    while minimum(hyblengths) < minexpansionlen
+        minidx1 = argmin(hyblengths)
+        minidx2 = argmin(hyblengths[filter(i -> i != minidx1, 1:length(hybsubsets))])
+        hybsubsets[minidx1] = [hybsubsets[minidx1]; hybsubsets[minidx2]]
+        hyblengths = [length(sub) for sub in hybsubsets]
+    end
 
     return (hybsubsets, treetaxa)
+end
+
+
+function expandhybsubsets!(hybsubs, others, quartets; maxlen::Int64=6)
+    hybsubs = view(hybsubs, filter(i -> length(hybsubs[1]) < maxlen, 1:length(hybsubs)))
+    
+    movedfromothers = []
+    for (i, othertaxa) in enumerate(others)
+        if length(hybsubs) == 0 break end
+
+        counts = []
+        for hybsubset in hybsubs
+            total = 0
+            for q in quartets
+                if any([hybtax in q for hybtax in hybsubset])
+                    total += 1
+                end
+            end
+            push!(counts, total)
+        end
+        maxcount = argmax(counts)
+        push!(hybsubs[maxcount], othertaxa)
+        push!(movedfromothers, othertaxa)
+
+        if length(hybsubs[maxcount]) >= maxlen
+            hybsubs = view(hybsubs, filter(i -> i != maxcount, 1:length(hybsubs)))
+        end
+    end
+    for del in movedfromothers
+        deleteat!(others, findfirst(others .== del))
+    end
+    return hybsubs, others
 end
 
 
