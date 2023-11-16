@@ -27,7 +27,7 @@ all relevant reticulations. The second entry is the remaining taxa that aren't i
 """
 function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector)
     check_quartets(R)
-    reqsubsets = requiredhybridsubsets(namelist, R)
+    hybsubsets = requiredhybridsubsets(namelist, R)
     treetaxa = [name for name in namelist if !inany(name, reqsubsets)]
 
     # TODO: add some more heuristics here.
@@ -36,7 +36,7 @@ function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector)
     #   2. if some `reqsubsets` have only 4 taxa and `treetaxa` is empty, combine
     #      some `reqsubsets` entry together
 
-    return (reqsubsets, treetaxa)
+    return (hybsubsets, treetaxa)
 end
 
 

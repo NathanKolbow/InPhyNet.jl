@@ -17,7 +17,11 @@ writeMultiTopology(sims, simfile)
 
 # 2. read the sims and run MSCquartets
 ptablefile = tempname()
-ptablefile = "src/tests/netnjmerge/1000currsim.hbptab"
+# ptablefile = "src/tests/netnjmerge/1000currsim.hbptab"
+
+mscquartetsexec = "C:\\Users\\Nathan\\repos\\network-merging\\src\\algos\\njmerge\\mscquartets.R"
+run(`$mscquartetsexec $simfile $ptablefile`)
+
 # in mscquartets.R:
 #   write.HBpTable($simfile, $ptablefile)
 # RCall is horrendously slow...
