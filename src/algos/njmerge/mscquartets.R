@@ -12,6 +12,7 @@ getHBpTable <- function(treefile, cutoff=0.05) {
 write.HBpTable <- function(treefile, outfile, cutoff=0.05) {
     write.csv(getHBpTable(treefile, cutoff=cutoff), outfile)
 }
+args = commandArgs(trailingOnly=T)
 write.HBpTable(args[1], args[2])
 
 
