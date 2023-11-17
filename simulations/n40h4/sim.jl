@@ -38,7 +38,32 @@ end
 
 estgtfile = "./estgt.treefile"
 hbptabfile = "./estgt.hbptab"
-run(pipeline(`Rscript ../../src/algos/njmerge/mscquartets.R $(estgtfile) $(hbptabfile)`))
+if !isfile(hbptabfile)
+    run(pipeline(`Rscript ../../src/algos/njmerge/mscquartets.R $(estgtfile) $(hbptabfile)`))
+end
 
 # 5. Parse quartets
 hybsubsets, treesubset = decomposeFromQuartets(hbptabfile, cutoff=0.01)
+
+# 6. Estimate constraints with SNaQ
+constraints = Array{HybridNetwork}(undef, length(hybsubsets))
+for (j, hybsub) in enumerate(hybsubsets)
+    hybsub = hybsubsets[1]
+    temptrees = Array{HybridNetwork}(undef, ngt)
+    for (i, gt) in enumerate(estgts)
+        temptrees[i] = deepcopy(gt)
+        delleaves = []
+        for leaf in temptrees[i].leaf
+            if !(leaf.name in hybsub)
+                push!(delleaves, leaf)
+            end
+        end
+        for leaf in delleaves
+            PhyloNetworks.deleteLeaf!(temptrees[i], leaf)
+        end
+        temptrees[i].names = copy(hybsub)
+    end
+    q, t = countquartetsintrees(temptrees, showprogressbar=false)
+    df = readTableCF(writeTableCF(q, t))
+    constraints[j] = snaq!(temptrees[1], df, hmax=Int64(ceiling(length(hybsub) / 3)), filename="./data/net$(j)")
+end
