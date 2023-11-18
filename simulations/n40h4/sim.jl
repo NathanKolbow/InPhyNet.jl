@@ -48,6 +48,8 @@ hybsubsets, treesubset = decomposeFromQuartets(hbptabfile, cutoff=0.01)
 # 6. Estimate constraints with SNaQ
 constraints = Array{HybridNetwork}(undef, length(hybsubsets))
 for (j, hybsub) in enumerate(hybsubsets)
+    if !isfile("./data/net$(j)")
+    println("\n\n\t\tEstimating constraint $(j)\n")
     hybsub = hybsubsets[1]
     temptrees = Array{HybridNetwork}(undef, ngt)
     for (i, gt) in enumerate(estgts)
@@ -65,5 +67,7 @@ for (j, hybsub) in enumerate(hybsubsets)
     end
     q, t = countquartetsintrees(temptrees, showprogressbar=false)
     df = readTableCF(writeTableCF(q, t))
-    constraints[j] = snaq!(temptrees[1], df, hmax=Int64(ceiling(length(hybsub) / 3)), filename="./data/net$(j)")
+    
+    # 8 SNaQ runs b/c that's how many processors we're using right now
+    constraints[j] = snaq!(temptrees[1], df, hmax=Int64(ceil(length(hybsub) / 3)), filename="./data/net$(j)", runs=8)
 end
