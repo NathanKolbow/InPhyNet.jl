@@ -45,39 +45,48 @@ end
 # 5. Parse quartets
 hybsubsets, treesubset = decomposeFromQuartets(hbptabfile, cutoff=0.01)
 
-# 6. Estimate constraints with SNaQ
+# 6. Count quartets in ALL estimated gene trees
+q, t = countquartetsintrees(temptrees, showprogressbar=false)
+
+# 7. Estimate constraints with SNaQ
 constraints = Array{HybridNetwork}(undef, length(hybsubsets))
 for (j, hybsub) in enumerate(hybsubsets)
     if !isfile("./data/net$(j).networks")
-        println("\n\n\t\tEstimating constraint $(j)\n")
-        hybsub = hybsubsets[1]
-        temptrees = Array{HybridNetwork}(undef, ngt)
-        for (i, gt) in enumerate(estgts)
-            temptrees[i] = deepcopy(gt)
+        # get only the quartets that are relevant to `hybsub`
+        temptaxonnumbers = [i for i in 1:length(t) if t[i] in hybsub]
+        tempq = view(q, [i for i in 1:length(q) if all([number in temptaxonnumbers for number in q[i].taxonnumber])])
+        tempdf = readTableCF(writeTableCF(tempq, t))
+        
+        startingtree = nothing
+        for gt in estgts
+            startingtree = deepcopy(gt)
             delleaves = []
-            for leaf in temptrees[i].leaf
+            for leaf in startingtree.leaf
                 if !(leaf.name in hybsub)
                     push!(delleaves, leaf)
                 end
             end
             for leaf in delleaves
-                PhyloNetworks.deleteLeaf!(temptrees[i], leaf)
+                PhyloNetworks.deleteLeaf!(startingtree, leaf)
             end
-            temptrees[i].names = copy(hybsub)
+            startingtree = readTopology(writeTopology(startingtree))
+            if length(startingtree.names) == length(hybsub) && all([name in hybsub for name in startingtree.names])
+                break
+            else
+                startingtree = nothing
+            end
         end
-        q, t = countquartetsintrees(temptrees, showprogressbar=false)
-        df = readTableCF(writeTableCF(q, t))
-        
-        # 8 SNaQ runs b/c that's how many processors we're using right now
-        constraints[j] = snaq!(temptrees[1], df, hmax=Int64(ceil(length(hybsub) / 3)), filename="./data/net$(j)", runs=8)
+        if startingtree === nothing error("pruning failed.") end
+
+        constraints[j] = snaq!(startingtree, tempdf, hmax=Int64(ceil(length(hybsub) / 3)), filename="./data/net$(j)", runs=8)
     else
         cons = readlines("./data/net$(j).networks")
         constraints[j] = readTopology(split(cons[1], ", with -loglik")[1])
     end
 end
 
-# 7. Calculate distance matrix
+# 8. Calculate distance matrix
 D, namelist = calculateAGID(estgts)
 
-# 8. Merge
+# 9. Merge
 mergednet = netnj!(D, constraints; namelist=namelist)
