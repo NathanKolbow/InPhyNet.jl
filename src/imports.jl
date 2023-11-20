@@ -9,4 +9,4 @@ import Graphs: SimpleGraph, a_star, add_edge!
 
 
 # Just for dev, to be removed later
-using Plots, GraphRecipes, PhyloCoalSimulations, PhyloPlots
+using PhyloCoalSimulations
