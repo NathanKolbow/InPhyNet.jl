@@ -10,7 +10,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork};
     namelist::AbstractVector{<:AbstractString}=String[])
     
     PhyloNetworks.check_distance_matrix(D)
-    check_constraints(constraints)
+    check_constraints(constraints, false)
     n = size(D, 1)
 
     # If namelist is not provided
@@ -81,7 +81,7 @@ end
 Checks validity of input constraints. So far, the only check is to make sure
 that all nodes have exactly 3 edges except for the root.
 """
-function check_constraints(constraints::Vector{HybridNetwork})
+function check_constraints(constraints::Vector{HybridNetwork}, requirerooted::Bool)
     for net in constraints
         for node in net.node
             nedge = length(node.edge)
@@ -90,7 +90,7 @@ function check_constraints(constraints::Vector{HybridNetwork})
                     throw(ArgumentError("Leaf nodes must have exactly 1 attached edge."))
                 end
             elseif node == net.node[net.root]
-                if length(node.edge) != 2
+                if length(node.edge) != 2 && requirerooted
                     throw(ArgumentError("Root node must have exactly 2 attached edges."))
                 end
             elseif length(node.edge) != 3
@@ -133,6 +133,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
     end
     mnet = readTopology(writeTopology(net))
 
+    edgepairs = []
     for ((fromname1, fromname2), (toname1, toname2)) in namepairs
         fromedge = nothing
         toedge = nothing
@@ -145,12 +146,27 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
                 toedge = edge
             end
         end
-        if fromedge === nothing error("from edge nothing")
-        elseif toedge === nothing error("to edge nothing") end
+        if fromedge === nothing
+            error("from edge nothing")
+        elseif toedge === nothing
+            error("to edge nothing")
+        end
+        push!(edgepairs, [fromedge, toedge])
+    end
 
-        hybnode, _ = addhybridedge!(mnet, fromedge, toedge, true)
-        # namepairsreplace!(namepairs, hybnode.name, toname1, toname2)
+    i = 1
+    while i <= length(edgepairs)
+        fromedge, toedge = edgepairs[i]
+
+        hybnode, hybedge = addhybridedge!(mnet, fromedge, toedge, true)
         mnet.root = findfirst([n.name == "root" for n in mnet.node])
+
+        for j=(i+1):length(edgepairs)
+            if edgepairs[2] == toedge
+                edgepairs[2] = hybedge
+            end
+        end
+        i += 1
     end
 
     return mnet
@@ -216,6 +232,19 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
     if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
         println("a: ($(nodei.name), $(nodej.name))")
+
+        # TODO: clean this up, when they're nothing we're assigning them randomly right now
+        for edge in net.edge
+            if edge.hybrid && !edge.isMajor
+                if reticmap.map[edge][1] === nothing
+                    logretic!(reticmap, edge, subnetedgei, "from")
+                end
+                if reticmap.map[edge][2] === nothing
+                    logretic!(reticmap, edge, subnetedgej, "to")
+                end
+            end
+        end
+        ################
 
         for edge in net.edge deleteEdge!(net, edge) end
         deleteNode!(net, nodej)
@@ -299,6 +328,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 break
             end
         end
+        
         ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
         hybedge = nothing
         hybedgelogged = false
@@ -358,7 +388,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
             for edge in node.edge
                 if edge.hybrid && !edge.isMajor
-                    fromorto = ifelse(getchild(edge) == node, "to", "from")
+                    fromorto = ifelse(getChild(edge) == node, "to", "from")
                     if subnetedgei == subnetedgej
                         @error("equiv edges!!")
                     end
