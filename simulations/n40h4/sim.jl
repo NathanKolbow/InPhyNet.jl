@@ -3,12 +3,12 @@ cd("C:\\Users\\Nathan\\repos\\network-merging\\simulations\\n40h4")
 include("../../src/main.jl")
 softwarepath = "../../software"
 ngt = 1000
+truenet = readTopology("n40h4.net")
 
 # 1. Simulate gene trees under the true network
 # 2. Simulate DNA sequences from the simulated gene trees
 # 3. Estimate gene trees from these DNA sequences
 if !isfile("./estgt.treefile")
-    truenet = readTopology("n40h4.net")
     simgts = simulatecoalescent(truenet, ngt, 1)
 
     Threads.@threads for i=1:length(simgts)
@@ -42,13 +42,16 @@ if !isfile(hbptabfile)
     run(pipeline(`Rscript ../../src/algos/njmerge/mscquartets.R $(estgtfile) $(hbptabfile)`))
 end
 
-# 5. Parse quartets
+# 5. Calculate distance matrix
+D, namelist = calculateAGID(estgts)
+
+# 6. Parse quartets
 hybsubsets, treesubset = decomposeFromQuartets(hbptabfile, cutoff=0.01)
 
-# 6. Count quartets in ALL estimated gene trees
-q, t = countquartetsintrees(temptrees, showprogressbar=false)
+# 7. Count quartets in ALL estimated gene trees
+q, t = countquartetsintrees(estgts, showprogressbar=false)
 
-# 7. Estimate constraints with SNaQ
+# 8. Estimate constraints with SNaQ
 constraints = Array{HybridNetwork}(undef, length(hybsubsets))
 for (j, hybsub) in enumerate(hybsubsets)
     if !isfile("./data/net$(j).networks")
@@ -85,8 +88,33 @@ for (j, hybsub) in enumerate(hybsubsets)
     end
 end
 
-# 8. Calculate distance matrix
-D, namelist = calculateAGID(estgts)
-
 # 9. Merge
 mergednet = netnj!(D, constraints; namelist=namelist)
+hardwiredClusterDistance(mergednet, truenet, false)
+
+
+for n in mergednet.node
+    if occursin("__internal", n.name)
+        n.name = ""
+    end
+end
+net = constraints[1]
+for e in net.edge
+    e.length = -1.
+    if e.hybrid
+        e.gamma = -1.
+    end
+end
+
+
+# 10. Dig into results
+
+## How accurate are the constraints?
+## - RF dist, num hybrids
+truec1 = 
+
+## The # of hybrids is overestimated; what's our RF distance if we reduce to correct numbers?
+
+using PhyloPlots
+plot(truenet)
+plot(mergednet)
