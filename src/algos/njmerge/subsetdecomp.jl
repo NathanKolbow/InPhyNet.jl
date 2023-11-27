@@ -31,31 +31,82 @@ estimated species tree and significant quartets from MSCquartets.
 Returns a tuple. The first entry is list of subsets that are required in order to indentify
 all relevant reticulations. The second entry is the remaining taxa that aren't in the first entry.
 """
-function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector; maxexpansionlen::Int64=10, minexpansionlen::Int64=5)
+function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector; maxexpansionlen::Int64=9, minexpansionlen::Int64=5,
+    distmat::Union{Matrix{Float64},Nothing}=nothing)
     check_quartets(R)
     hybsubsets = requiredhybridsubsets(namelist, R)
     treetaxa = [name for name in namelist if !inany(name, hybsubsets)]
 
-    expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=maxexpansionlen)
-    if length(treetaxa) < 5
-        # if we have very few taxa outside of the hybsubsets it's not worth keeping them separate
-        expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=Int64(1e12))
+    if distmat !== nothing
+        expandhybsubsetsD!(hybsubsets, treetaxa, R, distmat, namelist, maxlen=maxexpansionlen, minlen=minexpansionlen)
+    else
+        expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=maxexpansionlen, minlen=minexpansionlen)
     end
 
-    hyblengths = [length(sub) for sub in hybsubsets]
-    while minimum(hyblengths) < minexpansionlen
-        minidx1 = argmin(hyblengths)
-        minidx2 = argmin(hyblengths[filter(i -> i != minidx1, 1:length(hybsubsets))])
-        hybsubsets[minidx1] = [hybsubsets[minidx1]; hybsubsets[minidx2]]
-        hyblengths = [length(sub) for sub in hybsubsets]
-    end
+    # hyblengths = [length(sub) for sub in hybsubsets]
+    # while minimum(hyblengths) < minexpansionlen
+    #     minidx1 = argmin(hyblengths)
+    #     minidx2 = argmin(hyblengths[filter(i -> i != minidx1, 1:length(hybsubsets))])
+    #     hybsubsets[minidx1] = [hybsubsets[minidx1]; hybsubsets[minidx2]]
+    #     deleteat!(hybsubsets, minidx2)
+    #     hyblengths = [length(sub) for sub in hybsubsets]
+    # end
 
     return (hybsubsets, treetaxa)
 end
 
 
-function expandhybsubsets!(hybsubs, others, quartets; maxlen::Int64=6)
-    hybsubs = view(hybsubs, filter(i -> length(hybsubs[1]) < maxlen, 1:length(hybsubs)))
+"""
+    expandhybsubsetsD!(hybsubs, other, quartets, D; maxlen::Int64=9)
+
+Helper function; `hybsubs` is the subset of taxa selected for hybridization identification,
+`other` is all other taxa which are currently unplaced. This function expands the taxa in
+`other` appropriately into various subsets in `hybsubs` based on distance matrix `D`.
+"""
+function expandhybsubsetsD!(hybsubs, others, quartets, D, Dnames; maxlen::Int64=9, minlen::Int64=6)
+    removeMaxLenSets(hsubs) = view(hsubs, filter(i -> length(hsubs[i]) < maxlen, 1:length(hsubs)))
+    hybsubs = removeMaxLenSets(hybsubs)
+    nametoidx(name) = findfirst(name .== Dnames)
+
+    # If at the end of the `while` loop `others` is non-zero and less than `minlen`,
+    # we need to undo our last few placements so that everything has length
+    # greater than minlen, so we log our placements
+    placements = []
+
+    while length(hybsubs) != 0 && length(others) != 0
+        otheridx = nametoidx(others[1])
+        hybidxs = [[nametoidx(name) for name in subset] for subset in hybsubs]
+        avgdists = [mean(D[idxs, otheridx]) for idxs in hybidxs]
+        moveto = argmin(avgdists)
+        push!(hybsubs[moveto], others[1])
+        deleteat!(others, 1)
+        push!(placements, (hybsubs[moveto], length(hybsubs[moveto])))
+
+        hybsubs = removeMaxLenSets(hybsubs)
+    end
+
+    if length(others) != 0 && length(others) < minlen
+        i = length(placements)
+        while length(others) < minlen
+            if i == 0
+                @warn "Could not find suitable subset decomposition for the `maxexpansionlen` and `minexpansionlen` arguments provided."
+                return
+            end
+
+            record = placements[i]
+            if length(record[1]) > minlen
+                push!(others, record[1][record[2]])
+                deleteat!(record[1], record[2])
+            end
+
+            i -= 1
+        end
+    end
+end
+
+
+function expandhybsubsets!(hybsubs, others, quartets; maxlen::Int64=9)
+    hybsubs = view(hybsubs, filter(i -> length(hybsubs[i]) < maxlen, 1:length(hybsubs)))
     
     movedfromothers = []
     for (i, othertaxa) in enumerate(others)
@@ -82,7 +133,6 @@ function expandhybsubsets!(hybsubs, others, quartets; maxlen::Int64=6)
     for del in movedfromothers
         deleteat!(others, findfirst(others .== del))
     end
-    return hybsubs, others
 end
 
 
@@ -153,7 +203,7 @@ function minimumuniquesubset(namelist::ListOfNames, R::QuartetVector; cutoff::Fl
         R = view(R, .!inquartet[addidx])
         push!(subset, addname)
     end
-
+    
     return subset
 end
 
