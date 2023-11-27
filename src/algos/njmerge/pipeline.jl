@@ -1,56 +1,41 @@
-"""
-## Steps:
 
-1. Calculate distance matrix $D \in \mathbb{R}_{\ge0}^{n\text{x}n}$
-2. Compute quick, rough species tree $T$
-3. Find possible reticulation relationships $R$
-4. Decompose taxa into $k$ disjoint subsets $\mathbf{S}=\{S_1,\dots,S_k\}$ informed by $T$ and $R$
-5. Estimate $m$ networks $\mathbf{N}=\{N_1,\dots,N_m\}$ on each $S_i$
-6. Merge the set $\mathbf{N}_\text{C}$ into supernetwork $N_\text{super}$ from constraints $\mathbf{N}_\text{C}$
-7. If desired, use $N_\text{super}$ in place of $T$ and repeat
+function pipelineSNaQMSCquartets(estgts::AbstractVector{HybridNetwork}, mscqfile::AbstractString; cutoff::Float64=0.01)
+    error("Still need tree estimation method...")
 
-## Inputs:
-- msa: multiple sequence alignment
-- <letter>fxn: each is 1-to-1 associated with the above steps (Dfxn 1st step, Tfxn 2nd step, ...)
-- repeat: associated w/ 7th step above; `repeat>0` means that we repeat this pipeline `repeat` times, else we don't repeat
-"""
-function runpipeline(msa, Dfxn::Fxn, Tfxn::Fxn, Rfxn::Fxn, Sfxn::Fxn, Nfxn::Fxn, mergefxn::Fxn, repeat::Integer)
-    Dout = Tout = Rout = Sout = Nout = mergeout = nothing
-    
-    if repeat <= 0 repeat = 1 end
+    hybsubsets, treesubset = decomposeFromQuartets(mscqfile, cutoff=cutoff)
+    q, t = countquartetsintrees(estgts, showprogressbar=false)
 
-    D = Dfxn(msa=msa)
-    roughtree = Tfxn(msa=msa, D=D)
-    retics = Rfxn(msa=msa, D=D, T=roughtree)
-    subsets = Sfxn(msa=msa, D=D, T=roughtree, R=retics)
-    constraints = Nfxn(msa=msa, D=D, T=roughtree, R=retics, S=subsets)
-    supernet = mergefxn(msa=msa, D=D, T=roughtree, R=retics, S=subsets, N=constraints)
+    # estimate constraints
+    constraints = Array{HybridNetwork}(undef, length(hybsubsets)+length(treesubset))
+    for (j, hybsub) in enumerate(hybsubsets)
+        temptaxonnumbers = [i for i in 1:length(t) if t[i] in hybsub]
+        tempq = view(q, [i for i in 1:length(q) if all([number in temptaxonnumbers for number in q[i].taxonnumber])])
+        tempdf = readTableCF(writeTableCF(tempq, t))
+        
+        startingtree = nothing
+        for gt in estgts
+            startingtree = deepcopy(gt)
+            delleaves = []
+            for leaf in startingtree.leaf
+                if !(leaf.name in hybsub)
+                    push!(delleaves, leaf)
+                end
+            end
+            for leaf in delleaves
+                PhyloNetworks.deleteLeaf!(startingtree, leaf)
+            end
+            startingtree = readTopology(writeTopology(startingtree))
+            if length(startingtree.names) == length(hybsub) && all([name in hybsub for name in startingtree.names])
+                break
+            else
+                startingtree = nothing
+            end
+        end
+        if startingtree === nothing error("pruning failed.") end
 
-    for i in 2:repeat
-        subsets = Sfxn(msa=msa, D=D, T=supernet, R=retics)
-        constraints = Nfxn(msa=msa, D=D, T=supernet, R=retics, S=subsets)
-        supernet = mergefxn(msa=msa, D=D, T=supernet, R=retics, S=subsets, N=constraints)
+        constraints[j] = snaq!(startingtree, tempdf, hmax=Int64(ceil(length(hybsub) / 3)), filename="./data/net$(j)", runs=8)
     end
+
+    D, namelist = calculateAGID(estgts)
+    return netnj!(D, constraints; namelist=namelist)
 end
-
-const NA = nothing
-
-# Dfxn
-AGID(; msa=NA) = error("not implemented")
-
-# Tfxn
-nj(; msa=NA, D=NA) = PhyloNetworks.nj!(fixup(D), names(msa))
-fixup(D) = error("not implemented")
-
-# Rfxn
-MSCQuartets(; msa=NA, D=NA, T=NA) = error("not implemented")
-
-# Sfxn
-decompose(; msa=NA, D=NA, T=NA, R=NA) = decomposeFromQuartets(T, R)
-
-# Nfxn
-runsnaq(; msa=NA, D=NA, T=NA, R=NA, S=NA) = PhyloNetworks.snaq!(nj(D=D), getqcfinfo(msa, S))
-getqcfinfo(msa, S) = error("not implemented")   # build gene trees w/ msa on subsets S
-
-# mergefxn
-supernet(; msa=NA, D=NA, T=NA, R=NA, S=NA, N=NA) = error("not implemented")
