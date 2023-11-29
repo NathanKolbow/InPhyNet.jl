@@ -22,3 +22,7 @@ makedocs(
     ],
     checkdocs=:exports
 )
+
+deploydocs(
+    repo="github.com/NathanKolbow/network-merging.git"
+)
