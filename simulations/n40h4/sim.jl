@@ -1,6 +1,9 @@
 # make sure to activate project before running
+using Pkg
+Pkg.activate(Base.source_dir())
+using NetMerge
+
 cd("C:\\Users\\Nathan\\repos\\network-merging\\simulations\\n40h4")
-include("../../src/main.jl")
 softwarepath = "../../software"
 ngt = 1000
 truenet = readTopology("n40h4.net")
