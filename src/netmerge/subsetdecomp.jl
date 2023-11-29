@@ -1,5 +1,4 @@
 # Source for decomposing full species set into subsets
-include("mscquartetsinterface.jl")
 
 """
 
