@@ -7,22 +7,23 @@ makedocs(
     sitename="NetMerge.jl",
     authors="Nathan Kolbow",
     format=Documenter.HTML(;
-        prettyurls=true,
         assets=String[indigo]
     ),
     clean=true,
-    repo="NetMerge",
     draft=true,
+    doctest=false,
     pages=[
         "Introduction" => "index.md",
         "Guide" => [
             "Using estimated gene trees" => "guide.md"
         ],
         "Documentation" => "documentation.md"
-    ],
-    checkdocs=:exports
+    ]
 )
 
-deploydocs(
-    repo="github.com/NathanKolbow/network-merging.git"
-)
+# Waiting for the repo to be public to do deployment
+#
+# deploydocs(
+#     devbranch="gh-pages",
+#     repo="github.com/NathanKolbow/network-merging.git"
+# )
