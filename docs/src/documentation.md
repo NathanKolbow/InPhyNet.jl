@@ -1,8 +1,4 @@
-# Function Documentation
-
-```@index
-Pages   = ["documentation.md"]
-```
+# Most relevant functions
 
 ```@docs
 netnj
@@ -10,4 +6,14 @@ netnj
 
 ```@docs
 calculateAGID
+```
+
+# All documented functions
+
+```@index
+Pages   = ["documentation.md"]
+```
+
+```@autodocs
+Modules = [NetMerge]
 ```
