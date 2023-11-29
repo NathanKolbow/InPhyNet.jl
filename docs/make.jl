@@ -15,7 +15,7 @@ makedocs(
     pages=[
         "Introduction" => "index.md",
         "Guide" => [
-            "Using estimated gene trees" => "guide.md"
+            "Using estimated gene trees and SNaQ" => "guide/estgts.md"
         ],
         "Documentation" => "documentation.md"
     ]
