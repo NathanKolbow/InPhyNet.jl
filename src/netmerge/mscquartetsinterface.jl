@@ -1,8 +1,15 @@
-# Reads output from MSCquartets in R and parses it so that it can be used efficiently with our julia code.
+"""
+
+Reads output from MSCquartets in R and parses it so that it can be used efficiently with our julia code.
+"""
 function parsequartets(filepath::AbstractString; cutoff::Float64=0.01)
     return parsequartets(CSV.read(filepath, DataFrame), cutoff=cutoff)
 end
 
+"""
+
+Reads output from MSCquartets in R and parses it so that it can be used efficiently with our julia code.
+"""
 function parsequartets(ptable::DataFrame; cutoff::Float64=0.01)
     check_ptable(ptable)
 
@@ -27,6 +34,11 @@ function parsequartets(ptable::DataFrame; cutoff::Float64=0.01)
     return namelist, qlist
 end
 
+"""
+
+Checks the input table to make sure that it is Holmes-Bonferroni adjusted.
+TODO: if it isn't, manually adjust it instead of throwing an error.
+"""
 check_ptable(ptable::DataFrame) = 
     ("HBp_T3" in names(ptable)) || throw(ArgumentError("MSCquartets p-table must be Holmes-Bonferroni adjusted."))
 
