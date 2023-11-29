@@ -6,7 +6,3 @@ import Base: ==, *, -, names, getindex, setindex!
 import Combinatorics: partitions, powerset
 import Test: @warn
 import Graphs: SimpleGraph, a_star, add_edge!
-
-
-# Just for dev, to be removed later
-using PhyloCoalSimulations
