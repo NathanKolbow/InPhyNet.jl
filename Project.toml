@@ -1,11 +1,19 @@
+name = "NetMerge"
+uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
+authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
+version = "0.1.0"
+
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
+DocThemeIndigo = "8bac0ac5-51bf-41f9-885e-2bf1ac2bec5f"
 GraphIO = "aa1b3936-2fda-51b9-ab35-c553d3a640a2"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 PhyNEST = "115de871-c282-4823-a74f-b03678acf966"
 PhyloCoalSimulations = "53f7b83a-06b5-4910-9a21-1896bf762ade"
 PhyloNetworks = "33ad39ac-ed31-50eb-9b15-43d0656eaa72"
 PhyloPlots = "c0d5b6db-e3fc-52bc-a87d-1d050989ed3b"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
