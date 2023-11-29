@@ -140,7 +140,7 @@ end
 
 Helper function that finds whether `name` is listed in any subset in `subsets`
 """
-function inany(name::AbstractString, subsets::QuartetVector)
+@inline function inany(name::AbstractString, subsets::QuartetVector)
     for subset in subsets
         if name in subset return true end
     end
