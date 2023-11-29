@@ -3,6 +3,11 @@
 #
 # Source code for main components of the network merging algorithm.
 
+function netnj(estgts::Vector{HybridNetwork})
+    error("not implemented yet")
+end
+
+
 """
     netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork})
 
@@ -10,7 +15,7 @@ Creates a super-network based on the constraint trees/networks in `constraints` 
 distance matrix `D`.
 
 # Arguments
-- D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with 
+- D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
 """
 function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
     return netnj!(deepcopy(D), deepcopy(constraints), namelist)
