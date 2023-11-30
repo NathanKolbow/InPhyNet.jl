@@ -3,6 +3,13 @@ Pkg.activate(Base.source_dir())
 
 using NetMerge
 
+# RELEVANT FUNCTIONS:
+# 1. runGroundTruthPipeline(truenet, constraints)
+#    - runs pipeline w/ major tree AGID & constraints taken from truenet
+# 2. runEstGtPipeline(estgts)
+#    - runs pipeline w/ SNaQ, AGID calc'd from estimated gts, MSCquartets & subset decomposition algos
+
+
 
 function runGroundTruthPipeline(truenet::HybridNetwork, constraints::Vector{HybridNetwork})
     # 1. Calculate distance matrix
