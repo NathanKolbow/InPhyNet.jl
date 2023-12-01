@@ -14,6 +14,10 @@ makedocs(
     doctest=false,
     pages=[
         "Introduction" => "index.md",
+        "Computational Assessments" => [
+            "Runtime evaluations" => "intro/runtimes.md",
+            "Accuracy evaluations" => "intro/accuracies.md"
+        ],
         "Guide" => [
             "Using estimated gene trees and SNaQ" => "guide/estgts.md"
         ],
