@@ -6,11 +6,11 @@ Say we have estimated gene trees in the file `my-est-gts.treefile`. First, we us
 library(MSCquartets)
 library(ape)
 
-gtrees=read.tree(file="my-est-gts.treefile")
-taxanames=taxonNames(gtrees)
-QT=quartetTable(gtrees,taxanames)
-RQT=quartetTableResolved(QT)
-pTable=quartetTreeTestInd(RQT,"T3")
+gtrees <- read.tree(file="my-est-gts.treefile")
+taxanames <- taxonNames(gtrees)
+QT <- quartetTable(gtrees,taxanames)
+RQT <- quartetTableResolved(QT)
+pTable <- quartetTreeTestInd(RQT,"T3")
 HolmBonferroni(pTable,"T3",cutoff)
 write.csv(getHBpTable(treefile, cutoff=cutoff), "quartets.dat")
 ```
