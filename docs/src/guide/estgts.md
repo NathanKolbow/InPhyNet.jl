@@ -25,7 +25,7 @@ using PhyloNetworks, NetMerge
 mergednet = netnj("my-est-gts.treefile", "quartets.dat")
 ```
 
-Alternatively, if you want to make manual adjustments to the default pipeline, you can break the pipeline down as below.
+Alternatively, if you want to make manual adjustments to the default pipeline, you can break the pipeline down as below. In this example, the starting tree for SNaQ is estimated using neighbor joining, but you may instead choose to estimate an initial species tree with something like [IQTree](http://www.iqtree.org/), [RAxML-NG](https://github.com/amkozlov/raxml-ng), [BEAST](https://beast.community/), or whatever software you prefer.
 
 ```julia
 estgts = readMultiTopology("my-est-gts.treefile")
