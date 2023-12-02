@@ -30,16 +30,16 @@ estimated species tree and significant quartets from MSCquartets.
 Returns a tuple. The first entry is list of subsets that are required in order to indentify
 all relevant reticulations. The second entry is the remaining taxa that aren't in the first entry.
 """
-function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector; maxexpansionlen::Int64=9, minexpansionlen::Int64=5,
+function decomposeFromQuartets(namelist::ListOfNames, R::QuartetVector; maxexpansionlen::Int64=9,
     distmat::Union{Matrix{Float64},Nothing}=nothing)
     check_quartets(R)
     hybsubsets = requiredhybridsubsets(namelist, R)
     treetaxa = [name for name in namelist if !inany(name, hybsubsets)]
 
     if distmat !== nothing
-        expandhybsubsetsD!(hybsubsets, treetaxa, R, distmat, namelist, maxlen=maxexpansionlen, minlen=minexpansionlen)
+        expandhybsubsetsD!(hybsubsets, treetaxa, R, distmat, namelist, maxlen=maxexpansionlen)
     else
-        expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=maxexpansionlen, minlen=minexpansionlen)
+        expandhybsubsets!(hybsubsets, treetaxa, R, maxlen=maxexpansionlen)
     end
 
     # hyblengths = [length(sub) for sub in hybsubsets]
