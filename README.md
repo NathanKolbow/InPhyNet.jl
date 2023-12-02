@@ -5,17 +5,19 @@
 - [Algorithm overview](#algorithm-overview)
 - [Step details](#step-details)
 - [High level pseudo-code](#high-level-pseudo-code)
-- [Roadmap as of 06 Nov 2023](#roadmap-as-of-06-nov-2023)
+- [Repo Organization](#repo-organization)
+- [Roadmap from 15 Nov 2023](#roadmap-from-15-nov-2023)
+- [Roadmap from 06 Nov 2023](#roadmap-from-06-nov-2023)
 
 &nbsp;
 
 # Current Roadmap
 
-Last updated 15 November 2023
-- [ ] Improve subset decomposition algorithm
-- [ ] Implement MSCquartets methods in pure `julia`
-- [ ] Test merging algorithm on larger, more complicated networks with true gene trees/constraints
-- [ ] Test merging algorithm in simulation with estimated gene trees & constraint networks
+Update 2 Dec 2023
+- Robustness testing:
+  - [ ] various number of NNI moves
+  - [ ] adding noise to distance matrix
+- [ ] Implement new subset decomposition methods discussed w/ Kevin and Claudia: estimate species tree w/ neighbor joining and do clade decomposition
 
 # Algorithm overview
 
@@ -149,7 +151,27 @@ for retic in keys(H)
     draw edge from H[retic][1] to H[retic][2]
 ```
 
-# Roadmap as of 06 Nov 2023
+# Repo Organization
+
+- `docs/` files for building the `julia` package documentation
+- `simulations/`
+  - `n<N>h<H>/` contains relevant simulation files for network with `<N>` taxa and `<H>` reticulations
+  - `ground-truth/` simulation experiments where ground truth distances and constraints are used
+  - `truth-with-NNI/` simulation experiments where ground truth distances and constraints are used, but constraint networks are permuted with random NNI moves
+  - `all-estimated/` simulation experiments where everything is estimated from the ground up, starting with simulated DNA sequences
+- `software/` software used for simulation experiments
+- `src/` NetMerge package source code
+
+# Roadmap from 15 Nov 2023
+
+Notes: top 3 bullet points dropped as they are not a main focus.
+
+- [ ] ~~Improve subset decomposition algorithm~~
+- [ ] ~~Implement MSCquartets methods in pure `julia`~~
+- [ ] ~~Test merging algorithm on larger, more complicated networks with true gene trees/constraints~~
+- [X] Test merging algorithm in simulation with estimated gene trees & constraint networks
+
+# Roadmap from 06 Nov 2023
 
 - [ ] ~~Review MSCQuartets and fill in its pseudo-code implementation~~
 - [X] Sketch high-level pseudo-code for our network version of NJMerge above
