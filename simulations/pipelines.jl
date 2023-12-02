@@ -1,22 +1,40 @@
-using Pkg
-Pkg.activate(Base.source_dir())
+function fixdir()
+    currdir = split(pwd(), "/")
+    while currdir[length(currdir)] != "network-merging"
+        if length(currdir) <= 2
+            cd(Base.source_dir())
+        end
+        cd("..")
+        currdir = split(pwd(), "/")
+    end
+end
+fixdir()
 
-using NetMerge
+using Pkg; Pkg.activate(".")
+cd("simulations")
 
-# RELEVANT FUNCTIONS:
-# 1. runGroundTruthPipeline(truenet, constraints)
-#    - runs pipeline w/ major tree AGID & constraints taken from truenet
-# 2. runEstGtPipeline(estgts)
-#    - runs pipeline w/ SNaQ, AGID calc'd from estimated gts, MSCquartets & subset decomposition algos
+using NetMerge, PhyloNetworks, StatsBase, Plots
+include("plot-fxns.jl")
+
+# DATA LOADING FUNCTIONS
+function loadTrueData(netid::String, whichConstraints::Int64=1)
+    if netid == "n40h4"
+        truenet = readTopology("n40h4/n40h4.net")
+        constraints = readMultiTopology("n40h4/true-constraints$(whichConstraints).net")
+        return truenet, constraints
+    else
+        error("$(netid) not recognized")
+    end
+end
 
 
-
+# PIPELINE FUNCTIONS
 function runGroundTruthPipeline(truenet::HybridNetwork, constraints::Vector{HybridNetwork})
     # 1. Calculate distance matrix
     D, namelist = majorinternodedistance(truenet)
 
     # 2. Merge
-    return netnj(D, constraints, namelist=namelist)
+    return netnj(D, constraints, namelist)
 end
 
 
