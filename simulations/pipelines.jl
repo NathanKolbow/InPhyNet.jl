@@ -13,7 +13,7 @@ fixdir()
 using Pkg; Pkg.activate(".")
 cd("simulations")
 
-using NetMerge, PhyloNetworks, StatsBase, Plots
+using NetMerge, PhyloNetworks, StatsBase, Plots, StatsPlots
 include("plot-fxns.jl")
 
 # DATA LOADING FUNCTIONS
