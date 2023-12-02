@@ -245,7 +245,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsj = parentsj[1]
 
     if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
-        println("a: ($(nodei.name), $(nodej.name))")
+        # println("a: ($(nodei.name), $(nodej.name))")
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
         for edge in net.edge
@@ -270,7 +270,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         net.root = 1
         nodei.edge = []
     elseif parentsi == parentsj
-        println("b: ($(nodei.name), $(nodej.name))")
+        # println("b: ($(nodei.name), $(nodej.name))")
 
         # no reticulations: just merge the nodes
         parent = parentsi
@@ -304,7 +304,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
-        println("c: ($(nodei.name), $(nodej.name))")
+        # println("c: ($(nodei.name), $(nodej.name))")
 
         # find shortest path from `nodei` to `nodej`
         graph = Graph(net, includeminoredges=true)
