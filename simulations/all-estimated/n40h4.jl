@@ -1,7 +1,7 @@
 # make sure to activate project before running
 using Pkg
 Pkg.activate(Base.source_dir())
-using NetMerge
+using NetMerge, PhyloNetworks
 
 cd("C:\\Users\\Nathan\\repos\\network-merging\\simulations\\n40h4")
 softwarepath = "../../software"
@@ -55,12 +55,13 @@ hybsubsets, treesubset = decomposeFromQuartets(hbptabfile, cutoff=0.01)
 q, t = countquartetsintrees(estgts, showprogressbar=false)
 
 # 8. Estimate constraints with SNaQ
+constraints = readMultiTopology("constraints.net")
 constraints = Array{HybridNetwork}(undef, length(hybsubsets))
 for (j, hybsub) in enumerate(hybsubsets)
     if !isfile("./data/net$(j).networks")
         # get only the quartets that are relevant to `hybsub`
         temptaxonnumbers = [i for i in 1:length(t) if t[i] in hybsub]
-        tempq = view(q, [i for i in 1:length(q) if all([number in temptaxonnumbers for number in q[i].taxonnumber])])
+        tempq = q[[i for i in 1:length(q) if all([number in temptaxonnumbers for number in q[i].taxonnumber])]]
         tempdf = readTableCF(writeTableCF(tempq, t))
         
         startingtree = nothing
@@ -92,7 +93,7 @@ for (j, hybsub) in enumerate(hybsubsets)
 end
 
 # 9. Merge
-mergednet = netnj!(D, constraints; namelist=namelist)
+mergednet = netnj(D, constraints, namelist)
 hardwiredClusterDistance(mergednet, truenet, false)
 
 
