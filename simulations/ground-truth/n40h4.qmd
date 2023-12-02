@@ -1,0 +1,14 @@
+### Result: perfect reconstruction
+
+```{julia}
+include("../pipelines.jl")
+```
+
+```{julia}
+truenet, constraints = loadTrueData("n40h4")
+mnet = runGroundTruthPipeline(truenet, constraints)
+```
+
+```{julia}
+hardwiredClusterDistance(truenet, mnet, false)
+```
