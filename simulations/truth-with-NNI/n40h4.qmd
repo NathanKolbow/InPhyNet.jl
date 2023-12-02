@@ -83,6 +83,7 @@ This actually seems maybe a bit better than with two NNI moves, relatively speak
 
 ```{julia}
 plotNNIErrors(dists, constraintdiffs)
+histNNIErrors(dists, constraintdiffs, true, alpha=0.25, color="blue", labels="Distributions")
 ```
 
 ## TEN NNI moves on each constraint
@@ -92,6 +93,7 @@ nsim = 1000
 dists = Array{Int64}(undef, nsim)
 constraintdiffs = Array{Int64}(undef, 4, nsim)
 for i=1:nsim
+    if (i % 10) == 0 && i != 0 @show i end
     truenet, constraints = loadTrueData("n40h4")
     for (j, c) in enumerate(constraints)
         origc = readTopology(writeTopology(c))
