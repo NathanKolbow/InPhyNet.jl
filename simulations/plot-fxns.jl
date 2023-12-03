@@ -41,3 +41,11 @@ function histNNIErrors(mergedists, constraintdiffs, add=false; kwargs...)
         )
     end
 end
+
+function prettyNNIErrors(dists, constraintdiffs)
+    plotNNIErrors(dists, constraintdiffs)
+    histNNIErrors(dists, constraintdiffs,
+        true, alpha=0.25, color="blue",
+        labels="Distributions"
+    )
+end
