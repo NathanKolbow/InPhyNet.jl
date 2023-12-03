@@ -1,116 +1,56 @@
 ```{julia}
 include("../pipelines.jl")
+include("../robustness-fxns.jl")
 ```
 
 ## One NNI move on each constraint
 
 ```{julia}
-nsim = 1000
-dists = Array{Int64}(undef, nsim)
-constraintdiffs = Array{Int64}(undef, 4, nsim)
-for i=1:nsim
-    if (i % 100) == 0 && i != 0 @show i end
-    truenet, constraints = loadTrueData("n40h4")
-    for (j, c) in enumerate(constraints)
-        origc = readTopology(writeTopology(c))
-        e = sample(c.edge, 1, replace=false)[1]
-        nni!(c, e)
-        constraintdiffs[j, i] = hardwiredClusterDistance(origc, c, false)
-    end
-
-    mnet = runGroundTruthPipeline(truenet, constraints)
-    dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-end
+truenet, constraints = loadTrueData("n40h4")
+estdists, constraintdists = robustNNI(truenet, constraints, 1)
 ```
 
 Merged net errors are very closely in line with the sum of induced errors
 
 ```{julia}
-plotNNIErrors(dists, constraintdiffs)
+prettyNNIErrors(estdists, constraintdists)
 ```
 
 ## Two NNI moves on each constraint
 
 ```{julia}
-nsim = 1000
-dists = Array{Int64}(undef, nsim)
-constraintdiffs = Array{Int64}(undef, 4, nsim)
-for i=1:nsim
-    truenet, constraints = loadTrueData("n40h4")
-    for (j, c) in enumerate(constraints)
-        origc = readTopology(writeTopology(c))
-        for _=1:2
-            e = sample(c.edge, 1, replace=false)[1]
-            nni!(c, e)
-        end
-        constraintdiffs[j, i] = hardwiredClusterDistance(origc, c, false)
-    end
-
-    mnet = runGroundTruthPipeline(truenet, constraints)
-    dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-end
+truenet, constraints = loadTrueData("n40h4")
+estdists, constraintdists = robustNNI(truenet, constraints, 2, nsim=1000)
 ```
 
 Still tracking closely, but worse
 
 ```{julia}
-plotNNIErrors(dists, constraintdiffs)
+prettyNNIErrors(estdists, constraintdists)
 ```
 
 ## Three NNI moves on each constraint
 
 ```{julia}
-nsim = 1000
-dists = Array{Int64}(undef, nsim)
-constraintdiffs = Array{Int64}(undef, 4, nsim)
-for i=1:nsim
-    truenet, constraints = loadTrueData("n40h4")
-    for (j, c) in enumerate(constraints)
-        origc = readTopology(writeTopology(c))
-        for _=1:3
-            e = sample(c.edge, 1, replace=false)[1]
-            nni!(c, e)
-        end
-        constraintdiffs[j, i] = hardwiredClusterDistance(origc, c, false)
-    end
-
-    mnet = runGroundTruthPipeline(truenet, constraints)
-    dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-end
+truenet, constraints = loadTrueData("n40h4")
+estdists, constraintdists = robustNNI(truenet, constraints, 3, nsim=1000)
 ```
 
 This actually seems maybe a bit better than with two NNI moves, relatively speaking
 
 ```{julia}
-plotNNIErrors(dists, constraintdiffs)
-histNNIErrors(dists, constraintdiffs, true, alpha=0.25, color="blue", labels="Distributions")
+prettyNNIErrors(estdists, constraintdists)
 ```
 
 ## TEN NNI moves on each constraint
 
 ```{julia}
-nsim = 1000
-dists = Array{Int64}(undef, nsim)
-constraintdiffs = Array{Int64}(undef, 4, nsim)
-for i=1:nsim
-    if (i % 10) == 0 && i != 0 @show i end
-    truenet, constraints = loadTrueData("n40h4")
-    for (j, c) in enumerate(constraints)
-        origc = readTopology(writeTopology(c))
-        for _=1:10
-            e = sample(c.edge, 1, replace=false)[1]
-            nni!(c, e)
-        end
-        constraintdiffs[j, i] = hardwiredClusterDistance(origc, c, false)
-    end
-
-    mnet = runGroundTruthPipeline(truenet, constraints)
-    dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-end
+truenet, constraints = loadTrueData("n40h4")
+estdists, constraintdists = robustNNI(truenet, constraints, 10, nsim=100)
 ```
 
 
 
 ```{julia}
-plotNNIErrors(dists, constraintdiffs)
+prettyNNIErrors(estdists, constraintdists)
 ```
