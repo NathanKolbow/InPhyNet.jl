@@ -1,11 +1,11 @@
 function fixdir()
-    currdir = split(pwd(), "/")
+    currdir = splitdir(pwd())
     while currdir[length(currdir)] != "network-merging"
         if length(currdir) <= 2
             cd(Base.source_dir())
         end
         cd("..")
-        currdir = split(pwd(), "/")
+        currdir = splitdir(pwd())
     end
 end
 fixdir()
