@@ -404,7 +404,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 if edge.hybrid && !edge.isMajor
                     fromorto = ifelse(getChild(edge) == node, "to", "from")
                     if subnetedgei == subnetedgej
-                        @error("equiv edges!!")
+                        @error("equiv edges C")
                     end
 
                     # works for constraints[2]
