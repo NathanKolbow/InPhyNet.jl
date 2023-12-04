@@ -43,6 +43,8 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     reticmap = ReticMap(constraints)
 
     while n > 2
+        # DEBUG STATEMENT
+        # @show n
         possible_siblings = findvalidpairs(constraints, namelist)
         
         # Find optimal (i, j) idx pair for matrix Q
@@ -209,7 +211,10 @@ By convention we keep `nodenamei` and replace node names with `nodenamej`
 """
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
     constraints::Vector{HybridNetwork}, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
-    for net in constraints
+
+    for (netidx, net) in enumerate(constraints)
+        # DEBUG STATEMENTS
+        # println("\t$(netidx): $(writeTopology(net))")
         idxi = -1
         idxj = -1
         for (nodeidx, node) in enumerate(net.node)
@@ -342,6 +347,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 break
             end
         end
+        # @show newtip.name
+        # @show [n.name for n in nodesinpath]
         
         ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
         hybedge = nothing
@@ -511,6 +518,10 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
         if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
 
+        # For each pair, override 1 => -1 so that we can invalidate pairs that are not seen together in this net
+        netpairs = view(validpairs, leafidxs, leafidxs)
+        netpairs[netpairs .== 1] .= -1
+
         # Find valid sibling pairs
         nodepairs = findsiblingpairs(net)   # returned as nodes, need to convert to idxs
         nodestoidx(nodepair) = CartesianIndex(idx(nodepair[1].name), idx(nodepair[2].name))
@@ -528,7 +539,6 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
         end
 
         # 0 out anything that has not been seen yet and was not among the valid pairs
-        netpairs = view(validpairs, leafidxs, leafidxs)
         netpairs[netpairs .== -1] .= 0
     end
 
