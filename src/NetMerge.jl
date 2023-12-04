@@ -16,7 +16,8 @@ module NetMerge
     export netnj, netnj!,
         decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,
-        parsequartets, SubNet
+        parsequartets, SubNet,
+        findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")
