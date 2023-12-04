@@ -1,9 +1,9 @@
-There is a HAVEN of bugs to be discovered here...
-
 ```{julia}
 include("../pipelines.jl")
 include("../robustness-fxns.jl")
 truenet, constraints = loadTrueData("n40h4")
+D, _ = majorinternodedistance(truenet)
+std(D)
 ```
 
 ## Gaussian noise from N(0, 1)
@@ -13,17 +13,17 @@ errors = robustGauss(truenet, constraints, μ=0., σ=1.)
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
 
-## Gaussian noise from N(0, 4)
+## Gaussian noise from N(1, 4)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=0., σ=4.)
+errors = robustGauss(truenet, constraints, μ=1., σ=4.)
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
 
 ## Gaussian noise from N(2, 2)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=2., σ=2.)
+errors = robustGauss(truenet, constraints, μ=2., σ=2., nsim=100)
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
 
