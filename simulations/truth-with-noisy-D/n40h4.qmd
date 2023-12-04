@@ -46,7 +46,7 @@ histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ## Distance matrix of completely random values
 
 ```{julia}
-errors = robustRandD(truenet, constraints, nsim=1000)
+errors = robustRandD(truenet, constraints, nsim=10000)
 length(errors)
 #histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```

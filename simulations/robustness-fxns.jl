@@ -1,5 +1,6 @@
 using Distributions, Random
 
+
 function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
     nmoves::Int64; nsim::Int64=100)
 
@@ -27,14 +28,15 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
     dists = Array{Int64}(undef, nsim)
     dists .= -1
     rgen = Normal(μ, σ)
+    D, namelist = majorinternodedistance(truenet)
 
     Threads.@threads for i=1:nsim
         constraintscopy = copyConstraints(constraints)
-        D, namelist = majorinternodedistance(truenet)
-        addnoise!(D, rgen)
+        Dcopy = deepcopy(D)
+        addnoise!(Dcopy, rgen)
         
         try
-            mnet = netnj(D, constraintscopy, namelist)
+            mnet = netnj(Dcopy, constraintscopy, namelist)
             dists[i] = hardwiredClusterDistance(truenet, mnet, false)
         catch e
             # pass
@@ -42,6 +44,7 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
     end
     return dists[dists .!= -1]
 end
+
 
 function robustUniformProportion(truenet, constraints, p; nsim::Int64=100)
     dists = Array{Int64}(undef, nsim)
@@ -62,6 +65,7 @@ function robustUniformProportion(truenet, constraints, p; nsim::Int64=100)
     return dists[dists .!= -1]
 end
 
+
 function robustRandD(truenet, constraints; nsim::Int64=100)
     dists = Array{Int64}(undef, nsim)
     dists .= -1
@@ -81,6 +85,7 @@ function robustRandD(truenet, constraints; nsim::Int64=100)
     return dists[dists .!= -1]
 end
 
+
 @inline function randomize!(D)
     n = size(D)[1]
     for i=1:n
@@ -89,6 +94,7 @@ end
         end
     end
 end
+
 
 @inline function addpnoise!(D, p)
     n = size(D)[1]
@@ -100,6 +106,7 @@ end
     end
 end
 
+
 @inline function addnoise!(D, rgen)
     n = size(D)[1]
     for i=1:n
@@ -109,5 +116,6 @@ end
         end
     end
 end
+
 
 copyConstraints(cs::Vector{HybridNetwork}) = [readTopology(writeTopology(c)) for c in cs]
