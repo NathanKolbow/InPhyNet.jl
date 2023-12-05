@@ -26,5 +26,6 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/NathanKolbow/network-merging.git"
+    repo="github.com/NathanKolbow/network-merging.git",
+    devbranch="main"
 )
