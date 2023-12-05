@@ -2,17 +2,20 @@ using Distributions, Random
 
 
 function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
-    nmoves::Int64; nsim::Int64=100)
+    nmoves::Vector{Int64}; nsim::Int64=100)
 
     dists = Array{Int64}(undef, nsim)
-    constraintdiffs = Array{Int64}(undef, 4, nsim)
+    constraintdiffs = Array{Int64}(undef, length(constraints), nsim)
+    edgeheights = Array{Float64}(undef, length(constraints), nsim)
+
+    constraintEdgeHeights = [PhyloNetworks.getHeights(c) for c in constraints]
 
     Threads.@threads for i=1:nsim
         newconstraints = copyConstraints(constraints)
-        for (j, (c, newc)) in enumerate(zip(constraints, newconstraints))
-            for _=1:nmoves
-                e = sample(newc.edge, 1, replace=false)[1]
-                nni!(newc, e)
+        for (j, (c, newc, moves)) in enumerate(zip(constraints, newconstraints, nmoves))
+            for _=1:moves
+                nniedge = doRandomNNI!(newc)
+                edgeheights[j, i] = constraintEdgeHeights[j][findfirst(newc.edge .== [nniedge])] 
             end
             constraintdiffs[j, i] = hardwiredClusterDistance(newc, c, false)
         end
@@ -20,7 +23,7 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
         mnet = runGroundTruthPipeline(truenet, newconstraints)
         dists[i] = hardwiredClusterDistance(truenet, mnet, false)
     end
-    return dists, constraintdiffs
+    return dists, constraintdiffs, edgeheights
 end
 
 
@@ -31,12 +34,11 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
     D, namelist = majorinternodedistance(truenet)
 
     Threads.@threads for i=1:nsim
-        constraintscopy = copyConstraints(constraints)
         Dcopy = deepcopy(D)
         addnoise!(Dcopy, rgen)
         
         try
-            mnet = netnj(Dcopy, constraintscopy, namelist)
+            mnet = netnj(Dcopy, constraints, namelist)
             dists[i] = hardwiredClusterDistance(truenet, mnet, false)
         catch e
             # pass
@@ -115,6 +117,16 @@ end
             D[j, i] = D[i, j]
         end
     end
+end
+
+
+function doRandomNNI!(net; maxattempts::Int64=100)
+    j = 0
+    e = sample(net.edge, 1, replace=false)[1]
+    while j < 100 && nni!(net, e) === nothing
+        e = sample(net.edge, 1, replace=false)[1]
+    end
+    return e
 end
 
 
