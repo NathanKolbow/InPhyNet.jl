@@ -25,9 +25,6 @@ makedocs(
     ]
 )
 
-# Waiting for the repo to be public to do deployment
-#
-# deploydocs(
-#     devbranch="gh-pages",
-#     repo="github.com/NathanKolbow/network-merging.git"
-# )
+deploydocs(
+    repo="github.com/NathanKolbow/network-merging.git"
+)
