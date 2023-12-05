@@ -14,6 +14,7 @@ using Pkg; Pkg.activate(".")
 cd("simulations")
 
 using NetMerge, PhyloNetworks, StatsBase, Plots, StatsPlots
+include("robustness-fxns.jl")
 include("plot-fxns.jl")
 
 # DATA LOADING FUNCTIONS
