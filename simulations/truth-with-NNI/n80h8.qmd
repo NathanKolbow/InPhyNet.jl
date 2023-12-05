@@ -9,11 +9,10 @@ include("../pipelines.jl")
 
 ```{julia}
 truenet, constraints = loadTrueData("n80h8")
-M = length(constraints)
-estdists, constraintdists, edgeheights = stackRobustNNI(
+@elapsed stdists, constraintdists, edgeheights = stackRobustNNI(
     truenet, constraints,
     [
-        repeat([1], M),
+        repeat([1], length(constraints)),
         [1, 1, 0, 0, 1, 1, 1, 1],
         [1, 1, 1, 1, 0, 0, 1, 1],
         [0, 1, 1, 1, 1, 0, 1, 1],
@@ -43,21 +42,47 @@ Noteably worse than the `n40h4` example.
 I haven't been able to ascertain any relationship between the heights of the NNI edges and the estimation error.
 
 ```{julia}
-# prettyNNIEdgeHeights(estdists, constraintdists, edgeheights, metric=sum)
 prettyNNIErrors(estdists, constraintdists)
+prettyNNIEdgeHeights(estdists, constraintdists, edgeheights)
 ```
 
 ## Two NNI moves on each constraint
 
 ```{julia}
-estdists, constraintdists, edgeheights = robustNNI(truenet, constraints, repeat([1], M), nsim=250)
+truenet, constraints = loadTrueData("n80h8")
+@elapsed stdists, constraintdists, edgeheights = stackRobustNNI(
+    truenet, constraints,
+    [
+        repeat([2], length(constraints)),
+        [2, 2, 0, 0, 2, 2, 2, 2],
+        [2, 2, 2, 2, 0, 0, 2, 2],
+        [0, 2, 2, 2, 2, 0, 2, 2],
+        [0, 2, 2, 2, 2, 2, 0, 2],
+        [2, 2, 0, 2, 2, 2, 0, 0],
+        [2, 2, 2, 2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 2, 2, 2, 2],
+        [2, 2, 0, 0, 0, 0, 2, 2],
+        [0, 0, 2, 2, 2, 2, 0, 0],
+        [0, 2, 0, 2, 0, 2, 0, 2],
+        [2, 0, 2, 0, 2, 0, 2, 0],
+        [2, 2, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 2, 0, 0, 0, 0],
+        [0, 0, 0, 0, 2, 2, 0, 0],
+        [0, 0, 0, 0, 0, 0, 2, 2],
+        [0, 2, 0, 0, 0, 0, 0, 2],
+        [2, 0, 0, 0, 0, 0, 2, 0],
+        [0, 0, 2, 0, 2, 0, 0, 0],
+        [0, 0, 0, 2, 0, 2, 0, 0],
+    ],
+    25
+)
 ```
 
 Still tracking closely, but worse
 
 ```{julia}
-println(mean(estdists .== sum(constraintdists, dims=1)[1,:]))
 prettyNNIErrors(estdists, constraintdists)
+prettyNNIEdgeHeights(estdists, constraintdists, edgeheights)
 ```
 
 ## Three NNI moves on each constraint
