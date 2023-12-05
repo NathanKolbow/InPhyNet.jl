@@ -1,0 +1,116 @@
+## WARNING: All `hardwiredClusterDistance` functions here are run with `rooted=true` so that runtime does not skyrocket! So, merged network accuracy is not completely accurate b/c our generated network is assumed to be UNROOTED.
+
+```{julia}
+include("../pipelines.jl")
+@warn "$(Threads.nthreads()) threads in use."
+```
+
+## One NNI move on each constraint
+
+```{julia}
+truenet, constraints = loadTrueData("n80h8")
+M = length(constraints)
+estdists, constraintdists, edgeheights = stackRobustNNI(
+    truenet, constraints,
+    [
+        repeat([1], M),
+        [1, 1, 0, 0, 1, 1, 1, 1],
+        [1, 1, 1, 1, 0, 0, 1, 1],
+        [0, 1, 1, 1, 1, 0, 1, 1],
+        [0, 1, 1, 1, 1, 1, 0, 1],
+        [1, 1, 0, 1, 1, 1, 0, 0],
+        [1, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [1, 1, 0, 0, 0, 0, 1, 1],
+        [0, 0, 1, 1, 1, 1, 0, 0],
+        [0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 1, 0],
+        [1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 1, 1],
+        [0, 1, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],
+        [0, 0, 0, 1, 0, 1, 0, 0],
+    ],
+    25
+)
+```
+
+Noteably worse than the `n40h4` example.
+
+I haven't been able to ascertain any relationship between the heights of the NNI edges and the estimation error.
+
+```{julia}
+# prettyNNIEdgeHeights(estdists, constraintdists, edgeheights, metric=sum)
+prettyNNIErrors(estdists, constraintdists)
+```
+
+## Two NNI moves on each constraint
+
+```{julia}
+estdists, constraintdists, edgeheights = robustNNI(truenet, constraints, repeat([1], M), nsim=250)
+```
+
+Still tracking closely, but worse
+
+```{julia}
+println(mean(estdists .== sum(constraintdists, dims=1)[1,:]))
+prettyNNIErrors(estdists, constraintdists)
+```
+
+## Three NNI moves on each constraint
+
+```{julia}
+estdists, constraintdists, edgeheights = robustNNI(truenet, constraints, [3, 3, 3, 3], nsim=250)
+```
+
+This actually seems maybe a bit better than with two NNI moves, relatively speaking
+
+```{julia}
+println(sum(estdists .== sum(constraintdists, dims=1)[1,:]))
+prettyNNIErrors(estdists, constraintdists)
+```
+
+## Varying NNI moves on each constraint
+
+```{julia}
+truenet, constraints = loadTrueData("n80h8")
+
+step = 10
+total = 500
+estdists = Array{Float64}(undef, total)
+constraintdists = Array{Float64}(undef, length(constraints), total)
+edgeheights = Array{Float64}(undef, length(constraints), total)
+
+for i=1:(total ÷ step)
+    sidx = (i-1)*step+1
+    eidx = i*step
+
+    maxval = 3*rand() + 3*rand() + 3*rand()
+    nmoves = Int64.(round.(rand(length(constraints)) .* maxval))
+    tempdists, tempconstdists, tempheights = robustNNI(truenet, constraints, nmoves, nsim=step)
+    
+    estdists[sidx:eidx] .= tempdists
+    constraintdists[:,sidx:eidx] .= tempconstdists
+    edgeheights[:,sidx:eidx] .= tempheights
+end
+```
+
+```{julia}
+prettyNNIErrors(estdists, constraintdists)
+```
+
+## TEN NNI moves on each constraint
+
+```{julia}
+truenet, constraints = loadTrueData("n80h8")
+estdists, constraintdists, edgeheights = robustNNI(truenet, constraints, [10, 10, 10, 10], nsim=100)
+```
+
+
+
+```{julia}
+prettyNNIErrors(estdists, constraintdists)
+```
