@@ -23,6 +23,10 @@ function loadTrueData(netid::String, whichConstraints::Int64=1)
         truenet = readTopology("n40h4/n40h4.net")
         constraints = readMultiTopology("n40h4/true-constraints$(whichConstraints).net")
         return truenet, constraints
+    elseif netid == "n80h8"
+        truenet = readTopology("n80h8/n80h8.net")
+        constraints = readMultiTopology("n80h8/true-constraints$(whichConstraints).net")
+        return truenet, constraints
     else
         error("$(netid) not recognized")
     end
