@@ -50,7 +50,7 @@ prettyNNIEdgeHeights(estdists, constraintdists, edgeheights)
 
 ```{julia}
 truenet, constraints = loadTrueData("n80h8")
-@elapsed stdists, constraintdists, edgeheights = stackRobustNNI(
+@elapsed estdists, constraintdists, edgeheights = stackRobustNNI(
     truenet, constraints,
     [
         repeat([2], length(constraints)),
@@ -82,7 +82,7 @@ Still tracking closely, but worse
 
 ```{julia}
 prettyNNIErrors(estdists, constraintdists)
-prettyNNIEdgeHeights(estdists, constraintdists, edgeheights)
+prettyNNIEdgeHeights(estdists, constraintdists, edgeheights, metric=mean)
 ```
 
 ## Three NNI moves on each constraint
