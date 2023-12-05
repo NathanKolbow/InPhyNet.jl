@@ -40,8 +40,6 @@ end
 """
 Deals with all the overhead of connecting two nodes with an edge.
 Returns the edge used to connect the nodes.
-
-TODO: add option to make the connection a hybrid connection
 """
 function connectnodes!(child::Node, parent::Node)
     edge = Edge(0, -1.)
