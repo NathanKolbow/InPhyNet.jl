@@ -2,7 +2,15 @@ using Distributions, Random
 
 
 function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
-    nmoves::Vector{Int64}; nsim::Int64=100)
+    nmoves::Vector{Int64}; nsim::Int64=100, printruntime::Bool=true)
+
+    # Runtime metrics #
+    time_copying = 0.
+    time_nni = 0.
+    time_constraintRF = 0.
+    time_mnet = 0.
+    time_mnetRF = 0.
+    ###################
 
     dists = Array{Int64}(undef, nsim)
     constraintdiffs = Array{Int64}(undef, length(constraints), nsim)
@@ -11,17 +19,50 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
     constraintEdgeHeights = [PhyloNetworks.getHeights(c) for c in constraints]
 
     Threads.@threads for i=1:nsim
-        newconstraints = copyConstraints(constraints)
+        time_copying += @elapsed newconstraints = copyConstraints(constraints)
+        
         for (j, (c, newc, moves)) in enumerate(zip(constraints, newconstraints, nmoves))
-            for _=1:moves
+            time_nni += @elapsed for _=1:moves
                 nniedge = doRandomNNI!(newc)
                 edgeheights[j, i] = constraintEdgeHeights[j][findfirst(newc.edge .== [nniedge])] 
             end
-            constraintdiffs[j, i] = hardwiredClusterDistance(newc, c, false)
+            time_constraintRF += @elapsed constraintdiffs[j, i] = hardwiredClusterDistance(newc, c, false)
         end
 
-        mnet = runGroundTruthPipeline(truenet, newconstraints)
-        dists[i] = hardwiredClusterDistance(truenet, mnet, false)
+        time_mnet += @elapsed mnet = runGroundTruthPipeline(truenet, newconstraints)
+        if truenet.numTaxa > 50
+            time_mnetRF += @elapsed dists[i] = hardwiredClusterDistance(truenet, mnet, true)
+        else
+            time_mnetRF += @elapsed dists[i] = hardwiredClusterDistance(truenet, mnet, false)
+        end
+    end
+
+    # Runtime metrics #
+    if printruntime
+        println("Time taken: $(round(time_copying + time_nni + time_constraintRF + time_mnet + time_mnetRF, digits=2))s")
+        println("\tcopying: $(round(time_copying, digits=2))s")
+        println("\tNNI: $(round(time_nni, digits=2))s")
+        println("\tconstraint RF: $(round(time_constraintRF, digits=2))s")
+        println("\talgo: $(round(time_mnet, digits=2))s")
+        println("\tmerged net RF: $(round(time_mnetRF, digits=2))s")
+    end
+    ###################
+
+    return dists, constraintdiffs, edgeheights
+end
+
+
+function stackRobustNNI(truenet, constraints, nmovevecs, nsimeach)
+    dists = Array{Int64}(undef, length(nmovevecs)*nsimeach)
+    constraintdiffs = Array{Int64}(undef, length(constraints), length(nmovevecs)*nsimeach)
+    edgeheights = Array{Float64}(undef, length(constraints), length(nmovevecs)*nsimeach)
+    
+    for j=1:length(nmovevecs)
+        sidx = (j-1)*nsimeach + 1
+        eidx = j*nsimeach
+
+        dists[sidx:eidx], constraintdiffs[:, sidx:eidx], edgeheights[:, sidx:eidx] = 
+            robustNNI(truenet, constraints, nmovevecs[j], nsim=nsimeach, printruntime=false)
     end
     return dists, constraintdiffs, edgeheights
 end
@@ -126,7 +167,11 @@ function doRandomNNI!(net; maxattempts::Int64=100)
     while j < 100 && nni!(net, e) === nothing
         e = sample(net.edge, 1, replace=false)[1]
     end
-    return e
+    if j < 100
+        return e
+    else
+        return nothing
+    end
 end
 
 
