@@ -472,7 +472,10 @@ end
 
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
+TIEWARNING = false
 function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
+    global TIEWARNING
+
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
         throw(ArgumentError("No valid idx pairs received in `findoptQidx`."))
@@ -488,6 +491,9 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
         if qij < best
             best = qij
             minidx = (i, j)
+        elseif qij == best && !TIEWARNING
+            TIEWARNING = true
+            @warn "Found a tie in the distance matrix, result may not be unique. This warning is shown once per julia session."
         end
     end
     
