@@ -14,18 +14,19 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
 
     dists = Array{Int64}(undef, nsim)
     constraintdiffs = Array{Int64}(undef, length(constraints), nsim)
-    edgeheights = Array{Float64}(undef, length(constraints), nsim)
+    edgeheights = zeros(length(constraints), nsim)
 
     constraintEdgeHeights = [PhyloNetworks.getHeights(c) for c in constraints]
 
-    Threads.@threads for i=1:nsim
+    for i=1:nsim
         time_copying += @elapsed newconstraints = copyConstraints(constraints)
         
         for (j, (c, newc, moves)) in enumerate(zip(constraints, newconstraints, nmoves))
             time_nni += @elapsed for _=1:moves
                 nniedge = doRandomNNI!(newc)
-                edgeheights[j, i] = constraintEdgeHeights[j][findfirst(newc.edge .== [nniedge])] 
+                edgeheights[j, i] += constraintEdgeHeights[j][findfirst(newc.edge .== [nniedge])] 
             end
+            if moves > 0 edgeheights[j, i] /= moves end
             time_constraintRF += @elapsed constraintdiffs[j, i] = hardwiredClusterDistance(newc, c, false)
         end
 
