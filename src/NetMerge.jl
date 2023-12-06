@@ -12,13 +12,14 @@ module NetMerge
     include("netmerge/internodedistance.jl")
     include("netmerge/mscquartetsinterface.jl")
     include("netmerge/subsetdecomp.jl")
-    include("netmerge/subsetdecomp/nj-decomp.jl")
+    include("netmerge/subsetdecomp/njhierarchdecomp.jl")
 
     export netnj, netnj!,
         decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,
         parsequartets, SubNet,
-        findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!
+        findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
+        njHierarchDecomp, pruneTruthFromDecomp
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")
