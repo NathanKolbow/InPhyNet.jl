@@ -81,7 +81,11 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
         
         try
             mnet = netnj(Dcopy, constraints, namelist)
-            dists[i] = hardwiredClusterDistance(truenet, mnet, false)
+            if truenet.numTaxa > 50
+                dists[i] = hardwiredClusterDistance(truenet, mnet, true)
+            else
+                dists[i] = hardwiredClusterDistance(truenet, mnet, false)
+            end
         catch e
             # pass
         end
