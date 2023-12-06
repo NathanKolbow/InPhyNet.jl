@@ -22,13 +22,13 @@ function plotNNIErrors(mergedists, constraintdiffs, add=false; pointalpha=0.75)
     x = x .+ rand(length(x)) / 2
 
     if !add
-        scatter(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black", alpha=pointalpha)
+        scatter(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", primary=pointalpha > 0., labels="No difference", color="black", alpha=pointalpha)
     else
-        scatter!(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black", alpha=pointalpha)
+        scatter!(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", primary=pointalpha > 0., labels="No difference", color="black", alpha=pointalpha)
     end
-    scatter!(x[worse], y[worse], labels="Worse than induced", color="red", alpha=pointalpha)
+    scatter!(x[worse], y[worse], primary=pointalpha > 0., labels="Worse than induced", color="red", alpha=pointalpha)
     if any(better)
-        scatter!(x[better], y[better], labels="Better than induced", color="green", alpha=pointalpha)
+        scatter!(x[better], y[better], primary=pointalpha > 0., labels="Better than induced", color="green", alpha=pointalpha)
     end
     plot!([0, maximum(y)], [0, maximum(y)], primary=false, color="black")
     plot!(meansx, means, labels="Average errors", color="red")
@@ -89,4 +89,39 @@ function prettyNNIEdgeHeights(dists, constraintdists, edgeheights; metric::Funct
     scatter!(x[better], y[better], labels="Better than induced", color="green")
 
     boxplot!((dists .- constraintdists), y, labels=nothing, color="red", alpha=0.25)
+end
+
+
+function plotRobustnessPipelineResults(results::Tuple{Float64, DataFrame, DataFrame})
+    allplots = []
+    baselineDist, robustDdf, robustNNIdf = results
+    
+    p = prettyNNIErrors(robustNNIdf[!, "estdists"], robustNNIdf[!, "constraintdists"], pointalpha=0.)
+    push!(allplots, p)
+    display(p)
+    
+    b_range = 0:2:(maximum(robustDdf[!,"dists"]))
+    colors = ["blue", "green", "red"]
+    meanVals = sort(unique(robustDdf[!, "gaussMean"]))
+    for (i, meanVal) in enumerate(meanVals)
+        fn = histogram!
+        if i == 1 fn = histogram end
+
+        p = fn(
+            robustDdf[robustDdf[!,"gaussMean"] .== meanVal, "dists"],
+            bins=b_range,
+            labels="N($(meanVal), $(meanVal))", xlab="Merging error", ylab="Frequency",
+            color=colors[i], alpha=0.45,
+            normalize=:probability, ylims=[0., 1.]
+        )
+
+        if i == 1
+            push!(allplots, p)
+        end
+
+        if i == length(meanVals)
+            display(p)
+        end
+    end
+    return allplots
 end
