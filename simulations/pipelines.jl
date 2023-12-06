@@ -70,10 +70,10 @@ function runGroundTruthRobustnessPipeline(truenet::HybridNetwork, constraints::V
         dists=vcat(robD1, robD2, robD3)
     )
     r3 = DataFrame(
-        nniMoves=[repeat([1], length(a1)); repeat([2], length(a2)); repeat([3], length(a3))],
-        edgeheights=vcat(c1, c2, c3),
-        constraintdists=vcat(b1, b2, b3),
-        estdists=vcat(a1, a2, a3)
+        nniMoves=[repeat([0.5], length(a0)); repeat([1], length(a1)); repeat([2], length(a2)); repeat([3], length(a3))],
+        edgeheights=vcat(c0, c1, c2, c3),
+        constraintdists=vcat(b0, b1, b2, b3),
+        estdists=vcat(a0, a1, a2, a3)
     )
 
     return (
