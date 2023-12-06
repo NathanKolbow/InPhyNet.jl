@@ -2,7 +2,13 @@ using Plots, StatsPlots
 
 function plotNNIErrors(mergedists, constraintdiffs, add=false)
     y = Vector{Float64}(mergedists)
-    x = Vector{Float64}(sum(constraintdiffs, dims=1)[1,:])
+
+    x = Vector{Float64}()
+    if size(constraintdiffs, 2) != 1
+        x = Vector{Float64}(sum(constraintdiffs, dims=1)[1,:])
+    else
+        x = Vector{Float64}(constraintdiffs)
+    end
     
     neutral = y .== x
     worse = y .> x
@@ -26,7 +32,13 @@ end
 
 function histNNIErrors(mergedists, constraintdiffs, add=false; kwargs...)
     y = Vector{Float64}(mergedists)
-    x = sum(constraintdiffs, dims=1)[1,:]
+
+    x = Vector{Float64}()
+    if size(constraintdiffs, 2) != 1
+        x = Vector{Float64}(sum(constraintdiffs, dims=1)[1,:])
+    else
+        x = Vector{Float64}(constraintdiffs)
+    end
     y .+= rand(length(y)) / 2
 
     if !add
