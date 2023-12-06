@@ -8,6 +8,9 @@ function njHierarchDecomp(estgts::Vector{HybridNetwork}, maxtax::Int64; clustkwa
 end
 
 
+# TODO: after gathering the clusters, for all pairs of clusters (clusti, clustj)
+#       with length(clusti) + length(clustj) < maxtax,
+#       select min_(i,j) [ avg_pairwise_dist(clusti, clustj)] using `D`
 function njHierarchDecomp(tree::HybridNetwork, maxtax::Int64; clustkwargs...)
     D, namelist = internodedistance(tree)
     hres = hclust(D; clustkwargs...)
@@ -25,6 +28,7 @@ function njHierarchDecomp(tree::HybridNetwork, maxtax::Int64; clustkwargs...)
     for uqval in unique(hclusts)
         push!(subsets, namelist[hclusts .== uqval])
     end
+
     if minimum([length(s) for s in subsets]) < 7
         @warn "WARNING: smallest subset has $(minimum([length(s) for s in subsets])) taxa"
     end
@@ -36,11 +40,13 @@ function pruneTruthFromDecomp(truenet, subsets)
     nets = Vector{HybridNetwork}()
     for set in subsets
         tempnet = readTopology(writeTopology(truenet))
-        for leaf in tempnet.leaf
-            if !(leaf.name in set)
-                PhyloNetworks.deleteleaf!(tempnet, leaf.name)
+        namelist = [leaf.name for leaf in tempnet.leaf]
+        for name in namelist
+            if !(name in set)
+                PhyloNetworks.deleteleaf!(tempnet, name)
             end
         end
+        push!(nets, tempnet)
     end
     return nets
 end
