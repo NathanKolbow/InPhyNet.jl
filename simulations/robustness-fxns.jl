@@ -196,7 +196,6 @@ function runAndSaveRobustnessPipeline(netid::String, whichConstraints::Int64=1)
             write(f, "$(baselineDist)")
         end
     else
-        mnet = runGroundTruthPipeline(truenet, constraints)
         baselineDist = parse(Float64, readlines("data/$(fileprefix)_baselineDist.dat")[1])
         robustDdf = CSV.read("data/$(fileprefix)_robustDdf.csv", DataFrame)
         robustNNIdf = CSV.read("data/$(fileprefix)_robustNNIdf.csv", DataFrame)
