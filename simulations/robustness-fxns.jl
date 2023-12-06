@@ -31,11 +31,7 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
         end
 
         time_mnet += @elapsed mnet = runGroundTruthPipeline(truenet, newconstraints)
-        if truenet.numTaxa > 50
-            time_mnetRF += @elapsed dists[i] = hardwiredClusterDistance(truenet, mnet, true)
-        else
-            time_mnetRF += @elapsed dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-        end
+        @elapsed dists[i] = getNetDistances(truenet, mnet)
     end
 
     # Runtime metrics #
@@ -75,19 +71,14 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
     rgen = Normal(μ, σ)
     D, namelist = majorinternodedistance(truenet)
 
-    Threads.@threads for i=1:nsim
+    for i=1:nsim
         Dcopy = deepcopy(D)
         addnoise!(Dcopy, rgen)
-        
+
         try
             mnet = netnj(Dcopy, constraints, namelist)
-            if truenet.numTaxa > 50
-                dists[i] = hardwiredClusterDistance(truenet, mnet, true)
-            else
-                dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-            end
+            dists[i] = getNetDistances(truenet, mnet)
         catch e
-            # pass
         end
     end
     return dists[dists .!= -1]
@@ -103,12 +94,8 @@ function robustUniformProportion(truenet, constraints, p; nsim::Int64=100)
         D, namelist = majorinternodedistance(truenet)
         addpnoise!(D, p)
         
-        try
-            mnet = netnj(D, constraintscopy, namelist)
-            dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-        catch e
-            # pass
-        end
+        mnet = netnj(D, constraintscopy, namelist)
+        dists[i] = getNetDistances(truenet, mnet)
     end
     return dists[dists .!= -1]
 end
@@ -123,12 +110,8 @@ function robustRandD(truenet, constraints; nsim::Int64=100)
         D, namelist = majorinternodedistance(truenet)
         randomize!(D)
         
-        try
-            mnet = netnj(D, constraintscopy, namelist)
-            dists[i] = hardwiredClusterDistance(truenet, mnet, false)
-        catch e
-            # pass
-        end
+        mnet = netnj(D, constraintscopy, namelist)
+        dists[i] = getNetDistances(truenet, mnet)
     end
     return dists[dists .!= -1]
 end
@@ -176,6 +159,22 @@ function doRandomNNI!(net; maxattempts::Int64=100)
         return e
     else
         return nothing
+    end
+end
+
+
+function getNetDistances(truenet, estnet)
+    if "OUTGROUP" in [leaf.name for leaf in truenet.leaf]
+        try
+            rootatnode!(estnet, "OUTGROUP")
+            return hardwiredClusterDistance(truenet, estnet, true)
+        catch e
+            return hardwiredClusterDistance(truenet, estnet, true)
+        end
+    elseif truenet.numTaxa > 50
+        return hardwiredClusterDistance(truenet, mnet, true)
+    else
+        return hardwiredClusterDistance(truenet, mnet, false)
     end
 end
 
