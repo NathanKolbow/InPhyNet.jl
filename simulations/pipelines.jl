@@ -13,7 +13,7 @@ fixdir()
 using Pkg; Pkg.activate(".")
 cd("simulations")
 
-using NetMerge, PhyloNetworks, StatsBase, Plots, StatsPlots
+using NetMerge, PhyloNetworks, StatsBase, Plots, StatsPlots, DataFrames
 include("robustness-fxns.jl")
 include("plot-fxns.jl")
 
@@ -34,6 +34,53 @@ end
 
 
 # PIPELINE FUNCTIONS
+function runGroundTruthRobustnessPipeline(truenet::HybridNetwork, constraints::Vector{HybridNetwork}=Vector{HybridNetwork}([]); nsim::Int64=100)
+    if length(constraints) == 0
+        decomp = njHierarchDecomp(majorTree(truenet), 16)
+        constraints = pruneTruthFromDecomp(truenet, decomp)
+    end
+
+    # 1. Ground truth estimation
+    D, namelist = majorinternodedistance(truenet)
+    mnet = netnj(D, constraints, namelist)
+
+    # 2. Distance matrix robustness tests
+    robD1 = robustGauss(truenet, constraints, μ=1., σ=1., nsim=nsim)
+    robD2 = robustGauss(truenet, constraints, μ=2., σ=2., nsim=nsim)
+    robD3 = robustGauss(truenet, constraints, μ=4., σ=4., nsim=nsim)
+
+    # 3. NNI robustness tests
+    a1, b1, c1 = robustNNI(truenet, constraints, repeat([1], length(constraints)), nsim=nsim)
+    a2, b2, c2 = robustNNI(truenet, constraints, repeat([2], length(constraints)), nsim=nsim)
+    a3, b3, c3 = robustNNI(truenet, constraints, repeat([3], length(constraints)), nsim=nsim)
+    b1 = sum(b1, dims=1)[1,:]
+    b2 = sum(b2, dims=1)[1,:]
+    b3 = sum(b3, dims=1)[1,:]
+    c1 = sum(c1, dims=1)[1,:]
+    c2 = sum(c2, dims=1)[1,:]
+    c3 = sum(c3, dims=1)[1,:]
+
+    r1 = getNetDistances(truenet, mnet)
+    r2 = DataFrame(
+        gaussMean=[repeat([1.], length(robD1)); repeat([2.], length(robD2)); repeat([4.], length(robD3))],
+        gaussStd=[repeat([1.], length(robD1)); repeat([2.], length(robD2)); repeat([4.], length(robD3))],
+        dists=vcat(robD1, robD2, robD3)
+    )
+    r3 = DataFrame(
+        nniMoves=[repeat([1], length(a1)); repeat([2], length(a2)); repeat([3], length(a3))],
+        edgeheights=vcat(a1, a2, a3),
+        constraintdists=vcat(b1, b2, b3),
+        estdists=vcat(c1, c2, c3)
+    )
+
+    return (
+        r1,
+        r2,
+        r3
+    )
+end
+
+
 function runGroundTruthPipeline(truenet::HybridNetwork, constraints::Vector{HybridNetwork})
     # 1. Calculate distance matrix
     D, namelist = majorinternodedistance(truenet)
