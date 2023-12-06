@@ -5,12 +5,11 @@ include("pipelines.jl")
 n80h8
 
 ```{julia}
-truenet, constraints = loadTrueData("n80h8")
-distTrue, robustDdf, robustNNIdf = runGroundTruthRobustnessPipeline(truenet, constraints, nsim=1000)
+baselineDist, robustDdf, robustNNIdf = runAndSaveRobustnessPipeline("n80h8")
 ```
 
 ```{julia}
-prettyNNIErrors(robustNNIdf[!, "estdists"], robustNNIdf[!, "constraintdists"])
+prettyNNIErrors(robustNNIdf[!, "estdists"], robustNNIdf[!, "constraintdists"], pointalpha=0.)
 
 histogram(robustDdf[robustDdf[!,"gaussMean"] .== 1., "dists"], labels=false, xlab="Merging error", ylab="Frequency")
 
