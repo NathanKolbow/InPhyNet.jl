@@ -50,12 +50,15 @@ function runGroundTruthRobustnessPipeline(truenet::HybridNetwork, constraints::V
     robD3 = robustGauss(truenet, constraints, μ=4., σ=4., nsim=nsim)
 
     # 3. NNI robustness tests
+    a0, b0, c0 = robustNNI(truenet, constraints, repeat([0.5], length(constraints)), nsim=2*nsim)
     a1, b1, c1 = robustNNI(truenet, constraints, repeat([1], length(constraints)), nsim=nsim)
     a2, b2, c2 = robustNNI(truenet, constraints, repeat([2], length(constraints)), nsim=nsim)
     a3, b3, c3 = robustNNI(truenet, constraints, repeat([3], length(constraints)), nsim=nsim)
+    b0 = sum(b0, dims=1)[1,:]
     b1 = sum(b1, dims=1)[1,:]
     b2 = sum(b2, dims=1)[1,:]
     b3 = sum(b3, dims=1)[1,:]
+    c0 = sum(c0, dims=1)[1,:]
     c1 = sum(c1, dims=1)[1,:]
     c2 = sum(c2, dims=1)[1,:]
     c3 = sum(c3, dims=1)[1,:]
@@ -68,9 +71,9 @@ function runGroundTruthRobustnessPipeline(truenet::HybridNetwork, constraints::V
     )
     r3 = DataFrame(
         nniMoves=[repeat([1], length(a1)); repeat([2], length(a2)); repeat([3], length(a3))],
-        edgeheights=vcat(a1, a2, a3),
+        edgeheights=vcat(c1, c2, c3),
         constraintdists=vcat(b1, b2, b3),
-        estdists=vcat(c1, c2, c3)
+        estdists=vcat(a1, a2, a3)
     )
 
     return (
