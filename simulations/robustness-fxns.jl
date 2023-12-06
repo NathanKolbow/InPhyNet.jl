@@ -173,10 +173,35 @@ function getNetDistances(truenet, estnet)
             return hardwiredClusterDistance(truenet, estnet, true)
         end
     elseif truenet.numTaxa > 50
-        return hardwiredClusterDistance(truenet, mnet, true)
+        return hardwiredClusterDistance(truenet, estnet, true)
     else
-        return hardwiredClusterDistance(truenet, mnet, false)
+        return hardwiredClusterDistance(truenet, estnet, false)
     end
+end
+
+
+function runAndSaveRobustnessPipeline(netid::String, whichConstraints::Int64=1)
+    truenet, constraints = loadTrueData(netid, whichConstraints)
+    fileprefix = "$(netid)-$(whichConstraints)"
+
+    baselineDist = robustDdf = robustNNIdf = nothing
+    if !isfile("data/$(fileprefix)_robustDdf.csv")
+        totalt = @elapsed baselineDist, robustDdf, robustNNIdf = runGroundTruthRobustnessPipeline(truenet, constraints, nsim=1000)
+        println("\nFinished in $(round(totalt/60, digits=2)) minutes.")
+
+        # Save results
+        CSV.write("data/$(fileprefix)_robustDdf.csv", robustDdf)
+        CSV.write("data/$(fileprefix)_robustNNIdf.csv", robustNNIdf)
+        open("data/$(fileprefix)_baselineDist.dat", "w+") do f
+            write(f, "$(baselineDist)")
+        end
+    else
+        mnet = runGroundTruthPipeline(truenet, constraints)
+        baselineDist = parse(Float64, readlines("data/$(fileprefix)_baselineDist.dat")[1])
+        robustDdf = CSV.read("data/$(fileprefix)_robustDdf.csv", DataFrame)
+        robustNNIdf = CSV.read("data/$(fileprefix)_robustNNIdf.csv", DataFrame)
+    end
+    return baselineDist, robustDdf, robustNNIdf
 end
 
 
