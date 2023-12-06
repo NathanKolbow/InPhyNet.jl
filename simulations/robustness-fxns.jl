@@ -2,7 +2,7 @@ using Distributions, Random
 
 
 function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
-    nmoves::Vector{Int64}; nsim::Int64=100, printruntime::Bool=true)
+    nmoves::Vector{<:Real}; nsim::Int64=100, printruntime::Bool=true)
 
     # Runtime metrics #
     time_copying = 0.
@@ -22,6 +22,7 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
         time_copying += @elapsed newconstraints = copyConstraints(constraints)
         
         for (j, (c, newc, moves)) in enumerate(zip(constraints, newconstraints, nmoves))
+            if moves < 1 moves = Int64(rand() < moves) end
             time_nni += @elapsed for _=1:moves
                 nniedge = doRandomNNI!(newc)
                 edgeheights[j, i] += constraintEdgeHeights[j][findfirst(newc.edge .== [nniedge])] 
