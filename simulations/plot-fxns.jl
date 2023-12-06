@@ -1,6 +1,6 @@
 using Plots, StatsPlots
 
-function plotNNIErrors(mergedists, constraintdiffs, add=false)
+function plotNNIErrors(mergedists, constraintdiffs, add=false; pointalpha=0.75)
     y = Vector{Float64}(mergedists)
 
     x = Vector{Float64}()
@@ -9,6 +9,9 @@ function plotNNIErrors(mergedists, constraintdiffs, add=false)
     else
         x = Vector{Float64}(constraintdiffs)
     end
+
+    meansx = sort(unique(x))
+    means = [mean(y[findall(x .== xval)]) for xval in meansx]
     
     neutral = y .== x
     worse = y .> x
@@ -19,15 +22,16 @@ function plotNNIErrors(mergedists, constraintdiffs, add=false)
     x = x .+ rand(length(x)) / 2
 
     if !add
-        scatter(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black")
+        scatter(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black", alpha=pointalpha)
     else
-        scatter!(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black")
+        scatter!(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", labels="No difference", color="black", alpha=pointalpha)
     end
-    scatter!(x[worse], y[worse], labels="Worse than induced", color="red")
+    scatter!(x[worse], y[worse], labels="Worse than induced", color="red", alpha=pointalpha)
     if any(better)
-        scatter!(x[better], y[better], labels="Better than induced", color="green")
+        scatter!(x[better], y[better], labels="Better than induced", color="green", alpha=pointalpha)
     end
-    plot!([0, maximum(y)], [0, maximum(y)], primary=false)
+    plot!([0, maximum(y)], [0, maximum(y)], primary=false, color="black")
+    plot!(meansx, means, labels="Average errors", color="red")
 end
 
 function histNNIErrors(mergedists, constraintdiffs, add=false; kwargs...)
@@ -55,8 +59,8 @@ function histNNIErrors(mergedists, constraintdiffs, add=false; kwargs...)
 end
 
 
-function prettyNNIErrors(dists, constraintdiffs)
-    plotNNIErrors(dists, constraintdiffs)
+function prettyNNIErrors(dists, constraintdiffs; pointalpha=0.75)
+    plotNNIErrors(dists, constraintdiffs; pointalpha=pointalpha)
     histNNIErrors(dists, constraintdiffs,
         true, alpha=0.25, color="blue",
         labels="Distributions"
