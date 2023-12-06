@@ -6,7 +6,7 @@ n80h8
 
 ```{julia}
 truenet, constraints = loadTrueData("n80h8")
-distTrue, robustDdf, robustNNIdf = runGroundTruthRobustnessPipeline(truenet, constraints, nsim=10)
+distTrue, robustDdf, robustNNIdf = runGroundTruthRobustnessPipeline(truenet, constraints, nsim=1000)
 ```
 
 ```{julia}
