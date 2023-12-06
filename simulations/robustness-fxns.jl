@@ -18,7 +18,7 @@ function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
 
     constraintEdgeHeights = [PhyloNetworks.getHeights(c) for c in constraints]
 
-    for i=1:nsim
+    Threads.@threads for i=1:nsim
         time_copying += @elapsed newconstraints = copyConstraints(constraints)
         
         for (j, (c, newc, moves)) in enumerate(zip(constraints, newconstraints, nmoves))
@@ -72,7 +72,7 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
     rgen = Normal(μ, σ)
     D, namelist = majorinternodedistance(truenet)
 
-    for i=1:nsim
+    Threads.@threads for i=1:nsim
         Dcopy = deepcopy(D)
         addnoise!(Dcopy, rgen)
 
