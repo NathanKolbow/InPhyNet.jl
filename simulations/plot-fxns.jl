@@ -70,8 +70,13 @@ end
 
 function prettyNNIEdgeHeights(dists, constraintdists, edgeheights; metric::Function=median)
     dists = Vector{Float64}(dists)
-    constraintdists = Vector{Float64}(sum(constraintdists, dims=1)[1,:])
-    edgeheights = Vector{Float64}(metric(edgeheights, dims=1)[1,:])
+
+    if size(edgeheights, 2) != 1
+        edgeheights = Vector{Float64}(metric(edgeheights, dims=1)[1,:])
+    end
+    if size(constraintdists, 2) != 1
+        constraintdists = Vector{Float64}(sum(constraintdists, dims=1)[1,:])
+    end
 
     x = dists .- constraintdists
     y = edgeheights
@@ -84,7 +89,7 @@ function prettyNNIEdgeHeights(dists, constraintdists, edgeheights; metric::Funct
     y = y .+ rand(length(y)) / 2
     x = x .+ rand(length(x)) / 5
 
-    scatter(x[neutral], y[neutral], xlabel="Merged network error", ylabel="Metric on heights of NNI move edges", labels="No difference", color="black")
+    scatter(x[neutral], y[neutral], xlabel="Merged net error minus total induced constraint error", ylabel="Sum of heights of NNI move edges", labels="No difference", color="black")
     scatter!(x[worse], y[worse], labels="Worse than induced", color="red")
     scatter!(x[better], y[better], labels="Better than induced", color="green")
 
@@ -123,5 +128,10 @@ function plotRobustnessPipelineResults(results::Tuple{Float64, DataFrame, DataFr
             display(p)
         end
     end
+
+    p = prettyNNIEdgeHeights(robustNNIdf[!, "estdists"], robustNNIdf[!, "constraintdists"], robustNNIdf[!, "edgeheights"])
+    push!(allplots, p)
+    display(p)
+    
     return allplots
 end
