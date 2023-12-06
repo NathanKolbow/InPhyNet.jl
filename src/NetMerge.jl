@@ -12,6 +12,7 @@ module NetMerge
     include("netmerge/internodedistance.jl")
     include("netmerge/mscquartetsinterface.jl")
     include("netmerge/subsetdecomp.jl")
+    include("netmerge/subsetdecomp/nj-decomp.jl")
 
     export netnj, netnj!,
         decomposeFromQuartets,
