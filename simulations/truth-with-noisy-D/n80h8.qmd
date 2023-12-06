@@ -1,6 +1,3 @@
-## WARNING: All `hardwiredClusterDistance` functions here are run with `rooted=true` so that runtime does not skyrocket! So, merged network accuracy is not completely accurate b/c our generated network is assumed to be UNROOTED.
-
-
 ```{julia}
 include("../pipelines.jl")
 truenet, constraints = loadTrueData("n80h8")
@@ -11,15 +8,15 @@ mean(D[D .!= 0]), std(D[D .!= 0])
 ## Gaussian noise from N(5, 0) (sanity check)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=5., σ=0., nsim=250)
+errors = robustGauss(truenet, constraints, μ=5., σ=0., nsim=25)
 println(sum(errors .== 0))
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
 
-## Gaussian noise from N(5, 1)
+## Gaussian noise from N(1, 1)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=5., σ=1., nsim=250)
+errors = robustGauss(truenet, constraints, μ=1., σ=1., nsim=100)
 println(sum(errors .== 0))
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
@@ -27,7 +24,8 @@ histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ## Gaussian noise from N(2, 2)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=2., σ=2., nsim=250)
+errors = robustGauss(truenet, constraints, μ=2., σ=2., nsim=100)
+println(length(errors))
 println(sum(errors .== 0))
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```
@@ -35,7 +33,8 @@ histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ## Gaussian noise from N(4, 4)
 
 ```{julia}
-errors = robustGauss(truenet, constraints, μ=4., σ=4., nsim=250)
+errors = robustGauss(truenet, constraints, μ=4., σ=4., nsim=500)
+println(length(errors))
 println(sum(errors .== 0))
 histogram(errors, labels=false, xlab="Merging error", ylab="Frequency")
 ```

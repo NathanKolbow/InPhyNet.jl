@@ -18,7 +18,7 @@ distance matrix `D`.
 - D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
 """
 function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
-    return netnj!(deepcopy(D), deepcopy(constraints), namelist)
+    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist)
 end
 
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
@@ -99,6 +99,7 @@ that all nodes have exactly 3 edges except for the root.
 """
 function check_constraints(constraints::Vector{HybridNetwork}, requirerooted::Bool)
     for net in constraints
+        if net.numTaxa == 1 continue end
         for node in net.node
             nedge = length(node.edge)
             if node.leaf
