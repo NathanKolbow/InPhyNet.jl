@@ -5,8 +5,9 @@ include("pipelines.jl")
 
 
 ```{julia}
-n80h8results = runAndSaveRobustnessPipeline("n80h8")
 n40h4results = runAndSaveRobustnessPipeline("n40h4")
+n80h8results = runAndSaveRobustnessPipeline("n80h8")
+n160h16results = runAndSaveRobustnessPipeline("n160h16")
 ```
 
 
@@ -14,6 +15,7 @@ n40h4results = runAndSaveRobustnessPipeline("n40h4")
 ```{julia}
 n40h4plots = plotRobustnessPipelineResults(n40h4results)
 n80h8plots = plotRobustnessPipelineResults(n80h8results)
+n160h16plots = plotRobustnessPipelineResults(n160h16results)
 ```
 
 
