@@ -20,6 +20,13 @@ n160h16plots = plotRobustnessPipelineResults(n160h16results)
 n240h24plots = plotRobustnessPipelineResults(n240h24results)
 ```
 
+```{julia}
+plotRobustnessPipelineResultComparisons(
+    [n40h4results, n80h8results, n160h16results, n240h24results],
+    ["n40h4", "n80h8", "n160h16", "n240h24"]
+)
+```
+
 
 
 Save figs to PDF if we want to use them later
