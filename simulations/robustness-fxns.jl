@@ -1,6 +1,38 @@
 using Distributions, Random
 
 
+function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1000)
+    # TODO: change `nnigen` to generate the TOTAL number of NNI moves, and then
+    #       randomly select some permutation of length length(constraints) to use
+    nnigen = Uniform(0, 6)
+
+    esterrors = zeros(nsim) .- 1.
+    constraintdiffs = zeros(length(constraints), nsim) .- 1.
+    gausserrors = zeros(nsim) .- 1.
+
+    fortime = @elapsed Threads.@threads for iter=1:nsim
+        # Randomly generate the Gaussian noise parameters
+        gaussMean = gaussSd = rand(Uniform(0, 5))
+        gausserrors[iter] = gaussSd
+
+        # Randomly generate the number of NNI moves
+        nnimoves = round.(rand(nnigen, length(constraints)))
+
+        try
+            esterrors[iter], constraintdiffs[:,iter] =
+                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
+        catch e
+            if typeof(e) != ArgumentError
+                @show typeof(e)
+                throw(e)
+            end
+        end
+    end
+    print("Took $(round(fortime, digits=2)) seconds")
+    return esterrors, gausserrors, constraintdiffs
+end
+
+
 function robustNNI(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
     nmoves::Vector{<:Real}; nsim::Int64=100, printruntime::Bool=true)
 
@@ -143,10 +175,12 @@ end
     n = size(D)[1]
     for i=1:n
         for j=(i+1):n
-            D[i, j] += max(0, rand(rgen))
+            D[i, j] += rand(rgen)
             D[j, i] = D[i, j]
         end
     end
+    if minimum(D) < 0 D .-= minimum(D) end
+    for i=1:n D[i,i] = 0 end
 end
 
 
@@ -201,6 +235,37 @@ function runAndSaveRobustnessPipeline(netid::String, whichConstraints::Int64=1)
         robustNNIdf = CSV.read("data/$(fileprefix)_robustNNIdf.csv", DataFrame)
     end
     return baselineDist, robustDdf, robustNNIdf
+end
+
+
+function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String},
+    gaussMean::Real, gaussSd::Real, NNImoves::Vector{<:Real}; copyD::Bool=true, copyconstraints::Bool=true)
+
+    if copyD D = deepcopy(D) end
+    origconstraints = constraints
+    if copyconstraints constraints = copyConstraints(constraints) end
+
+    length(NNImoves) == length(constraints) || error("Must specify same number of NNI moves as exist constraints.")
+
+    # Add noise
+    if gaussSd > 0
+        addnoise!(D, Normal(gaussMean, gaussSd))
+    end
+
+    # Do NNI moves
+    constraintdiffs = zeros(length(constraints))
+    if maximum(NNImoves) > 0
+        for (i, (c, nmoves)) in enumerate(zip(constraints, NNImoves))
+            for _=1:nmoves doRandomNNI!(c) end
+            constraintdiffs[i] = hardwiredClusterDistance(origconstraints[i], constraints[i], false)
+        end
+    end
+
+    # Merge the nets
+    mnet = netnj(D, constraints, namelist)
+    esterror = getNetDistances(truenet, mnet)
+
+    return esterror, constraintdiffs
 end
 
 
