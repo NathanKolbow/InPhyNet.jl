@@ -6,7 +6,7 @@ log = julia-build.log
 # have job transfer a copy of precompiled Julia software
 # be sure to match the name of the version 
 # that you have downloaded to your home directory
-transfer_input_files = julia-#.#.#-linux-x86_64.tar.gz
+transfer_input_files = https://julialang-s3.julialang.org/bin/linux/x64/1.9/julia-1.9.4-linux-x86_64.tar.gz
 
 +IsBuildJob = true
 
