@@ -1,10 +1,8 @@
-using Distributions, Random
+using Distributions, Random, Combinatorics, StatsBase, NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
 
 
 function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1000)
-    # TODO: change `nnigen` to generate the TOTAL number of NNI moves, and then
-    #       randomly select some permutation of length length(constraints) to use
-    nnigen = Uniform(0, 6)
+    totalnnigen = Uniform(0, length(constraints) * 4)
 
     esterrors = zeros(nsim) .- 1.
     constraintdiffs = zeros(length(constraints), nsim) .- 1.
@@ -12,14 +10,16 @@ function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
-        gaussMean = gaussSd = rand(Uniform(0, 5))
+        gaussMean = gaussSd = rand(Exponential(1.5))
         gausserrors[iter] = gaussSd
 
         # Randomly generate the number of NNI moves
-        nnimoves = round.(rand(nnigen, length(constraints)))
+        totalnnimoves = Int64(round(rand(totalnnigen)))
+        nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
+        nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
         try
-            esterrors[iter], constraintdiffs[:,iter] =
+            esterrors[iter], constraintdiffs[:,iter], _ =
                 runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
         catch e
             if typeof(e) != ArgumentError
@@ -28,7 +28,7 @@ function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1
             end
         end
     end
-    print("Took $(round(fortime, digits=2)) seconds")
+    print("Took $(round(fortime, digits=2)) seconds\n")
     return esterrors, gausserrors, constraintdiffs
 end
 
@@ -262,10 +262,18 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
     end
 
     # Merge the nets
-    mnet = netnj(D, constraints, namelist)
-    esterror = getNetDistances(truenet, mnet)
-
-    return esterror, constraintdiffs
+    try
+        mnet = netnj(D, constraints, namelist)
+        esterror = getNetDistances(truenet, mnet)
+        return esterror, constraintdiffs, writeTopology(mnet)
+    catch e
+        if typeof(e) != ArgumentError
+            @show typeof(e)
+            throw(e)
+        else
+            return -1, constraintdiffs, ""
+        end
+    end
 end
 
 
