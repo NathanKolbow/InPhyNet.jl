@@ -1,6 +1,23 @@
-using Plots, StatsPlots
+using Plots, StatsPlots, VegaLite
 
-function plotNNIErrors(mergedists, constraintdiffs, add=false; pointalpha=0.75)
+
+function plotMonophyleticRobustness(esterrors, gausserrors, constraintdiffs)
+    df = DataFrame(x=gausserrors, y=sum(constraintdiffs, dims=1)[1,:], z=esterrors)
+    df |> @vlplot(:point, x={
+            :x, axis={title="Gaussian standard error"}
+        }, y={
+            :y, axis={title="Sum of error induced by NNI moves"}
+        }, color={
+            :z,
+            scale={
+            domain=[-0.01, 0, 2, 4, maximum(esterrors)/3, 2*maximum(esterrors)/3, maximum(esterrors)], 
+            range=[:black, :blue, :purple, :cyan, "#ffffb2", "#ffeda0", "#feb24c", "#f03b20"]
+            }
+        })
+end
+
+
+function plotNNIErrors(mergedists, constraintdiffs, p=nothing; pointalpha=0.75, avglab=nothing, avgcol="red")
     y = Vector{Float64}(mergedists)
 
     x = Vector{Float64}()
@@ -21,17 +38,16 @@ function plotNNIErrors(mergedists, constraintdiffs, add=false; pointalpha=0.75)
     y = y .+ rand(length(y)) / 2
     x = x .+ rand(length(x)) / 2
 
-    if !add
-        scatter(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", primary=pointalpha > 0., labels="No difference", color="black", alpha=pointalpha)
-    else
-        scatter!(x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", primary=pointalpha > 0., labels="No difference", color="black", alpha=pointalpha)
-    end
-    scatter!(x[worse], y[worse], primary=pointalpha > 0., labels="Worse than induced", color="red", alpha=pointalpha)
-    if any(better)
-        scatter!(x[better], y[better], primary=pointalpha > 0., labels="Better than induced", color="green", alpha=pointalpha)
-    end
-    plot!([0, maximum(y)], [0, maximum(y)], primary=false, color="black")
-    plot!(meansx, means, labels="Average errors", color="red")
+    if p === nothing || (typeof(p) == Bool && !p) p = plot() end
+
+    p = scatter!(p, x[neutral], y[neutral], xlabel="Sum of errors induced by NNI moves", ylabel="Merged net error", primary=pointalpha > 0., labels="No difference", color="black", alpha=pointalpha)
+    scatter!(p, x[worse], y[worse], primary=pointalpha > 0., labels="Worse than induced", color="red", alpha=pointalpha)
+    scatter!(p, x[better], y[better], primary=pointalpha > 0., labels="Better than induced", color="green", alpha=pointalpha)
+    plot!(p, [0, maximum(y)], [0, maximum(y)], primary=false, color="black")
+
+    avglab = ifelse(avglab === nothing, "Average errors", avglab)
+    plot!(p, meansx, means, labels=avglab, color=avgcol)
+    return p
 end
 
 function histNNIErrors(mergedists, constraintdiffs, add=false; kwargs...)
@@ -134,4 +150,14 @@ function plotRobustnessPipelineResults(results::Tuple{Float64, DataFrame, DataFr
     display(p)
     
     return allplots
+end
+
+
+function plotRobustnessPipelineResultComparisons(result_list::Vector, labels::Vector{String})
+    colors = ["red", "green", "blue", "cyan"]
+    p = plot()
+    for (i, ((_, _, results_df), lab, col)) in enumerate(zip(result_list, labels, colors))
+        t = plotNNIErrors(results_df[!,"estdists"], results_df[!,"constraintdists"], p, pointalpha=0., avglab=lab, avgcol=col)
+    end
+    return p
 end
