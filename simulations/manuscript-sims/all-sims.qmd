@@ -1,5 +1,5 @@
 ```{julia}
-include("pipelines.jl")
+include("../pipelines.jl")
 using Plots, VegaLite
 ```
 
