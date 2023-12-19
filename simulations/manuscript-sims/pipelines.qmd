@@ -23,21 +23,21 @@ constraintsizes = [10, 10, 10, 10]
 errors5, nhybs5 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
 
 
-scatter(nhybs1 + rand(length(nhybs1))/3, errors1 + rand(length(errors1))/3,
-    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+scatter(nhybs1 .+ 0., errors1 .+ rand(length(errors1))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
     color="blue", label="1")
-scatter!(nhybs2 + rand(length(nhybs2))/3, errors2 + rand(length(errors2))/3, 
-    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+scatter!(nhybs2 .+ 0.1, errors2 .+ rand(length(errors2))/3, 
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
     color="red", label="2")
-scatter!(nhybs3 + rand(length(nhybs3))/3, errors3 + rand(length(errors3))/3,
-    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+scatter!(nhybs3 .+ 0.2, errors3 .+ rand(length(errors3))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
     color="green", label="3")
-scatter!(nhybs4 + rand(length(nhybs4))/3, errors4 + rand(length(errors4))/3,
-    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+scatter!(nhybs4 .+ 0.3, errors4 .+ rand(length(errors4))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
     color="yellow", label="4")
-scatter!(nhybs5 + rand(length(nhybs5))/3, errors5 + rand(length(errors5))/3,
-    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
-    color="yellow", label="4")
+scatter!(nhybs5 .+ 0.4, errors5 .+ rand(length(errors5))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="orange", label="5")
 ```
 
 Results plotting
