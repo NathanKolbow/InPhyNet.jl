@@ -4,6 +4,21 @@ using Plots, VegaLite
 ```
 
 ```{julia}
+# a. Monophyletic partitions
+#   i-iv. pipeline files in `condor/pipeline_1i_iv/`
+#   v.
+truenet, constraints = loadTrueData("n40h4")
+D, namelist = majorinternodedistance(truenet)
+nswaps = repeat(1:10, inner=100)
+errors = []
+for j=1:10 errors = [errors; monophyleticSwappingRobustness(truenet, constraints, D, namelist, j, nsim=100)] end
+
+boxplot(nswaps, errors, alpha=0.5)
+scatter!(nswaps + rand(length(nswaps)) / 5, errors + rand(length(errors)) / 5, alpha=0.1)
+
+
+# b. Full random partitions
+#   i. Ground truth constraints accuracy
 truenet, _ = loadTrueData("n40h4")
 D, namelist = majorinternodedistance(truenet)
 
@@ -38,17 +53,6 @@ scatter!(nhybs4 .+ 0.3, errors4 .+ rand(length(errors4))/3,
 scatter!(nhybs5 .+ 0.4, errors5 .+ rand(length(errors5))/3,
     xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
     color="orange", label="5")
-```
-
-Results plotting
-
-```{julia}
-# a. Monophyletic partitions
-#   i-iv. pipeline files in `condor/pipeline_1i_iv/`
-
-
-# b. Full random partitions
-#   i. Ground truth constraints accuracy
 
 #   ii & iii & iv. NNI & distance noise accuracy
 
