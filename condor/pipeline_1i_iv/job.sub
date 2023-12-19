@@ -6,7 +6,7 @@ log = job_$(Cluster).log
 error = job_$(Cluster)_$(Process).err
 output = job_$(Cluster)_$(Process).out
 
-executable = julia-job.sh
+executable = job.sh
 
 should_transfer_files = YES
 when_to_transfer_output = ON_EXIT
