@@ -1,0 +1,55 @@
+```{julia}
+include("../pipelines.jl")
+using Plots, VegaLite
+```
+
+```{julia}
+truenet, _ = loadTrueData("n40h4")
+D, namelist = majorinternodedistance(truenet)
+
+constraintsizes = [8, 9, 7, 16]
+errors1, nhybs1 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [8, 8, 8, 8, 8]
+errors2, nhybs2 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [6, 6, 7, 7, 7, 7]
+errors3, nhybs3 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [5, 5, 5, 5, 6, 6, 8]
+errors4, nhybs4 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [10, 10, 10, 10]
+errors5, nhybs5 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+
+scatter(nhybs1 + rand(length(nhybs1))/3, errors1 + rand(length(errors1))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+    color="blue", label="1")
+scatter!(nhybs2 + rand(length(nhybs2))/3, errors2 + rand(length(errors2))/3, 
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+    color="red", label="2")
+scatter!(nhybs3 + rand(length(nhybs3))/3, errors3 + rand(length(errors3))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+    color="green", label="3")
+scatter!(nhybs4 + rand(length(nhybs4))/3, errors4 + rand(length(errors4))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+    color="yellow", label="4")
+scatter!(nhybs5 + rand(length(nhybs5))/3, errors5 + rand(length(errors5))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.25,
+    color="yellow", label="4")
+```
+
+Results plotting
+
+```{julia}
+# a. Monophyletic partitions
+#   i-iv. pipeline files in `condor/pipeline_1i_iv/`
+
+
+# b. Full random partitions
+#   i. Ground truth constraints accuracy
+
+#   ii & iii & iv. NNI & distance noise accuracy
+
+```
