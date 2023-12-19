@@ -1,6 +1,7 @@
 using Distributions, Random, Combinatorics, StatsBase, NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
 
 
+# Main driver for manuscript sim 2(i)
 function randomPartitionRobustness(truenet::HybridNetwork, constraintsizes::Vector{Int64}, D, namelist; nsim::Int64=1000)
     esterrors = zeros(nsim) .- 1.
     nhyb = zeros(nsim) .- 1.
@@ -25,6 +26,41 @@ function randomPartitionRobustness(truenet::HybridNetwork, constraintsizes::Vect
     end
 
     return esterrors, nhyb
+end
+
+
+# Main driver function for manuscript sim 1(v)
+function monophyleticSwappingRobustness(truenet, constraints, D, namelist, nswaps; nsim::Int64=1000)
+    constraintnames = [[l.name for l in c.leaf] for c in constraints]
+    
+    esterrors = zeros(nsim) .- 1.
+
+    for iter=1:nsim
+        tempnames = deepcopy(constraintnames)
+        for swapiter=1:nswaps
+            subsetidxs = sample(1:length(tempnames), 2, replace=false)
+            swapidx1 = sample(1:length(tempnames[subsetidxs[1]]), 1)
+            swapidx2 = sample(1:length(tempnames[subsetidxs[2]]), 1)
+
+            savename = tempnames[subsetidxs[1]][swapidx1]
+            tempnames[subsetidxs[1]][swapidx1] = tempnames[subsetidxs[2]][swapidx2]
+            tempnames[subsetidxs[2]][swapidx2] = savename
+        end
+        constraints = pruneTruthFromDecomp(truenet, tempnames)
+
+        try
+            mnet = netnj(D, constraints, namelist)
+            itererror = getNetDistances(truenet, mnet)
+            esterrors[iter] = itererror
+        catch e
+            if typeof(e) != ArgumentError
+                @show typeof(e)
+                throw(e)
+            end
+        end
+    end
+
+    return esterrors
 end
 
 
