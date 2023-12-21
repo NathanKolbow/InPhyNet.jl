@@ -6,12 +6,17 @@ using Plots, VegaLite
 ```{julia}
 # a. Monophyletic partitions
 #   i-iv. pipeline files in `condor/pipeline_1i_iv/`
+df = CSV.read("../condor/pipeline_1i_iv/pipeline-1i_iv.csv", DataFrame)
+for netid in ["n40h4", "n80h8", "n160h16", "n240h24-unbalanced"]
+    tempdf = filter(:identifier => ==(netid), df)
+    p = plotMonophyleticRobustness(tempdf[!,"merged_est_error"], tempdf[!,"gauss_sd"], tempdf[!,"sum_of_constraint_errors"])
+    display(p)
+end
+
 #   v.
 truenet, constraints = loadTrueData("n40h4")
 D, namelist = majorinternodedistance(truenet)
-nswaps = repeat(1:10, inner=100)
-errors = []
-for j=1:10 errors = [errors; monophyleticSwappingRobustness(truenet, constraints, D, namelist, j, nsim=100)] end
+errors = monophyleticSwappingRobustness(truenet, constraints, D, namelist, 1:10, nsim=100)
 
 boxplot(nswaps, errors, alpha=0.5)
 scatter!(nswaps + rand(length(nswaps)) / 5, errors + rand(length(errors)) / 5, alpha=0.1)
