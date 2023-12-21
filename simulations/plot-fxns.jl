@@ -1,9 +1,11 @@
 using Plots, StatsPlots, VegaLite
 
 
-function plotMonophyleticRobustness(esterrors, gausserrors, constraintdiffs)
-    df = DataFrame(x=gausserrors, y=sum(constraintdiffs, dims=1)[1,:], z=esterrors)
-    df |> @vlplot(:point, x={
+function plotMonophyleticRobustness(esterrors, gausserrors, constraintdiffs; title="", showminusone=false)
+    if size(constraintdiffs, 2) > 1 constraintdiffs = sum(constraintdiffs, dims=1)[1,:] end
+    df = DataFrame(x=gausserrors, y=constraintdiffs, z=esterrors)
+    if !showminusone df = filter(:z => >=(0.), df) end
+    p = df |> @vlplot(:point, x={
             :x, axis={title="Gaussian standard error"}
         }, y={
             :y, axis={title="Sum of error induced by NNI moves"}
@@ -14,6 +16,7 @@ function plotMonophyleticRobustness(esterrors, gausserrors, constraintdiffs)
             range=[:black, :blue, :purple, :cyan, "#ffffb2", "#ffeda0", "#feb24c", "#f03b20"]
             }
         })
+    return p
 end
 
 
