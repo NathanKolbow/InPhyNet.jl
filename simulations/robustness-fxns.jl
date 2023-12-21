@@ -31,31 +31,37 @@ end
 
 # Main driver function for manuscript sim 1(v)
 function monophyleticSwappingRobustness(truenet, constraints, D, namelist, nswaps; nsim::Int64=1000)
+    if typeof(nswaps) <: AbstractVector nswaps = Vector(nswaps)
+    else nswaps = [nswaps] end
     constraintnames = [[l.name for l in c.leaf] for c in constraints]
     
-    esterrors = zeros(nsim) .- 1.
+    esterrors = zeros(nsim * length(nswaps)) .- 1.
 
-    for iter=1:nsim
-        tempnames = deepcopy(constraintnames)
-        for swapiter=1:nswaps
-            subsetidxs = sample(1:length(tempnames), 2, replace=false)
-            swapidx1 = sample(1:length(tempnames[subsetidxs[1]]), 1)
-            swapidx2 = sample(1:length(tempnames[subsetidxs[2]]), 1)
+    for (j, currswaps) in enumerate(nswaps)
+        Threads.@threads for iter=1:nsim
+            iteridx = (j-1)*nsim + iter
 
-            savename = tempnames[subsetidxs[1]][swapidx1]
-            tempnames[subsetidxs[1]][swapidx1] = tempnames[subsetidxs[2]][swapidx2]
-            tempnames[subsetidxs[2]][swapidx2] = savename
-        end
-        constraints = pruneTruthFromDecomp(truenet, tempnames)
+            tempnames = deepcopy(constraintnames)
+            for swapiter=1:currswaps
+                subsetidxs = sample(1:length(tempnames), 2, replace=false)
+                swapidx1 = sample(1:length(tempnames[subsetidxs[1]]), 1)
+                swapidx2 = sample(1:length(tempnames[subsetidxs[2]]), 1)
 
-        try
-            mnet = netnj(D, constraints, namelist)
-            itererror = getNetDistances(truenet, mnet)
-            esterrors[iter] = itererror
-        catch e
-            if typeof(e) != ArgumentError
-                @show typeof(e)
-                throw(e)
+                savename = tempnames[subsetidxs[1]][swapidx1]
+                tempnames[subsetidxs[1]][swapidx1] = tempnames[subsetidxs[2]][swapidx2]
+                tempnames[subsetidxs[2]][swapidx2] = savename
+            end
+            constraints = pruneTruthFromDecomp(truenet, tempnames)
+
+            try
+                mnet = netnj(D, constraints, namelist)
+                itererror = getNetDistances(truenet, mnet)
+                esterrors[iteridx] = itererror
+            catch e
+                if typeof(e) != ArgumentError
+                    @show typeof(e)
+                    throw(e)
+                end
             end
         end
     end
