@@ -1,0 +1,64 @@
+```{julia}
+include("../pipelines.jl")
+using Plots, VegaLite
+```
+
+```{julia}
+# a. Monophyletic partitions
+#   i-iv. pipeline files in `condor/pipeline_1i_iv/`
+df = CSV.read("../condor/pipeline_1i_iv/pipeline-1i_iv.csv", DataFrame)
+for netid in ["n40h4", "n80h8", "n160h16", "n240h24-unbalanced"]
+    tempdf = filter(:identifier => ==(netid), df)
+    p = plotMonophyleticRobustness(tempdf[!,"merged_est_error"], tempdf[!,"gauss_sd"], tempdf[!,"sum_of_constraint_errors"])
+    display(p)
+end
+
+#   v.
+truenet, constraints = loadTrueData("n40h4")
+D, namelist = majorinternodedistance(truenet)
+errors = monophyleticSwappingRobustness(truenet, constraints, D, namelist, 1:10, nsim=100)
+
+boxplot(nswaps, errors, alpha=0.5)
+scatter!(nswaps + rand(length(nswaps)) / 5, errors + rand(length(errors)) / 5, alpha=0.1)
+
+
+# b. Full random partitions
+#   i. Ground truth constraints accuracy
+truenet, _ = loadTrueData("n40h4")
+D, namelist = majorinternodedistance(truenet)
+
+constraintsizes = [8, 9, 7, 16]
+errors1, nhybs1 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [8, 8, 8, 8, 8]
+errors2, nhybs2 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [6, 6, 7, 7, 7, 7]
+errors3, nhybs3 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [5, 5, 5, 5, 6, 6, 8]
+errors4, nhybs4 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+constraintsizes = [10, 10, 10, 10]
+errors5, nhybs5 = randomPartitionRobustness(truenet, constraintsizes, D, namelist, nsim=200)
+
+
+scatter(nhybs1 .+ 0., errors1 .+ rand(length(errors1))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="blue", label="1")
+scatter!(nhybs2 .+ 0.1, errors2 .+ rand(length(errors2))/3, 
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="red", label="2")
+scatter!(nhybs3 .+ 0.2, errors3 .+ rand(length(errors3))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="green", label="3")
+scatter!(nhybs4 .+ 0.3, errors4 .+ rand(length(errors4))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="yellow", label="4")
+scatter!(nhybs5 .+ 0.4, errors5 .+ rand(length(errors5))/3,
+    xlab="Sum of constraint hybs", ylab="Merged errors", alpha=0.45,
+    color="orange", label="5")
+
+#   ii & iii & iv. NNI & distance noise accuracy
+
+```
