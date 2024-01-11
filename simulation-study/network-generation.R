@@ -1,3 +1,4 @@
+# Should be in directory `network-merging/simulation-study/`
 library(ape)
 library(SiPhyNetwork)
 
@@ -19,26 +20,27 @@ findnu <- function(ntaxa, goalhybs) {
     while(!(mean(ssa_nets_hybs) < goalhybs + 1)) {
         nu <- nu - nu / 10
         ssa_nets <- sim.bdh.taxa.ssa(
-            n=50, numbsim=100, nu=nu, hybprops=c(0.5, 0, 0.5),
+            n=ntaxa, numbsim=100, nu=nu, hybprops=c(0.5, 0, 0.5),
             mu=0, hyb.inher.fxn=make.beta.draw(10, 10),
             lambda=1
         )
         ssa_nets_hybs <- getnhybs(ssa_nets)
     }
+    print(paste0("Found nu: ", nu))
     return(nu)
 }
 
-findnets <- function(nu, goalhybs) {
+findnets <- function(ntaxa, nu, goalhybs) {
     idx <- 1
     nets <- sim.bdh.taxa.ssa(   # placeholder nets
-            n=50, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
+            n=ntaxa, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
             mu=0, hyb.inher.fxn=make.beta.draw(10, 10),
             lambda=1
         )
 
     while(idx <= 100) {
         net <- sim.bdh.taxa.ssa(
-            n=50, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
+            n=ntaxa, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
             mu=0, hyb.inher.fxn=make.beta.draw(10, 10),
             lambda=1
         )
@@ -55,8 +57,8 @@ findnets <- function(nu, goalhybs) {
 findandsavenets <- function(ntaxa, prod) {
     goalhybs <- floor(ntaxa * prod)
     nu <- findnu(ntaxa, goalhybs)
-    nets <- findnets(nu, goalhybs)
-    write.net(nets, file=paste0("simulation-study/data/networks/n", ntaxa, "h", goalhybs, ".netfile"))
+    nets <- findnets(ntaxa, nu, goalhybs)
+    write.net(nets, file=paste0("data/networks/n", ntaxa, "h", goalhybs, ".netfile"))
 }
 
 # 50 taxa
@@ -64,7 +66,7 @@ findandsavenets(50, 0.05)   # done
 findandsavenets(50, 0.10)   # done
 
 # 100 taxa
-findandsavenets(100, 0.05)  # done
+findandsavenets(100, 0.05)
 findandsavenets(100, 0.10)
 
 # 200 taxa
