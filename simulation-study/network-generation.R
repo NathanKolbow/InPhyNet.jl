@@ -2,7 +2,6 @@ library(ape)
 library(SiPhyNetwork)
 
 # Helper functions
-
 getnhybs <- function(ssa_nets) {
     nhyblist <- c()
     for(i in 1:length(ssa_nets)) {
