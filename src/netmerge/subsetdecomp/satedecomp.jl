@@ -4,6 +4,7 @@ using PhyloNetworks, StatsBase
 
 """
 Performs subset decomposition as outlines in SATe-I on `inittree`.
+Returns vector of vector of names, e.g. [["a", "b"], ["c", "d", "e"]]
 """
 function sateIdecomp(inittree::HybridNetwork, maxsize::Integer)
     workingset = Vector{HybridNetwork}([inittree])
@@ -23,7 +24,7 @@ function sateIdecomp(inittree::HybridNetwork, maxsize::Integer)
         else push!(splittrees, split2) end
     end
 
-    return splittrees
+    return [[l.name for l in t.leaf] for t in splittrees]
 end
 
 
