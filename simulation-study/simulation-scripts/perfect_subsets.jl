@@ -10,7 +10,7 @@ dmethod = ARGS[3]
 include("helpers/robustness-fxns.jl")
 include("helpers/save-results.jl")
 
-# 0. gather ground truth distance matrix
+# 0. gather ground truth distance matrix & namelist
 truenet = readTopology(truenewick)
 
 D, namelist = (nothing, nothing)
@@ -20,7 +20,7 @@ else
     error("Unrecognized distance method specified.")
 end
 
-# 1. subset decomp w/ SATe-I decomp method
+# 1. subset decomp w/ SATe-I decomp method (SATe-II doesn't seem to work very well for our purposes)
 taxa_subsets = sateIdecomp(majorTree(truenet), maxsubsetsize)
 constraints = pruneTruthFromDecomp(truenet, taxa_subsets)
 
