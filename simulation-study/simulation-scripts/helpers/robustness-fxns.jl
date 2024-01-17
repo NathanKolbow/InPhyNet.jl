@@ -71,12 +71,15 @@ end
 
 
 # Main driver function for manuscript sims 1(i)-(iv)
-function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1000)
+function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000)
     totalnnigen = Uniform(0, length(constraints) * 4)
 
+    # Recorded values
     esterrors = zeros(nsim) .- 1.
     constraintdiffs = zeros(length(constraints), nsim) .- 1.
     gausserrors = zeros(nsim) .- 1.
+    nretics_est = zeros(nsim) .- 1.
+    #
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
@@ -89,7 +92,7 @@ function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
         try
-            esterrors[iter], constraintdiffs[:,iter], _ =
+            esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
                 runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
         catch e
             if typeof(e) != ArgumentError
@@ -99,7 +102,7 @@ function monophyleticRobustness(truenet, constraints, D, namelist; nsim::Int64=1
         end
     end
     print("Took $(round(fortime, digits=2)) seconds\n")
-    return esterrors, gausserrors, constraintdiffs
+    return esterrors, gausserrors, constraintdiffs, nretics_est
 end
 
 
@@ -350,13 +353,13 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
     try
         mnet = netnj(D, constraints, namelist)
         esterror = getNetDistances(truenet, mnet)
-        return esterror, constraintdiffs, writeTopology(mnet)
+        return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         if typeof(e) != ArgumentError
             @show typeof(e)
             throw(e)
         else
-            return -1, constraintdiffs, ""
+            return -1, constraintdiffs, "", -1
         end
     end
 end
