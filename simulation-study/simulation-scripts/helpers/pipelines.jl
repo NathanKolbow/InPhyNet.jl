@@ -1,27 +1,25 @@
-function fixdir()
-    currdir = splitdir(pwd())
-    while currdir[length(currdir)] != "network-merging"
-        if length(currdir) <= 2
-            cd(Base.source_dir())
-        end
-        cd("..")
-        currdir = splitdir(pwd())
-    end
-end
-fixdir()
-
-using Pkg; Pkg.activate(".")
-cd("simulations")
-
-using NetMerge, PhyloNetworks, StatsBase, Plots, StatsPlots, DataFrames, CSV
+using NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
 include("robustness-fxns.jl")
-include("plot-fxns.jl")
+
+# FILE PATH HELPERS
+getBaseDir() = "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
+getDataDir() = joinpath(getBaseDir(), "data")
+getNetworkFilepath(netid::String) = joinpath(getDataDir(), "networks", "$(netid).netfile")
+getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$(truenet.numTaxa)r$(truenet.numHybrids).csv")
 
 # DATA LOADING FUNCTIONS
-function loadTrueData(netid::String, whichConstraints::Int64=1)
-    truenet = readTopology("$(netid)/$(netid).net")
-    constraints = readMultiTopology("$(netid)/true-constraints$(whichConstraints).net")
-    return truenet, constraints
+function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String)
+    truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
+    constraints = sateIdecomp(majorTree(truenet), maxsize)
+    constraints = pruneTruthFromDecomp(truenet, constraints)
+    
+    D, namelist = (nothing, nothing)
+    if dmethod == "internode_count"
+        D, namelist = majorinternodedistance(truenet)
+    else
+        error("Unrecognized distance method specified.")
+    end
+    return truenet, constraints, D, namelist
 end
 
 
