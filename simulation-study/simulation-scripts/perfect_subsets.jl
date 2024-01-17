@@ -1,31 +1,36 @@
 # MAKE SURE TO RUN WITH `julia --project -tX ...`
-# TODO: switch up how network newick is passed. passing as a string will probably get too long and cause problems eventuallyget
-if length(ARGS) != 3
-    error("Usage: julia perfect_subsets.jl \"<true network newick>\" <maximum subset size> \"<distance method>\"")
-end
-truenewick = ARGS[1]
-maxsubsetsize = parse(Int64, ARGS[2])
-dmethod = ARGS[3]
-
-include("helpers/robustness-fxns.jl")
-include("helpers/save-results.jl")
-
-# 0. gather ground truth distance matrix & namelist
-truenet = readTopology(truenewick)
-
-D, namelist = (nothing, nothing)
-if dmethod == "internode_count"
-    D, namelist = majorinternodedistance(truenet)
-else
-    error("Unrecognized distance method specified.")
+error("Double check in Slack how we're choosing the Gaussian standard error and refactor `monophyleticRobustness` to use this schema.")
+if length(ARGS) != 4 && length(ARGS) != 5
+    error("Usage: julia perfect_subsets.jl \"<true network abbreviation>\" <network/replicate number> <maximum subset size> \"<distance method>\" [number of sims]")
 end
 
-# 1. subset decomp w/ SATe-I decomp method (SATe-II doesn't seem to work very well for our purposes)
-taxa_subsets = sateIdecomp(majorTree(truenet), maxsubsetsize)
-constraints = pruneTruthFromDecomp(truenet, taxa_subsets)
+# distance method options:
+# - "internode_count"
+
+###### Input parsing ######
+netid = ARGS[1]
+replicatenum = parse(Int64, ARGS[2])
+maxsubsetsize = parse(Int64, ARGS[3])
+dmethod = ARGS[4]
+nsim = 1000
+if length(ARGS) == 5 nsim = parse(Int64, ARGS[5]) end
+###########################
+
+include("helpers/helpers.jl")
+
+# 1. gather ground truth network, constraint, distance matrix, and namelist
+truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
 
 # 2. run robustness testing
-esterrors, gausserrors, constraintdiffs = monophyleticRobustness(truenet, constraints, D, namelist)
+esterrors, gausserrors, constraintdiffs, nretics_est = monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim)
 constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
 # 3. save results
+savePerfectResults(
+    truenet,
+    constraints,
+    esterrors,
+    gausserrors,
+    constraintdiffs,
+    nretics_est
+)
