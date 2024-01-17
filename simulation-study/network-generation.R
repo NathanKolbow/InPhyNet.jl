@@ -67,7 +67,7 @@ findandsavenets(50, 0.10)   # done
 
 # 100 taxa
 findandsavenets(100, 0.05)  # done
-findandsavenets(100, 0.10)
+findandsavenets(100, 0.10)  # HERE AND BELOW probably not gonna finish...
 
 # 200 taxa
 findandsavenets(200, 0.05)
