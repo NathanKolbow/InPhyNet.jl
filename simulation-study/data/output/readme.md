@@ -1,4 +1,15 @@
 # Output data planning
 
-100 network topologies for each category (n50h2, n50h5, ...) all of which go through
-1. 
+Part 1 - perfect subsets
+- Gaussian noise
+- NNI noise count
+
+Part 2 - semi-perfect subsets
+- Number of swaps (1-10)
+- Gaussian noise
+- NNI noise count
+
+Part 3 - random subsets
+- Constraint sizes
+- Gaussian noise
+- NNI noise count
