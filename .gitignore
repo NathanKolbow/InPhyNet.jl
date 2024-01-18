@@ -30,4 +30,8 @@ Manifest.toml
 relevant-reading/*
 
 # Simulation data
-simulations/n40h4/data/*
+old-sims/n40h4/data/*
+old-sims/n40h4/*
+old-sims/report/*
+*treefile*
+*seq-gen*
