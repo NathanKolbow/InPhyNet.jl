@@ -5,11 +5,15 @@ include("robustness-fxns.jl")
 getBaseDir() = "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
 getDataDir() = joinpath(getBaseDir(), "data")
 getNetworkFilepath(netid::String) = joinpath(getDataDir(), "networks", "$(netid).netfile")
-getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$(truenet.numTaxa)r$(truenet.numHybrids).csv")
+getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$((truenet.numTaxa)-1)r$(truenet.numHybrids).csv")
 
 # DATA LOADING FUNCTIONS
 function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String)
     truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
+    newick = writeTopology(truenet)
+    newick = "($(newick[1:(length(newick)-1)]),OUTGROUP:1.0);"
+    truenet = readTopology(newick)
+
     constraints = sateIdecomp(majorTree(truenet), maxsize)
     constraints = pruneTruthFromDecomp(truenet, constraints)
     
