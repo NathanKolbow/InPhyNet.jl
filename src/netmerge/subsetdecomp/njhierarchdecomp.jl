@@ -36,7 +36,7 @@ function njHierarchDecomp(tree::HybridNetwork, maxtax::Int64; clustkwargs...)
 end
 
 
-function pruneTruthFromDecomp(truenet, subsets)
+function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector)
     nets = Vector{HybridNetwork}()
     for set in subsets
         tempnet = readTopology(writeTopology(truenet))
