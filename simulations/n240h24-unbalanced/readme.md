@@ -1,1 +1,0 @@
-If `N` is the network in `n40h4/n40h4.net`, then this net is `(N,(N,(N,(N,(N,N)))))`; i.e., merging `N` 6 times in an unbalanced manner.
