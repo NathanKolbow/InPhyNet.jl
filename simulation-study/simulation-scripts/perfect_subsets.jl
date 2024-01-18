@@ -1,5 +1,5 @@
 # MAKE SURE TO RUN WITH `julia --project -tX ...`
-error("Double check in Slack how we're choosing the Gaussian standard error and refactor `monophyleticRobustness` to use this schema.")
+#error("Double check in Slack how we're choosing the Gaussian standard error and refactor `monophyleticRobustness` to use this schema.")
 if length(ARGS) != 4 && length(ARGS) != 5
     error("Usage: julia perfect_subsets.jl \"<true network abbreviation>\" <network/replicate number> <maximum subset size> \"<distance method>\" [number of sims]")
 end
@@ -32,5 +32,6 @@ savePerfectResults(
     esterrors,
     gausserrors,
     constraintdiffs,
-    nretics_est
+    nretics_est,
+    replicatenum
 )
