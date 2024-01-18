@@ -4,7 +4,7 @@ include("retic-metric.jl")
 using CSV, DataFrames
 
 function savePerfectResults(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, esterrors::Vector{<:Real},
-    gausserrors::Vector{<:Real}, constraintdiffs::Vector{<:Real}, nretics_est::Vector{<:Real})
+    gausserrors::Vector{<:Real}, constraintdiffs::Vector{<:Real}, nretics_est::Vector{<:Real}, replicate_num::Int64)
 
     # Quick checks for bad input
     a = length(gausserrors)
@@ -21,11 +21,11 @@ function savePerfectResults(truenet::HybridNetwork, constraints::Vector{HybridNe
     # Calculate some relevant data points
     nretics_inside, nretics_outside, nretics_duplicated = calculateReticData(truenet, constraints)
     constraint_sizes = string([c.numTaxa for c in constraints])
-    constraint_sizes = constraint_sizes[2:(length(constraint_sizes)-1)]
+    constraint_sizes = replace(constraint_sizes[2:(length(constraint_sizes)-1)], " " => "")
 
     # Put together and save data
     df = DataFrame(
-        numtaxa=repeat([truenet.numTaxa], nrows),
+        numtaxa=repeat([truenet.numTaxa - 1], nrows),
         nretics_true=repeat([truenet.numHybrids], nrows),
         nretics_est=nretics_est,
         nretics_inside=repeat([nretics_inside], nrows),
@@ -34,7 +34,8 @@ function savePerfectResults(truenet::HybridNetwork, constraints::Vector{HybridNe
         constraint_sizes=constraint_sizes,
         estRFerror=esterrors,
         gauss_error=gausserrors,
-        constraint_error_sum=constraintdiffs
+        constraint_error_sum=constraintdiffs,
+        replicate_num=repeat([replicate_num], nrows)
     )
     CSV.write(output_path, df, append=true)
 end
