@@ -1,0 +1,13 @@
+universe = vanilla
+
+log = ../logs/snaq1_$(Cluster).log
+error = ../logs/snaq1_$(Cluster)_$(NETABBR)_$(NUMGT)_$(NUMTHREADS)_$(ILS)_$(REPLICATENUM).err
+output = ../logs/snaq1_$(Cluster)_$(NETABBR)_$(NUMGT)_$(NUMTHREADS)_$(ILS)_$(REPLICATENUM).out
+
+###################################################################
+exec = scripts/perfect_subsets.sh
+arguments = $(NETID) $(REPLICATENUM) $(MAXSUBSETSIZE) $(DMETHOD) $(NSIMS)
+###################################################################
+
+# Queue one job for each unique newick
+queue NETID,REPLICATENUM,MAXSUBSETSIZE,DMETHOD,NSIMS from tables/perfect_subsets.tab
