@@ -9,5 +9,14 @@ exec = scripts/perfect_subsets.sh
 arguments = $(NETID) $(REPLICATENUM) $(MAXSUBSETSIZE) $(DMETHOD) $(NSIMS)
 ###################################################################
 
+should_transfer_files = YES
+transfer_input_files = transfer-files/julia-1.9.3-linux-x86_64.tar.gz   \
+    scripts/perfect_subsets.sh
+
+
+request_cpus = 8
+request_memory = 8GB
+request_disk = 2GB
+
 # Queue one job for each unique newick
 queue NETID,REPLICATENUM,MAXSUBSETSIZE,DMETHOD,NSIMS from tables/perfect_subsets.tab
