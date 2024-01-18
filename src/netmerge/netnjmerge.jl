@@ -146,7 +146,14 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
             to.node[2].name = "___internal"*string(counter+=1)
         end
 
-        push!(namepairs, ([from.node[1].name, from.node[2].name], [to.node[1].name, to.node[2].name]))
+        # Alphanumeric name ordering for easier uniqueness checking
+        name1a, name1b = from.node[1].name < from.node[2].name ? [from.node[1].name, from.node[2].name] : [from.node[2].name, from.node[1].name]
+        name2a, name2b = to.node[1].name < to.node[2].name ? [to.node[1].name, to.node[2].name] : [to.node[2].name, to.node[1].name]
+        newpair = ([name1a, name1b], [name2a, name2b])
+
+        if !(newpair in namepairs)
+            push!(namepairs, newpair)
+        end
     end
     mnet = readTopology(writeTopology(net))
 
