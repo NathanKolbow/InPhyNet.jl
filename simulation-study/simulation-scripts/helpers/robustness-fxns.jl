@@ -1,4 +1,4 @@
-using Distributions, Random, Combinatorics, StatsBase, NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
+using Distributions, Random, Combinatorics, StatsBase, NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
 
 
 # Main driver for manuscript sim 2(i)
@@ -81,9 +81,14 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     nretics_est = zeros(nsim) .- 1.
     #
 
+    #
+    nrows = size(D, 1)
+    std0 = std(UpperTriangular(D[1:(nrows-1), 2:nrows]))
+    #
+
     fortime = @elapsed Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
-        gaussMean = gaussSd = rand(Exponential(1.5))
+        gaussMean = gaussSd = rand(Uniform(0, 2*std0))
         gausserrors[iter] = gaussSd
 
         # Randomly generate the number of NNI moves
