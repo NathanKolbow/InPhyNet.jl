@@ -6,15 +6,20 @@ output = ../logs/snaq1_$(Cluster)_$(NETABBR)_$(NUMGT)_$(NUMTHREADS)_$(ILS)_$(REP
 
 ###################################################################
 exec = scripts/perfect_subsets.sh
-arguments = $(NETID) $(REPLICATENUM) $(MAXSUBSETSIZE) $(DMETHOD) $(NSIMS)
+arguments = $(NETID) $(REPLICATENUM) $(MAXSUBSETSIZE) $(DMETHOD) $(NSIMS) $(NTHREADS)
 ###################################################################
+
+# Some machines lead to segfaults, but these all seem to work fine. So, we only allow these for now.
+Requirements = (machine == "roy-exec-1.discovery.wisc.edu") || (machine == "roy-exec-2.discovery.wisc.edu") || \
+    (machine == "roy-exec-3.discovery.wisc.edu") || (machine == "roy-exec-4.discovery.wisc.edu") || \
+    (machine == "roy-exec-5.discovery.wisc.edu")
 
 should_transfer_files = YES
 transfer_input_files = transfer-files/julia-1.9.3-linux-x86_64.tar.gz   \
     scripts/perfect_subsets.sh
 
 
-request_cpus = 8
+request_cpus = 1
 request_memory = 8GB
 request_disk = 2GB
 
