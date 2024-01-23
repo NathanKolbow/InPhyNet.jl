@@ -345,6 +345,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             constraintdiffs[i] = hardwiredClusterDistance(origconstraints[i], constraints[i], false)
         end
     end
+    tempcs = copyConstraints(constraints)
 
     # Merge the nets
     try
@@ -353,7 +354,14 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         return esterror, constraintdiffs, writeTopology(mnet)
     catch e
         if typeof(e) != ArgumentError
+            
+            println("ERROR RECEIVED")
             @show typeof(e)
+            println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")
+            for c in tempcs println("\t$(writeTopology(c))") end
+            println("TRUE NET")
+            println("\t$(writeTopology(truenet))")
+
             throw(e)
         else
             return -1, constraintdiffs, ""
