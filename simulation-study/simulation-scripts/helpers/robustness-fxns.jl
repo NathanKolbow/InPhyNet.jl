@@ -361,7 +361,13 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         if typeof(e) != ArgumentError
+            println("ERROR RECEIVED")
             @show typeof(e)
+            println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")
+            for c in tempcs println("\t$(writeTopology(c))") end
+            println("TRUE NET")
+            println("\t$(writeTopology(truenet))")
+
             throw(e)
         else
             return -1, constraintdiffs, "", -1
