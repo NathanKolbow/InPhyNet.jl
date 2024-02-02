@@ -36,7 +36,19 @@ function njHierarchDecomp(tree::HybridNetwork, maxtax::Int64; clustkwargs...)
 end
 
 
-function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector)
+"""
+Returns a list of networks where each entry is a copy of `truenet` pruned to include
+only the taxa named in each respective set in `subsets`.
+
+# Example
+
+```julia
+mynetwork = readTopology("((t1,t2),(t3,t4));")
+pruneTruthFromDecomp(mynetwork, [["t1", "t2"], ["t3", "t4"]])
+> 2-element Vector{HybridNetwork}: (t1, t2); and (t3, t4);
+```
+"""
+function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:AbstractVector{<:AbstractString}})
     nets = Vector{HybridNetwork}()
     for set in subsets
         tempnet = readTopology(writeTopology(truenet))
