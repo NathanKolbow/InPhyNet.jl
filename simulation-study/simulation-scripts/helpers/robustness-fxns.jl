@@ -353,6 +353,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             constraintdiffs[i] = hardwiredClusterDistance(origconstraints[i], constraints[i], false)
         end
     end
+    tempcs = copyConstraints(constraints)
 
     # Merge the nets
     try
