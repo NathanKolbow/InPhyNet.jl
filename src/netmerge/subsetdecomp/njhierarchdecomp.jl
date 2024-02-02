@@ -12,6 +12,8 @@ end
 #       with length(clusti) + length(clustj) < maxtax,
 #       select min_(i,j) [ avg_pairwise_dist(clusti, clustj)] using `D`
 function njHierarchDecomp(tree::HybridNetwork, maxtax::Int64; clustkwargs...)
+    @warn "Function `njHierarchDecomp` is deprecated. Use `sateIdecomp` instead."
+
     D, namelist = internodedistance(tree)
     hres = hclust(D; clustkwargs...)
 
