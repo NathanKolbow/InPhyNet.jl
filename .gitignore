@@ -33,5 +33,11 @@ relevant-reading/*
 old-sims/n40h4/data/*
 old-sims/n40h4/*
 old-sims/report/*
+old-sims/
 *treefile*
 *seq-gen*
+
+# Julia
+artifacts/
+logs/
+compiled/
