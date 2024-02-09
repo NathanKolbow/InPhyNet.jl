@@ -39,6 +39,7 @@ function check_reticmap(r::ReticMap)
             error("ReticMap key $i has $(length(r.map[key])) attached edges.")
         elseif sum(r.map[key] .!== nothing) != 2
             println(r.map[key])
+            println(key.number)
             error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
         end
     end
