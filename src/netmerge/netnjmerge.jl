@@ -42,7 +42,26 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
 
-    while n > 2
+    # Edge case: remove (but log) retics that emerge from the root of constraints
+    rootretics = Array{Union{Edge, Nothing}}(undef, length(subnets))
+    for (i, c) in enumerate(constraints)
+        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        if any(hybridbools)
+            sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
+            hybedge = c.node[c.root].edge[hybridbools][1]
+            rootretics[i] = hybedge
+
+            @warn "Constraint network $(i) has a reticulation emerging from the root of the network. "*
+                  "This behavior may not be handled in a way that you expect. See this post for "*
+                  "additional information: POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB."
+        else
+            rootretics[i] = nothing
+        end
+    end
+    rootreticprocessed = [false for _ in 1:length(constraints)]
+
+    # Main algorithm loop
+    while n > 1
         # DEBUG STATEMENT
         # @show n
         possible_siblings = findvalidpairs(constraints, namelist)
@@ -53,6 +72,17 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         # connect subnets i and j
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
         updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
+
+        # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
+        for (cidx, c) in enumerate(constraints)
+            if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
+                fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
+                subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
+                logretic!(reticmap, rootretics[cidx], edgei, "from")
+                # println("logging retic for edge number $(rootretics[cidx].number)")
+                rootreticprocessed[cidx] = true
+            end
+        end
 
         # collapse taxa i into j
         for l in 1:n
@@ -79,16 +109,30 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
 
         n -= 1
     end
-
-    mnet, edgei, edgej = mergesubnets!(subnets[1], subnets[2])
-    updateconstraints!(namelist[1], namelist[2], constraints, reticmap, edgei, edgej)
+    
+    # mnet, edgei, edgej = mergesubnets!(subnets[1], subnets[2])
+    # updateconstraints!(namelist[1], namelist[2], constraints, reticmap, edgei, edgej)
+    mnet = subnets[1]
 
     mnet = HybridNetwork(mnet.nodes, mnet.edges)
     mnet.root = mnet.numNodes
     mnet.node[mnet.root].name = "root"
 
     mnet = placeretics!(mnet, reticmap)
+    removeplaceholdernames!(mnet)
+
     return mnet
+end
+
+
+@inline function removeplaceholdernames!(mnet::HybridNetwork)
+    for node in mnet.node
+        if node.leaf && startswith(node.name, "__placeholder_for_rootretic_num")
+            deleteleaf!(mnet, node)
+        elseif !node.leaf && startswith(node.name, "___internal")
+            node.name = ""
+        end
+    end
 end
 
 
@@ -318,6 +362,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         push!(net.edge, newedge)
     else
         # println("c: ($(nodei.name), $(nodej.name))")
+        # println("Before any operations:\n\t$(writeTopology(net))")
 
         # find shortest path from `nodei` to `nodej`
         graph = Graph(net, includeminoredges=true)
@@ -422,13 +467,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                         @error("equiv edges C")
                     end
 
-                    # works for constraints[2]
-                    # if sum(ishybedge) == 1 && edge != hybedge
-                    #     logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-                    # end
-
-
-                    # works for constraints[1]
                     if edge != hybedge || !hybedgelogged
                         logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                     end
@@ -467,7 +505,7 @@ Redundant nodes in this case will always have only two edges while *not* being t
 """
 function fuseredundantedges!(net::HybridNetwork)
     for (i, node) in enumerate(net.node)
-        if node.leaf || node == net.node[net.root] continue end
+        if node.leaf || node.hybrid || node == net.node[net.root] continue end
         if length(node.edge) == 2
             fuseedgesat!(i, net)
         end
