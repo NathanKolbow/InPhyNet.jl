@@ -75,9 +75,9 @@ findandsavenets(200, 0.05, maxlevel = 6)
 findandsavenets(200, 0.10, maxlevel = 10)
 
 # 500 taxa
-findandsavenets(500, 0.05)
-findandsavenets(500, 0.10)
+findandsavenets(500, 0.05, maxlevel = 12)
+findandsavenets(500, 0.10, maxlevel = 25)
 
 # 1000 taxa
-findandsavenets(1000, 0.05)
-findandsavenets(1000, 0.10)
+findandsavenets(1000, 0.05, maxlevel = 50)
+findandsavenets(1000, 0.10, maxlevel = 100)
