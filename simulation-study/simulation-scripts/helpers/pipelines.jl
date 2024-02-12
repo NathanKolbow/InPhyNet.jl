@@ -2,8 +2,7 @@ using NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
 include("robustness-fxns.jl")
 
 # FILE PATH HELPERS
-# getBaseDir() = "/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/"
-getBaseDir() = "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
+getBaseDir() = "/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/"
 getDataDir() = joinpath(getBaseDir(), "data")
 getNetworkFilepath(netid::String) = joinpath(getDataDir(), "networks", "$(netid).netfile")
 getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$((truenet.numTaxa)-1)r$(truenet.numHybrids).csv")
