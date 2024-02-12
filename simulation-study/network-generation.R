@@ -30,21 +30,22 @@ findnu <- function(ntaxa, goalhybs) {
     return(nu)
 }
 
-findnets <- function(ntaxa, nu, goalhybs) {
+findnets <- function(ntaxa, nu, goalhybs, maxlevel) {
     idx <- 1
     nets <- sim.bdh.taxa.ssa(   # placeholder nets
-            n=ntaxa, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
-            mu=0, hyb.inher.fxn=make.beta.draw(10, 10),
-            lambda=1
+            n = ntaxa, numbsim = 1, nu = nu, hybprops = c(0.5, 0, 0.5),
+            mu = 0, hyb.inher.fxn = make.beta.draw(10, 10),
+            lambda = 1
         )
 
-    while(idx <= 100) {
+    while (idx <= 100) {
         net <- sim.bdh.taxa.ssa(
-            n=ntaxa, numbsim=1, nu=nu, hybprops=c(0.5, 0, 0.5),
-            mu=0, hyb.inher.fxn=make.beta.draw(10, 10),
-            lambda=1
+            n = ntaxa, numbsim = 1, nu = nu, hybprops = c(0.5, 0, 0.5),
+            mu = 0, hyb.inher.fxn = make.beta.draw(10, 10),
+            lambda = 1
         )
-        if(!is.numeric(net[[1]]) && getNetworkLevel(net[[1]]) == 1 && getnhybs(net) == goalhybs) {
+
+        if(!is.numeric(net[[1]]) && getNetworkLevel(net[[1]]) <= maxlevel && getnhybs(net) == goalhybs) {
             nets[[idx]] <- net[[1]]
             print(idx)
             idx <- idx + 1
@@ -54,10 +55,10 @@ findnets <- function(ntaxa, nu, goalhybs) {
 }
 
 # Find networks
-findandsavenets <- function(ntaxa, prod) {
+findandsavenets <- function(ntaxa, prod, maxlevel = 1) {
     goalhybs <- floor(ntaxa * prod)
     nu <- findnu(ntaxa, goalhybs)
-    nets <- findnets(ntaxa, nu, goalhybs)
+    nets <- findnets(ntaxa, nu, goalhybs, maxlevel = maxlevel)
     write.net(nets, file=paste0("data/networks/n", ntaxa, "h", goalhybs, ".netfile"))
 }
 
@@ -67,11 +68,11 @@ findandsavenets(50, 0.10)   # done
 
 # 100 taxa
 findandsavenets(100, 0.05)  # done
-findandsavenets(100, 0.10)  # HERE AND BELOW probably not gonna finish...
+findandsavenets(100, 0.10, maxlevel = 6)
 
 # 200 taxa
-findandsavenets(200, 0.05)
-findandsavenets(200, 0.10)
+findandsavenets(200, 0.05, maxlevel = 6)
+findandsavenets(200, 0.10, maxlevel = 10)
 
 # 500 taxa
 findandsavenets(500, 0.05)
