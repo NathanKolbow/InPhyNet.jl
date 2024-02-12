@@ -51,9 +51,9 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
             hybedge = c.node[c.root].edge[hybridbools][1]
             rootretics[i] = hybedge
 
-            @warn "Constraint network $(i) has a reticulation emerging from the root of the network. "*
-                  "This behavior may not be handled in a way that you expect. See this post for "*
-                  "additional information: POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB."
+            @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
+                  "Merging may not behave as expected, see this post for important details: "*
+                  "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
         else
             rootretics[i] = nothing
         end
