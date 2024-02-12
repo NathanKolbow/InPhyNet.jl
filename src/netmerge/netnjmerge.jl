@@ -109,12 +109,8 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
 
         n -= 1
     end
-    
-    # mnet, edgei, edgej = mergesubnets!(subnets[1], subnets[2])
-    # updateconstraints!(namelist[1], namelist[2], constraints, reticmap, edgei, edgej)
-    mnet = subnets[1]
 
-    mnet = HybridNetwork(mnet.nodes, mnet.edges)
+    mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
     mnet.root = mnet.numNodes
     mnet.node[mnet.root].name = "root"
 
