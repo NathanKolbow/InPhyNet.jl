@@ -83,7 +83,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
 
     #
     nrows = size(D, 1)
-    std0 = std(UpperTriangular(D[1:(nrows-1), 2:nrows]))
+    std0 = upperTraingStd(D)
     #
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
@@ -108,6 +108,20 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     end
     print("Took $(round(fortime, digits=2)) seconds\n")
     return esterrors, gausserrors, constraintdiffs, nretics_est
+end
+
+
+function upperTriangStd(D::Matrix)
+    nrows = size(D, 1)
+    idxs = Array{CartesianIndex{2}}(undef, Int64(nrows * (nrows - 1) / 2))
+    _idx = 1
+    for i = 1:(nrows-1)
+        for j = (i+1):nrows
+            idxs[_idx] = CartesianIndex(i, j)
+            _idx += 1
+        end
+    end
+    return std(D[idxs])
 end
 
 
