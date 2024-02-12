@@ -83,7 +83,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
 
     #
     nrows = size(D, 1)
-    std0 = upperTraingStd(D)
+    std0 = upperTriangStd(D)
     #
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
