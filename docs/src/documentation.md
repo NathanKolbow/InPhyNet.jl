@@ -15,5 +15,5 @@ Pages   = ["documentation.md"]
 ```
 
 ```@autodocs
-Modules = [NetMerge]
+Modules = [InPhyNet]
 ```
