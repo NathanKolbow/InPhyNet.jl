@@ -7,6 +7,7 @@ do
     do
         for rep in $(seq 1 100)
         do
+            echo "top: ${top} (${rep}), maxsubsetsize: ${maxsubsetsize}"
             julia --project=../.. -t16 ./perfect_subsets.jl ${top} ${rep} ${maxsubsetsize} "internode_count" 1000 &>> perfect_subsets.log
         done
     done
