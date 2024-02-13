@@ -1,4 +1,4 @@
-# NetMerge Abstract
+# `InPhyNet` Abstract
 
 Title: Massively scalable inference of phylogenetic networks
 
