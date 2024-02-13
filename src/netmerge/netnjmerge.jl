@@ -17,11 +17,11 @@ distance matrix `D`.
 # Arguments
 - D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
 """
-function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
+function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; kwargs...)
     return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist)
 end
 
-function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
+function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false)
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, false)
@@ -51,9 +51,11 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
             hybedge = c.node[c.root].edge[hybridbools][1]
             rootretics[i] = hybedge
 
-            @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
-                  "Merging may not behave as expected, see this post for important details: "*
-                  "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
+            if !supressunsampledwarning
+                @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
+                    "Merging may not behave as expected, see this post for important details: "*
+                    "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
+            end
         else
             rootretics[i] = nothing
         end
