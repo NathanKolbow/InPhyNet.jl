@@ -2,6 +2,9 @@
 library(ape)
 library(SiPhyNetwork)
 
+basedir <- "/mnt/ws/home/nkolbow/repos/network-merging/"
+if(!dir.exists(basedir)) basedir <- "C:\\Users\\Nathan\\repos\\network-merging\\"
+
 # Helper functions
 getnhybs <- function(ssa_nets) {
     nhyblist <- c()
@@ -105,19 +108,19 @@ findandsavenets <- function(ntaxa, prod, maxlevel = 1, searchtimeseconds = -1) {
     }
 
     nets <- findnets(ntaxa, nu, goalhybs, maxlevel = maxlevel)
-    write.net(nets, file=paste0("/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/data/networks/n", ntaxa, "r", goalhybs, ".netfile"))
+    write.net(nets, file=paste0(basedir, "simulation-study/data/networks/n", ntaxa, "r", goalhybs, ".netfile"))
 }
 
 # 50 taxa
-findandsavenets(50, 0.05)                   # done
-findandsavenets(50, 0.10)                   # done
+findandsavenets(50, 0.05)                           # done
+findandsavenets(50, 0.10)                           # done
 
 # 100 taxa
-findandsavenets(100, 0.05)                  # done
-findandsavenets(100, 0.10, maxlevel = 6)    # done
+findandsavenets(100, 0.05)                          # done
+findandsavenets(100, 0.10, maxlevel = 6)            # done
 
 # 200 taxa
-findandsavenets(200, 0.05, maxlevel = 6)    # done
+findandsavenets(200, 0.05, maxlevel = 6)            # done
 findandsavenets(200, 0.10, searchtimeseconds = 240)
 
 # 500 taxa
