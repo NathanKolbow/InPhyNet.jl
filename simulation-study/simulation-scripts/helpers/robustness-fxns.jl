@@ -1,4 +1,4 @@
-using Distributions, Random, Combinatorics, StatsBase, NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
+using Distributions, Random, Combinatorics, StatsBase, InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
 
 
 # Main driver for manuscript sim 2(i)

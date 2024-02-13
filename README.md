@@ -163,7 +163,7 @@ for retic in keys(H)
   - `truth-with-NNI/` simulation experiments where ground truth distances and constraints are used, but constraint networks are permuted with random NNI moves
   - `all-estimated/` simulation experiments where everything is estimated from the ground up, starting with simulated DNA sequences
 - `software/` software used for simulation experiments
-- `src/` NetMerge package source code
+- `src/` InPhyNet package source code
 
 # Roadmap from 15 Nov 2023
 
