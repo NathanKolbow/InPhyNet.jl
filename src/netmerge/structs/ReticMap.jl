@@ -15,7 +15,26 @@ struct ReticMap
     end
 end
 
+# Try logging a retic to "from" or "to", being lenient of errors (used exclusively for rootretic updating)
+function trylogretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+    try
+        logretic!(r, constraintedge, subnetedge, fromorto)
+    catch e
+        try
+            logretic!(r, constraintedge, subnetedge, fromorto == "from" ? "to" : "from")
+        catch
+        end
+    end
+end
+
 function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+    # If we're double logging identical edges then return w/o error
+    if haskey(r.map, constraintedge)
+        if fromorto == "from" && r.map[constraintedge][1] == subnetedge return end
+        if fromorto == "to" && r.map[constraintedge][2] == subnetedge return end
+    end
+
+    # Log the reticulation
     if fromorto == "from"
         if !(r.map[constraintedge][1] === nothing) throw(ErrorException("Overriding from edge")) end
         r.map[constraintedge][1] = subnetedge
