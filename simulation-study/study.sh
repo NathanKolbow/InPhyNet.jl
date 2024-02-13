@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Run from simulation-study/simulation-scripts/
 for top in n50r2 n50r5 n100r5 # n100r10 ...
 do
