@@ -1,4 +1,4 @@
-name = "NetMerge"
+name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
 version = "0.1.0"
