@@ -1,10 +1,10 @@
-using Documenter, NetMerge
+using Documenter, InPhyNet
 using DocThemeIndigo
 
-indigo = DocThemeIndigo.install(NetMerge)
+indigo = DocThemeIndigo.install(InPhyNet)
 makedocs(
-    modules=[NetMerge],
-    sitename="NetMerge.jl",
+    modules=[InPhyNet],
+    sitename="InPhyNet.jl",
     authors="Nathan Kolbow",
     format=Documenter.HTML(;
         assets=String[indigo]
