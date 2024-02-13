@@ -18,7 +18,7 @@ distance matrix `D`.
 - D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
 """
 function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; kwargs...)
-    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist)
+    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist; kwargs...)
 end
 
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false)
@@ -81,11 +81,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
                 fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
                 subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
 
-                try
-                    logretic!(reticmap, rootretics[cidx], edgei, "from")
-                catch e
-                    logretic!(reticmap, rootretics[cidx], edgei, "to")
-                end
+                trylogretic!(reticmap, rootretics[cidx], edgei, "from")
                 # println("logging retic for edge number $(rootretics[cidx].number)")
                 rootreticprocessed[cidx] = true
             end
