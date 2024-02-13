@@ -20,7 +20,7 @@ The results from `MSCquartets` are now in the file `quartets.dat`.
 Now we can do everything else in `juila`.
 
 ```julia
-using PhyloNetworks, NetMerge
+using PhyloNetworks, InPhyNet
 
 mergednet = netnj("my-est-gts.treefile", "quartets.dat")
 ```
