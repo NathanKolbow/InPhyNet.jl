@@ -13,7 +13,7 @@ function randomPartitionRobustness(truenet::HybridNetwork, constraintsizes::Vect
         try
             nhyb[iter] = sum([c.numHybrids for c in constraints])
 
-            mnet = netnj(D, constraints, namelist, supressunsampwarning=true)
+            mnet = netnj(D, constraints, namelist, supressunsampledwarning=true)
             itererror = getNetDistances(truenet, mnet)
             esterrors[iter] = itererror
         catch e
@@ -54,7 +54,7 @@ function monophyleticSwappingRobustness(truenet, constraints, D, namelist, nswap
             constraints = pruneTruthFromDecomp(truenet, tempnames)
 
             try
-                mnet = netnj(D, constraints, namelist, supressunsampwarning=true)
+                mnet = netnj(D, constraints, namelist, supressunsampledwarning=true)
                 itererror = getNetDistances(truenet, mnet)
                 esterrors[iteridx] = itererror
             catch e
@@ -201,7 +201,7 @@ function robustGauss(truenet, constraints; μ::Float64=0., σ::Float64=1., nsim:
         addnoise!(Dcopy, rgen)
 
         try
-            mnet = netnj(Dcopy, constraints, namelist, supressunsampwarning=true)
+            mnet = netnj(Dcopy, constraints, namelist, supressunsampledwarning=true)
             dists[i] = getNetDistances(truenet, mnet)
         catch e
         end
@@ -219,7 +219,7 @@ function robustUniformProportion(truenet, constraints, p; nsim::Int64=100)
         D, namelist = majorinternodedistance(truenet)
         addpnoise!(D, p)
         
-        mnet = netnj(D, constraintscopy, namelist, supressunsampwarning=true)
+        mnet = netnj(D, constraintscopy, namelist, supressunsampledwarning=true)
         dists[i] = getNetDistances(truenet, mnet)
     end
     return dists[dists .!= -1]
@@ -235,7 +235,7 @@ function robustRandD(truenet, constraints; nsim::Int64=100)
         D, namelist = majorinternodedistance(truenet)
         randomize!(D)
         
-        mnet = netnj(D, constraintscopy, namelist, supressunsampwarning=true)
+        mnet = netnj(D, constraintscopy, namelist, supressunsampledwarning=true)
         dists[i] = getNetDistances(truenet, mnet)
     end
     return dists[dists .!= -1]
@@ -371,7 +371,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
     # Merge the nets
     try
-        mnet = netnj(D, constraints, namelist, supressunsampwarning=true)
+        mnet = netnj(D, constraints, namelist, supressunsampledwarning=true)
         esterror = getNetDistances(truenet, mnet)
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
