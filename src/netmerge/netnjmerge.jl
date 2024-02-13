@@ -78,7 +78,12 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
             if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
                 fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
                 subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
-                logretic!(reticmap, rootretics[cidx], edgei, "from")
+
+                try
+                    logretic!(reticmap, rootretics[cidx], edgei, "from")
+                catch e
+                    logretic!(reticmap, rootretics[cidx], edgei, "to")
+                end
                 # println("logging retic for edge number $(rootretics[cidx].number)")
                 rootreticprocessed[cidx] = true
             end
