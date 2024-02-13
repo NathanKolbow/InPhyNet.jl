@@ -1,19 +1,19 @@
-module NetMerge
+module InPhyNet
 
     include("imports.jl")
     include("constants.jl")
 
     include("GraphHelpers.jl")
 
-    include("netmerge/structs/SubNet.jl")
-    include("netmerge/structs/ReticMap.jl")
+    include("inphynet/structs/SubNet.jl")
+    include("inphynet/structs/ReticMap.jl")
     
-    include("netmerge/netnjmerge.jl")
-    include("netmerge/internodedistance.jl")
-    include("netmerge/mscquartetsinterface.jl")
-    include("netmerge/subsetdecomp.jl")
-    include("netmerge/subsetdecomp/njhierarchdecomp.jl")
-    include("netmerge/subsetdecomp/satedecomp.jl")
+    include("inphynet/netnjmerge.jl")
+    include("inphynet/internodedistance.jl")
+    include("inphynet/mscquartetsinterface.jl")
+    include("inphynet/subsetdecomp.jl")
+    include("inphynet/subsetdecomp/njhierarchdecomp.jl")
+    include("inphynet/subsetdecomp/satedecomp.jl")
 
     export netnj, netnj!,
         decomposeFromQuartets,
