@@ -1,4 +1,4 @@
-using NetMerge, PhyloNetworks, StatsBase, DataFrames, CSV
+using InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV
 include("robustness-fxns.jl")
 
 # FILE PATH HELPERS
