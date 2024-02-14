@@ -12,13 +12,13 @@ implemented pathfinding algorithms.
 """
 function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing)
     graph = SimpleGraph(net.numNodes)
+    nodemap = Dict{Node, Int64}(n => i for (i, n) in enumerate(net.node))   # 10x faster for n100r5 than using `findfirst`
     for edge in net.edge
         if !includeminoredges && edge.hybrid && !edge.isMajor && edge != alwaysinclude continue end
-        nidx1 = findfirst(net.node .== [edge.node[1]])
-        nidx2 = findfirst(net.node .== [edge.node[2]])
-
-        if nidx1 !== nothing && nidx2 !== nothing
-            add_edge!(graph, nidx1, nidx2)  # edges are undirected by default, don't need to add twice
+        enode1 = edge.node[1]
+        enode2 = edge.node[2]
+        if haskey(nodemap, enode1) && haskey(nodemap, enode2)
+            add_edge!(graph, nodemap[enode1], nodemap[enode2])
         end
     end
     return graph
