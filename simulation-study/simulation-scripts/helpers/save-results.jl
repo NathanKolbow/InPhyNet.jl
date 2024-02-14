@@ -3,8 +3,9 @@ include("retic-metric.jl")
 
 using CSV, DataFrames
 
-function savePerfectResults(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, esterrors::Vector{<:Real},
-    gausserrors::Vector{<:Real}, constraintdiffs::Vector{<:Real}, nretics_est::Vector{<:Real}, replicate_num::Int64)
+const AV = AbstractVector
+function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
+    gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64)
 
     # Quick checks for bad input
     a = length(gausserrors)
