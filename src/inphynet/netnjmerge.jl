@@ -529,17 +529,23 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
     n = size(D)[1]
     sums = sum(D, dims=1)
     best = Inf
+    bestcount = 0
     minidx = (-1, -1)
 
     for (i, j) in idxpairs
         qij = (n-2) * D[i,j] - sums[i] - sums[j]
         if qij < best
             best = qij
+            bestcount = 1
             minidx = (i, j)
-        elseif qij == best && !TIEWARNING
-            TIEWARNING = true
-            @warn "Found a tie in the distance matrix, result may not be unique. This warning is shown once per julia session."
+        elseif qij == best
+            bestcount += 1
         end
+    end
+
+    if bestcount > 1 && !TIEWARNING
+        TIEWARNING = true
+        @warn "Found a tie in the distance matrix, result may not be unique. This warning is shown once per julia session."
     end
     
     return minidx
