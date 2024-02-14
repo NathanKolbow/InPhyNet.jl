@@ -20,12 +20,14 @@ if length(ARGS) == 5 nsim = parse(Int64, ARGS[5]) end
 ###########################
 
 include("helpers/helpers.jl")
+InPhyNet.TIEWARNING = true
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
 
 # 2. run robustness testing
-esterrors, gausserrors, constraintdiffs, nretics_est = monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim)
+println("- Running robustness testing for $(netid) ($(replicatenum)), max: $(maxsubsetsize)")
+esterrors, gausserrors, constraintdiffs, nretics_est = monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim, displayprogress=true)
 constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
 # 3. save results
@@ -38,3 +40,16 @@ savePerfectResults(
     nretics_est,
     replicatenum
 )
+
+#############
+# Profiling #
+#############
+
+# include("helpers/helpers.jl")
+# truenet, constraints, D, namelist = loadPerfectData("n100r5", 1, 15, "internode_count")
+# _ = monophyleticRobustness(truenet, constraints, D, namelist, nsim=15)
+# # Original:                 13.85   seconds
+# # `findfirst` -> `nodemap`: 3.84    seconds
+
+# using StatProfilerHTML
+# @profilehtml esterrors, gausserrors, constraintdiffs, nretics_est = monophyleticRobustness(truenet, constraints, D, namelist, nsim=100)
