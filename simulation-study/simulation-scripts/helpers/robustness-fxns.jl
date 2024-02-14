@@ -1,4 +1,5 @@
-using Distributions, Random, Combinatorics, StatsBase, InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
+using Distributions, Distributed, SharedArrays, Random, Combinatorics, StatsBase, 
+      InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
 
 
 # Main driver for manuscript sim 2(i)
@@ -120,6 +121,59 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         end
     end
     print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
+    print("Took $(round(fortime, digits=2)) seconds\n")
+    return esterrors, gausserrors, constraintdiffs, nretics_est
+end
+
+# w/ 1 proc: 8.77s
+
+# Main driver function for manuscript sims 1(i)-(iv)
+# Same as above, but uses `pmap` for distributed computing
+function monophyleticRobustnessDistributed(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
+    D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000)
+
+    totalnnigen = Uniform(0, length(constraints) * 4)
+
+    # Recorded values
+    esterrors = SharedVector{Float64}(nsim)
+    constraintdiffs = SharedArray{Float64, 2}(length(constraints), nsim)
+    gausserrors = SharedVector{Float64}(nsim)
+    nretics_est = SharedVector{Float64}(nsim)
+
+    esterrors .= -1.
+    constraintdiffs .= -1.
+    gausserrors .= -1.
+    nretics_est .= -1.
+    #
+
+    # Base values
+    nrows = size(D, 1)
+    std0 = upperTriangStd(D)
+    #
+
+    fortime = @elapsed @sync @distributed for iter=1:nsim
+        # Randomly generate the Gaussian noise parameters
+        gaussMean = gaussSd = rand(Uniform(0, 2*std0))
+        gausserrors[iter] = gaussSd
+
+        # Randomly generate the number of NNI moves
+        totalnnimoves = Int64(round(rand(totalnnigen)))
+        nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
+        nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
+
+        try
+            esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
+                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
+        catch e
+            if typeof(e) != ArgumentError
+                @show typeof(e)
+                throw(e)
+            end
+        end
+    end
+
+    # results = pmap(iter -> runSingleIter(iter, std0, truenet, constraints, D, namelist, totalnnigen), 1:1000)
+
     print("Took $(round(fortime, digits=2)) seconds\n")
     return esterrors, gausserrors, constraintdiffs, nretics_est
 end
