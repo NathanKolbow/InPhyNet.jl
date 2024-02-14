@@ -96,7 +96,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
-        gaussMean = gaussSd = rand(Uniform(0, 2*std0))
+        gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
         gausserrors[iter] = gaussSd
 
         # Randomly generate the number of NNI moves
@@ -153,7 +153,7 @@ function monophyleticRobustnessDistributed(truenet::HybridNetwork, constraints::
 
     fortime = @elapsed @sync @distributed for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
-        gaussMean = gaussSd = rand(Uniform(0, 2*std0))
+        gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
         gausserrors[iter] = gaussSd
 
         # Randomly generate the number of NNI moves
