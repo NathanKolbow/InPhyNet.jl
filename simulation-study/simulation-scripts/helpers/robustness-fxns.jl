@@ -70,8 +70,11 @@ function monophyleticSwappingRobustness(truenet, constraints, D, namelist, nswap
 end
 
 
+# Atomic counter is used for easy progress display
+mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
+
 # Main driver function for manuscript sims 1(i)-(iv)
-function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000)
+function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false)
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
@@ -81,9 +84,13 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     nretics_est = zeros(nsim) .- 1.
     #
 
-    #
+    # Base values
     nrows = size(D, 1)
     std0 = upperTriangStd(D)
+    #
+
+    # Progress display
+    ac = AtomicCounter(0)
     #
 
     fortime = @elapsed Threads.@threads for iter=1:nsim
@@ -105,7 +112,14 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
                 throw(e)
             end
         end
+
+        # Display progress
+        @atomic :sequentially_consistent ac.iterspassed += 1
+        if Threads.threadid() == 1
+            print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
+        end
     end
+    print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
     print("Took $(round(fortime, digits=2)) seconds\n")
     return esterrors, gausserrors, constraintdiffs, nretics_est
 end
@@ -371,7 +385,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
     # Merge the nets
     try
-        mnet = netnj(D, constraints, namelist, supressunsampledwarning=true)
+        mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
         esterror = getNetDistances(truenet, mnet)
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
