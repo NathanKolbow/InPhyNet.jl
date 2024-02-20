@@ -57,7 +57,7 @@ findnets <- function(ntaxa, nu, goalhybs, maxlevel) {
     return(nets)
 }
 
-findlowestlevel <- function(ntaxa, nu, goalhybs, searchtimeseconds = 120, shouldprint = F) {
+findlowestlevel <- function(ntaxa, nu, goalhybs, searchtimeseconds = 360, shouldprint = F) {
     minlvl <- Inf
     minlvlcount <- 0
     start_time <- Sys.time()
@@ -96,6 +96,7 @@ findlowestlevel <- function(ntaxa, nu, goalhybs, searchtimeseconds = 120, should
 # Find networks
 findandsavenets <- function(ntaxa, prod, maxlevel = 1, searchtimeseconds = -1) {
     set.seed(42)
+
     goalhybs <- floor(ntaxa * prod)
     cat("\rSearching for nu value...")
     nu <- findnu(ntaxa, goalhybs)
@@ -122,12 +123,12 @@ findandsavenets(100, 0.10, maxlevel = 6)            # done
 
 # 200 taxa
 findandsavenets(200, 0.05, maxlevel = 6)            # done
-findandsavenets(200, 0.10, searchtimeseconds = 240)
+findandsavenets(200, 0.10, searchtimeseconds = 360)
 
 # 500 taxa
-findandsavenets(500, 0.05, searchtimeseconds = 240)
-findandsavenets(500, 0.10, searchtimeseconds = 240)
+findandsavenets(500, 0.05, searchtimeseconds = 360)
+findandsavenets(500, 0.10, searchtimeseconds = 360)
 
 # 1000 taxa
-findandsavenets(1000, 0.05, searchtimeseconds = 240)
-findandsavenets(1000, 0.10, searchtimeseconds = 240)
+findandsavenets(1000, 0.05, searchtimeseconds = 360)
+findandsavenets(1000, 0.10, searchtimeseconds = 360)
