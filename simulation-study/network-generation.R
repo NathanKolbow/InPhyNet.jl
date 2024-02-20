@@ -2,6 +2,8 @@
 library(ape)
 library(SiPhyNetwork)
 
+set.seed(42)
+
 basedir <- "/mnt/ws/home/nkolbow/repos/network-merging/"
 if(!dir.exists(basedir)) basedir <- "C:\\Users\\Nathan\\repos\\network-merging\\"
 
