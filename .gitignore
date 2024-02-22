@@ -1,3 +1,5 @@
+.vscode/
+
 # MacOS files
 *.DS_store
 
@@ -42,3 +44,4 @@ artifacts/
 logs/
 compiled/
 benchmarks/
+packages/
