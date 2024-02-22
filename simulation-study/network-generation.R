@@ -1,9 +1,12 @@
 # Should be in directory `network-merging/simulation-study/`
+
 library(ape)
 library(SiPhyNetwork)
 
+# Multiple workstations...
 basedir <- "/mnt/ws/home/nkolbow/repos/network-merging/"
 if(!dir.exists(basedir)) basedir <- "C:\\Users\\Nathan\\repos\\network-merging\\"
+if(!dir.exists(basedir)) basedir <- "/Users/Nathan/repos/network-merging/"
 
 # Helper functions
 getnhybs <- function(ssa_nets) {
