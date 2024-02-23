@@ -25,7 +25,20 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
 
     constraints = sateIdecomp(majorTree(truenet), maxsize)
     constraints = pruneTruthFromDecomp(truenet, constraints)
+
+    InPhyNet.check_constraints(constraints)
     
+    # If any constraints have root-retics, remove them
+    for c in constraints
+        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        if any(hybridbools)
+            @warn "Fixing root retics."
+            println("Before: $(writeTopology(c))")
+            PhyloNetworks.deletehybridedge!(c, c.node[c.root].edge[hybridbools][1])
+            println("After:  $(writeTopology(c))")
+        end
+    end
+
     D, namelist = (nothing, nothing)
     if dmethod == "internode_count"
         D, namelist = majorinternodedistance(truenet)
