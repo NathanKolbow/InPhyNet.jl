@@ -267,7 +267,7 @@ Checks validity of a single input constraint networks. Checks include:
 2. Reticulations do not lead directly into other reticulations
 """
 function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=false)
-    if net.numTaxa == 1 continue end
+    if net.numTaxa == 1 return end
 
     # Check #1
     for node in net.node
