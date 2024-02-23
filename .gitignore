@@ -45,3 +45,5 @@ logs/
 compiled/
 benchmarks/
 packages/
+registries/
+scratchspaces/
