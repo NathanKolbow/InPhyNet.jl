@@ -2,7 +2,16 @@ using InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV
 include("robustness-fxns.jl")
 
 # FILE PATH HELPERS
-getBaseDir() = isdir("/mnt") ? "/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/" : "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
+function getBaseDir()
+    basedir = "/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/"
+    if !isdir(basedir)
+        basedir = "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
+    end
+    if !isdir(basedir)
+        basedir = "/Users/nkolbow/repos/network-merging/simulation-study/"
+    end
+end
+
 getDataDir() = joinpath(getBaseDir(), "data")
 getNetworkFilepath(netid::String) = joinpath(getDataDir(), "networks", "$(netid).netfile")
 getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$((truenet.numTaxa)-1)r$(truenet.numHybrids).csv")
