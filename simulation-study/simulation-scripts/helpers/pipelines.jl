@@ -10,6 +10,7 @@ function getBaseDir()
     if !isdir(basedir)
         basedir = "/Users/nkolbow/repos/network-merging/simulation-study/"
     end
+    return basedir
 end
 
 getDataDir() = joinpath(getBaseDir(), "data")
