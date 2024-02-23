@@ -8,6 +8,119 @@ function netnj(estgts::Vector{HybridNetwork})
 end
 
 
+function netnj_corrected!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString};
+    supressunsampledwarning::Bool=false)
+
+    # 1. Check inputs
+    PhyloNetworks.check_distance_matrix(D)
+    check_constraints(constraints, requirerooted=false)
+    n = size(D, 1)
+
+    if isempty(namelist)
+        namelist = string.(1:n)
+    end
+    if length(namelist) != n
+        m = length(namelist)
+        throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
+    elseif length(unique(namelist)) != length(namelist)
+        throw(ArgumentError("Names must be unique."))
+    end
+
+    # 2. Setup values/vectors used in loop
+    # Empty network
+    subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
+    reticmap = ReticMap(constraints)
+
+    # Edge case: remove (but log) retics that emerge from the root of constraints
+    rootretics = Array{Union{Edge, Nothing}}(undef, length(subnets))
+    for (i, c) in enumerate(constraints)
+        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        if any(hybridbools)
+            sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
+            hybedge = c.node[c.root].edge[hybridbools][1]
+            rootretics[i] = hybedge
+
+            if !supressunsampledwarning
+                @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
+                    "Merging may not behave as expected, see this post for important details: "*
+                    "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
+            end
+        else
+            rootretics[i] = nothing
+        end
+    end
+    rootreticprocessed = [false for _ in 1:length(constraints)]
+
+    # 3. Main algorithm loop
+    while n > 1
+        M = calculateM(D)
+
+        # DEBUG STATEMENT
+        # @show n
+        possible_siblings = findvalidpairs(constraints, namelist)
+        
+        # Find optimal (i, j) idx pair for matrix Q
+        i, j = findoptQidx(M, possible_siblings)
+
+        # connect subnets i and j
+        subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
+        updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
+
+        # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
+        for (cidx, c) in enumerate(constraints)
+            if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
+                fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
+                subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
+
+                trylogretic!(reticmap, rootretics[cidx], edgei, "from")
+                # println("logging retic for edge number $(rootretics[cidx].number)")
+                rootreticprocessed[cidx] = true
+            end
+        end
+
+        # collapse taxa i into j
+        for l in 1:n
+            if l != i && l != j
+                D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
+            end
+        end
+
+        # Remove data elements that corresponded to `j`
+        idxfilter = [1:(j-1); (j+1):n]
+        D = view(D, idxfilter, idxfilter)   # remove j from D
+        subnets = view(subnets, idxfilter)
+        namelist = view(namelist, idxfilter)
+
+        n -= 1
+    end
+
+    mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
+    mnet.root = mnet.numNodes
+    mnet.node[mnet.root].name = "root"
+
+    mnet = placeretics!(mnet, reticmap)
+    removeplaceholdernames!(mnet)
+
+    return mnet
+end
+
+
+function calculateM(D::Matrix{<:Real})
+    r = sum(D, dims=1)[1,:]
+    all(abs.(r .- sum(D, dims=2)[:,1]) < 1e-12) || error("Failed sanity check.")
+
+    nrow = size(D, 1)
+    M = zeros(nrow, nrow)
+    for i = 1:(nrow - 1)
+        for j = 2:nrow
+            M[i, j] = M[j, i] = D[i, j] - (r[i] + r[j]) / (nrow - 2)
+        end
+    end
+
+    return M
+end
+
+
 """
     netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork})
 
@@ -24,7 +137,7 @@ end
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false)
     
     PhyloNetworks.check_distance_matrix(D)
-    check_constraints(constraints, false)
+    check_constraints(constraints, requirerooted=false)
     n = size(D, 1)
 
     # If namelist is not provided
@@ -140,25 +253,49 @@ end
 Checks validity of input constraints. So far, the only check is to make sure
 that all nodes have exactly 3 edges except for the root.
 """
-function check_constraints(constraints::Vector{HybridNetwork}, requirerooted::Bool)
-    for net in constraints
-        if net.numTaxa == 1 continue end
-        for node in net.node
-            nedge = length(node.edge)
-            if node.leaf
-                if length(node.edge) != 1
-                    throw(ArgumentError("Leaf nodes must have exactly 1 attached edge."))
-                end
-            elseif node == net.node[net.root]
-                if length(node.edge) != 2 && requirerooted
-                    throw(ArgumentError("Root node must have exactly 2 attached edges."))
-                end
-            elseif length(node.edge) != 3
-                throw(ArgumentError("Internal nodes must have exactly 3 attached edges."))
+function check_constraints(constraints::Vector{HybridNetwork}; kwargs...)
+    for (i, constraint) in enumerate(constraints)
+        check_constraint(i, constraint; kwargs...)
+    end
+end
+
+
+"""
+
+Checks validity of a single input constraint networks. Checks include:
+1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
+2. Reticulations do not lead directly into other reticulations
+"""
+function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=false)
+    if net.numTaxa == 1 continue end
+
+    # Check #1
+    for node in net.node
+        nedge = length(node.edge)
+        if node.leaf
+            if length(node.edge) != 1
+                throw(ArgumentError("Leaf nodes must have exactly 1 attached edge."))
             end
+        elseif node == net.node[net.root]
+            if length(node.edge) != 2 && requirerooted
+                throw(ArgumentError("Root node must have exactly 2 attached edges."))
+            end
+        elseif length(node.edge) != 3
+            throw(ArgumentError("Internal nodes must have exactly 3 attached edges."))
+        end
+    end
+
+    # Check #2
+    for hybnode in net.hybrid
+        if getchild(hybnode).hybrid
+            # TODO: make a post explaining this error w/ visuals
+            # Example network: ((#H128:0.563::0.397,(t35:0.828,(t62:0.647)#H172:0.181::0.719):0.744):0.295,((#H172:0.0::0.281)#H128:0.851::0.603,t48:0.747):2.38);
+            error("Found redundant reticulations in constraint #$(idx). You can resolve this manually or automatically by setting `fixredundantretics=true`. "*
+                    "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE.")
         end
     end
 end
+check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
 
 
 """
