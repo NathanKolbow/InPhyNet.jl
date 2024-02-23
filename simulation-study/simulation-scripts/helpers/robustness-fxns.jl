@@ -75,7 +75,7 @@ end
 mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
 
 # Main driver function for manuscript sims 1(i)-(iv)
-function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false, netnjcorrected::Bool=false)
+function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false)
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
@@ -106,7 +106,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
 
         try
             esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
-                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves, netnjcorrected=netnjcorrected)
+                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
         catch e
             if typeof(e) != ArgumentError
                 @show typeof(e)
@@ -364,7 +364,12 @@ function getNetDistances(truenet, estnet)
             rootatnode!(estnet, "OUTGROUP")
             return hardwiredClusterDistance(truenet, estnet, true)
         catch e
-            return hardwiredClusterDistance(truenet, estnet, true)
+            try
+                # TODO: figure out why this line sometimes gives an error that __placeholder... isn't in the species list of the other network
+                return hardwiredClusterDistance(truenet, estnet, true)
+            catch e
+                return -1.
+            end
         end
     elseif truenet.numTaxa > 50
         return hardwiredClusterDistance(truenet, estnet, true)
@@ -414,7 +419,7 @@ end
 
 
 function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String},
-    gaussMean::Real, gaussSd::Real, NNImoves::Vector{<:Real}; copyD::Bool=true, copyconstraints::Bool=true, netnjcorrected=false)
+    gaussMean::Real, gaussSd::Real, NNImoves::Vector{<:Real}; copyD::Bool=true, copyconstraints::Bool=true)
 
     if copyD D = deepcopy(D) end
     origconstraints = constraints
@@ -439,13 +444,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
     # Merge the nets
     try
-        mnet = nothing
-        if netnjcorrected
-            mnet = InPhyNet.netnj_corrected!(D, constraints, namelist, supressunsampledwarning=true)
-        else
-            mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
-        end
-
+        mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
         esterror = getNetDistances(truenet, mnet)
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
