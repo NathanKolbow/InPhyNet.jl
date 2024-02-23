@@ -20,7 +20,7 @@ if length(ARGS) == 5 nsim = parse(Int64, ARGS[5]) end
 ###########################
 
 include("helpers/helpers.jl")
-InPhyNet.TIEWARNING = true
+InPhyNet.TIEWARNING = true  # disables the warning message when there are ties
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
