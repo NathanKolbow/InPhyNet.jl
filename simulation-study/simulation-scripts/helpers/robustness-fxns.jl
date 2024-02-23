@@ -364,12 +364,8 @@ function getNetDistances(truenet, estnet)
             rootatnode!(estnet, "OUTGROUP")
             return hardwiredClusterDistance(truenet, estnet, true)
         catch e
-            try
-                # TODO: figure out why this line sometimes gives an error that __placeholder... isn't in the species list of the other network
-                return hardwiredClusterDistance(truenet, estnet, true)
-            catch e
-                return -1.
-            end
+            # TODO: figure out why this line sometimes gives an error that __placeholder... isn't in the species list of the other network
+            return hardwiredClusterDistance(truenet, estnet, true)
         end
     elseif truenet.numTaxa > 50
         return hardwiredClusterDistance(truenet, estnet, true)
