@@ -239,7 +239,7 @@ end
 
 @inline function removeplaceholdernames!(mnet::HybridNetwork)
     for node in mnet.node
-        if node.leaf && startswith(node.name, "__placeholder_for_rootretic_num")
+        if startswith(node.name, "__placeholder_for_rootretic_num")
             deleteleaf!(mnet, node)
         elseif !node.leaf && startswith(node.name, "___internal")
             node.name = ""
