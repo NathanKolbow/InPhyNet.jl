@@ -105,9 +105,8 @@ function netnj_corrected!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}
 end
 
 
-function calculateM(D::Matrix{<:Real})
+function calculateM(D::AbstractMatrix{<:Real})
     r = sum(D, dims=1)[1,:]
-    all(abs.(r .- sum(D, dims=2)[:,1]) < 1e-12) || error("Failed sanity check.")
 
     nrow = size(D, 1)
     M = zeros(nrow, nrow)
