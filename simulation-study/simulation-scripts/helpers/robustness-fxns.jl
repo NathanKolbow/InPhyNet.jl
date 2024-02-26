@@ -451,10 +451,12 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             for c in tempcs println("\t$(writeTopology(c))") end
             println("TRUE NET")
             println("\t$(writeTopology(truenet))")
+            println("gaussSd: $(gaussSd)")
 
-            d_path = abspath("./dmat$(Threads.threadid()).csv")
+            d_path = "/mnt/home/nkolbow/repos/network-merging/dmat$(Threads.threadid()).csv"
             println("SAVING DISTANCE MATRIX TO \"$(d_path)\"")
             CSV.write(DataFrame(D, :auto), d_path)
+            touch(d_path)
 
             throw(e)
         else
