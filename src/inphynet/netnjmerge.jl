@@ -152,8 +152,9 @@ end
 Checks validity of a single input constraint networks. Checks include:
 1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
 2. Reticulations do not lead directly into other reticulations
+3. No node has children that are *both* reticulations
 """
-function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=false)
+function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=false, autofix::Bool=true)
     if net.numTaxa == 1 return end
 
     # Check #1
@@ -161,14 +162,14 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
         nedge = length(node.edge)
         if node.leaf
             if length(node.edge) != 1
-                throw(ArgumentError("Leaf nodes must have exactly 1 attached edge."))
+                throw(ConstraintError(idx, "Leaf nodes must have exactly 1 attached edge."))
             end
         elseif node == net.node[net.root]
             if length(node.edge) != 2 && requirerooted
-                throw(ArgumentError("Root node must have exactly 2 attached edges."))
+                throw(ConstraintError(idx, "Root node must have exactly 2 attached edges."))
             end
         elseif length(node.edge) != 3
-            throw(ArgumentError("Internal nodes must have exactly 3 attached edges."))
+            throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
         end
     end
 
@@ -177,9 +178,32 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
         if getchild(hybnode).hybrid
             # TODO: make a post explaining this error w/ visuals
             # Example network: ((#H128:0.563::0.397,(t35:0.828,(t62:0.647)#H172:0.181::0.719):0.744):0.295,((#H172:0.0::0.281)#H128:0.851::0.603,t48:0.747):2.38);
-            println(writeTopology(net))
-            error("Found redundant reticulations in constraint #$(idx). You can resolve this manually or automatically by setting `fixredundantretics=true`. " *
-                    "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE.")
+            if autofix
+                error("Automatic fix for check #2 not implemented yet.")
+            else
+                throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
+                    "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
+            end
+        end
+    end
+
+    # Check 3
+    checking_three = true   # if we end up changing the net's topology,
+                            # we want to restart the `for` loop.
+    while checking_three
+        checking_three = false
+        for (node_idx, node) in enumerate(net.node)
+            children = getchildren(node)
+            if all(child.hybrid for child in children)
+                if autofix
+                    error("Automatic fix for check #3 not implemented yet.")
+                    checking_three = true
+                    break
+                else
+                    throw(ConstraintError(idx, "Node #$(node.number) (net.node[$(node_idx)]) has a hybrid for *both* of its children; this is not allowed. "*
+                        "This can be automatically fixed by setting `autofix=true`."))
+                end
+            end
         end
     end
 end
@@ -548,7 +572,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
 
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
-        throw(ArgumentError("No valid idx pairs received in `findoptQidx`."))
+        throw(SolutionDNEError())
     end
 
     n = size(D)[1]
