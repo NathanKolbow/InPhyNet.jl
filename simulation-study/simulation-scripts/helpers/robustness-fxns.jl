@@ -94,7 +94,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     ac = AtomicCounter(0)
     #
 
-    fortime = @elapsed Threads.@threads for iter=1:nsim
+    fortime = @elapsed for iter=1:nsim  # Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
         gausserrors[iter] = gaussSd
@@ -104,15 +104,15 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
-        try
-            esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
-                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
-        catch e
-            if typeof(e) != ArgumentError
-                @show typeof(e)
-                throw(e)
-            end
-        end
+        # try
+        esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
+            runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
+        # catch e
+        #     if typeof(e) != ArgumentError
+        #         println("\n\n\n\n\n----------------------------------------------------------------------------------------------------------------------------------\n\n\n\n\n\n")
+        #         return nothing
+        #     end
+        # end
 
         # Display progress
         @atomic :sequentially_consistent ac.iterspassed += 1
@@ -427,6 +427,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
     if gaussSd > 0
         addnoise!(D, Normal(gaussMean, gaussSd))
     end
+    copyD = deepcopy(D)
 
     # Do NNI moves
     constraintdiffs = zeros(length(constraints))
@@ -448,15 +449,15 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             println("ERROR RECEIVED")
             @show typeof(e)
             println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")
-            for c in tempcs println("\t$(writeTopology(c))") end
+            for c in tempcs println("$(writeTopology(c))") end
             println("TRUE NET")
-            println("\t$(writeTopology(truenet))")
+            println("$(writeTopology(truenet))")
             println("gaussSd: $(gaussSd)")
+            println()
 
             d_path = "/mnt/home/nkolbow/repos/network-merging/dmat$(Threads.threadid()).csv"
             println("SAVING DISTANCE MATRIX TO \"$(d_path)\"")
-            CSV.write(DataFrame(D, :auto), d_path)
-            touch(d_path)
+            CSV.write(d_path, DataFrame(copyD, :auto))
 
             throw(e)
         else
