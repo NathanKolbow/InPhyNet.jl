@@ -2,6 +2,7 @@ module InPhyNet
 
     include("imports.jl")
     include("constants.jl")
+    include("Exceptions.jl")
 
     include("GraphHelpers.jl")
 
