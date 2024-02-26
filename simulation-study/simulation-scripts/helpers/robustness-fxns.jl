@@ -452,6 +452,10 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             println("TRUE NET")
             println("\t$(writeTopology(truenet))")
 
+            d_path = abspath("./dmat$(Threads.threadid()).csv")
+            println("SAVING DISTANCE MATRIX TO \"$(d_path)\"")
+            CSV.write(DataFrame(D, :auto), d_path)
+
             throw(e)
         else
             return -1, constraintdiffs, "", -1
