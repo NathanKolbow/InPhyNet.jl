@@ -44,10 +44,8 @@ function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto
             end
         end
         if r.map[constraintedge][2] == subnetedge
-            @error("Attempting to set `from` edge to a duplicate of the `to` edge.")
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the `to` edge."))
         elseif r.map[constraintedge][3] == subnetedge
-            @error("Attempting to set `from` edge to a duplicate of the (second) `to` edge.")
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the (second) `to` edge."))
         end
         r.map[constraintedge][1] = subnetedge
@@ -57,14 +55,12 @@ function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto
                 throw(ErrorException("Both `to` edges already set to non-nothing values."))
             else
                 if r.map[constraintedge][1] == subnetedge
-                    @error("Attempting to set (second) `to` edge to a duplicate of the `from` edge.")
                     throw(ErrorException("Attempting to set (second) `to` edge to a duplicate of the `from` edge."))
                 end
                 r.map[constraintedge][3] = subnetedge
             end
         else
             if r.map[constraintedge][1] == subnetedge
-                @error("Attempting to set `to` edge to a duplicate of the `from` edge.")
                 throw(ErrorException("Attempting to set `to` edge to a duplicate of the `from` edge."))
             end
             r.map[constraintedge][2] = subnetedge
