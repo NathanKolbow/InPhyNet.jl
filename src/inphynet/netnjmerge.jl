@@ -81,6 +81,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
                 fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
                 subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
 
+                println("E")
                 trylogretic!(reticmap, rootretics[cidx], edgei, "from")
                 # println("logging retic for edge number $(rootretics[cidx].number)")
                 rootreticprocessed[cidx] = true
@@ -194,10 +195,12 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
         checking_three = false
         for (node_idx, node) in enumerate(net.node)
             children = getchildren(node)
-            if all(child.hybrid for child in children)
+            if length(children) == 2 && all(child.hybrid for child in children)
                 if autofix
-                    error("Automatic fix for check #3 not implemented yet.")
+                    println("Check #3 autofix not implemented yet.")
+                    break
                     checking_three = true
+                    fix_check_three!(net, node)
                     break
                 else
                     throw(ConstraintError(idx, "Node #$(node.number) (net.node[$(node_idx)]) has a hybrid for *both* of its children; this is not allowed. "*
@@ -208,6 +211,20 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
     end
 end
 check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
+
+
+"""
+`node` has two children *each* of which are hybrids. This function
+adjusts the network so the topology is functionally unchanged, but
+so that the node no longer has 2 hybrid children.
+"""
+function fix_check_three!(net::HybridNetwork, node::Node)
+    hyb1, hyb2 = getchildren(node)
+    new_node = Node(minimum(n.number for n in net.node if !n.leaf) - 1, false, false)
+    new_edge = Edge(length(net.edge) + 1)
+
+    # error("Automatic fix for check #3 not implemented yet.")
+end
 
 
 """
@@ -356,9 +373,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         for edge in net.edge
             if edge.hybrid && !edge.isMajor
                 if reticmap.map[edge][1] === nothing
+                    println("A")
                     logretic!(reticmap, edge, subnetedgei, "from")
                 end
                 if reticmap.map[edge][2] === nothing
+                    println("B")
                     logretic!(reticmap, edge, subnetedgej, "to")
                 end
             end
@@ -486,9 +505,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 end
             end
 
-            # direction shouldn't lead to any rooting issues b/c we're at the leaves,
-            # but direction not being retained here is bad
+            # TODO: direction shouldn't lead to any rooting issues b/c
+            # we're at the leaves, but direction not being retained here is bad
             hybedgelogged = true
+            println("C")
             logretic!(reticmap, hybedge, subnetedgei, "from")
             logretic!(reticmap, hybedge, subnetedgej, "to")
         elseif newtip === nothing && any(ishybedge)
@@ -499,13 +519,14 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             println(nodej)
             error("Unknown case. No newtip found but we also don't take a hybrid path.")
         end
+        println(sum(ishybedge))
 
         # find the retics that we need to keep track of
         # our a_star path goes from `i` to `j`, so any retics we find are relevant to `i` up
         # until we cross the new tip, at which point they become relevant to `j`
         relevanttoi = true
         for node in nodesinpath
-            if node == newtip
+            if node == newtip || hybedgelogged
                 relevanttoi = false
             end
             for edge in node.edge
@@ -515,9 +536,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                         @error("equiv edges C")
                     end
 
-                    if edge != hybedge || !hybedgelogged
-                        logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-                    end
+                    # println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                    if !hybedgelogged hybedgelogged = true end
                 end
             end
         end
