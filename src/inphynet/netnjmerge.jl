@@ -43,7 +43,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     reticmap = ReticMap(constraints)
 
     # Edge case: remove (but log) retics that emerge from the root of constraints
-    rootretics = Array{Union{Edge, Nothing}}(undef, length(subnets))
+    rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
     for (i, c) in enumerate(constraints)
         hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
         if any(hybridbools)
@@ -57,12 +57,27 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
                     "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
             end
         else
-            rootretics[i] = nothing
+            # None of the nodes coming out of the root are hybrids, but now
+            # we need to make sure that none of the nodes coming out of the
+            # root lead to _only_ hybrids, thus effectively making the root
+            # lead directly to hybrids.
+            children = getchildren(c.node[c.root])
+            hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
+            println(hybridbools)
+
+            if sum(hybridbools[1]) == 2
+                rootretics[i] = (children[1].edge[1], children[1].edge[2])
+            elseif sum(hybridbools[2]) == 2
+                rootretics[i] = (children[2].edge[1], children[2].edge[2])
+            else
+                rootretics[i] = nothing
+            end
         end
     end
     rootreticprocessed = [false for _ in 1:length(constraints)]
 
     # Main algorithm loop
+    println(rootretics)
     while n > 1
         # DEBUG STATEMENT
         # @show n
@@ -79,9 +94,14 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         for (cidx, c) in enumerate(constraints)
             if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
                 fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
-                subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
+                subnets[i], edgei, edgej = mergesubnets!(subnets[i], fakesubnet)
                 
-                trylogretic!(reticmap, rootretics[cidx], edgei, "from")
+                if typeof(rootretics[cidx]) <: Edge
+                    trylogretic!(reticmap, rootretics[cidx], edgei, "from")
+                else # type is Tuple
+                    trylogretic!(reticmap, rootretics[cidx][1], edgei, "from")
+                    trylogretic!(reticmap, rootretics[cidx][2], edgej, "from")
+                end
                 # println("logging retic for edge number $(rootretics[cidx].number)")
                 rootreticprocessed[cidx] = true
             end
