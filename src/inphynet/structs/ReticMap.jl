@@ -7,7 +7,9 @@ struct ReticMap
         for net in constraints
             for e in net.edge
                 if e.hybrid && !e.isMajor
-                    d[e] = Vector{EdgeOrNA}([nothing, nothing])
+                    d[e] = Vector{EdgeOrNA}([nothing, nothing, nothing])    # first entry:  `from` edge,
+                                                                            # second entry: `to` edge,
+                                                                            # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)
                 end
             end
         end
@@ -36,27 +38,41 @@ function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto
 
     # Log the reticulation
     if fromorto == "from"
-        if !(r.map[constraintedge][1] === nothing) throw(ErrorException("Overriding from edge")) end
-        r.map[constraintedge][1] = subnetedge
+        if (r.map[constraintedge][1] !== nothing) throw(ErrorException("Overriding from edge")) end
         if r.map[constraintedge][2] == subnetedge
-            @error("equiv edges A")
-            throw(ErrorException("equiv edges A"))
+            @error("Attempting to set `from` edge to a duplicate of the `to` edge.")
+            throw(ErrorException("Attempting to set `from` edge to a duplicate of the `to` edge."))
+        elseif r.map[constraintedge][3] == subnetedge
+            @error("Attempting to set `from` edge to a duplicate of the (second) `to` edge.")
+            throw(ErrorException("Attempting to set `from` edge to a duplicate of the (second) `to` edge."))
         end
+        r.map[constraintedge][1] = subnetedge
     else
-        if !(r.map[constraintedge][2] === nothing) throw(ErrorException("Overriding to edge")) end
-        r.map[constraintedge][2] = subnetedge
-        if r.map[constraintedge][1] == subnetedge
-            @error("equiv edges B")
-            throw(ErrorException("equiv edges B"))
+        if (r.map[constraintedge][2] !== nothing)
+            if (r.map[constraintedge][3] !== nothing)
+                throw(ErrorException("Both `to` edges already set to non-nothing values."))
+            else
+                if r.map[constraintedge][1] == subnetedge
+                    @error("Attempting to set (second) `to` edge to a duplicate of the `from` edge.")
+                    throw(ErrorException("Attempting to set (second) `to` edge to a duplicate of the `from` edge."))
+                end
+                r.map[constraintedge][3] = subnetedge
+            end
+        else
+            if r.map[constraintedge][1] == subnetedge
+                @error("Attempting to set `to` edge to a duplicate of the `from` edge.")
+                throw(ErrorException("Attempting to set `to` edge to a duplicate of the `from` edge."))
+            end
+            r.map[constraintedge][2] = subnetedge
         end
     end
 end
 
 function check_reticmap(r::ReticMap)
     for (i, key) in enumerate(keys(r.map))
-        if length(r.map[key]) != 2
+        if length(r.map[key]) != 3
             error("ReticMap key $i has $(length(r.map[key])) attached edges.")
-        elseif sum(r.map[key] .!== nothing) != 2
+        elseif sum(r.map[key] .!== nothing) != 2 && sum(r.map[key] .!== nothing) != 3
             println(r.map[key])
             println(key.number)
             error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
