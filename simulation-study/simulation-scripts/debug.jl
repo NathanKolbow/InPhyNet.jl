@@ -8,9 +8,10 @@ include("helpers/simple-plot-fxns.jl")
 # - n50r2       (0.48, 0.92) - prop-1: 0.59
 # - n50r5       (0.52, 1.07) - prop-1: 0.49
 # - n100r5      (0.49, 0.91) - prop-1: 0.58
-# - n100r10     (ERROR)
+# - n100r10     (0.02, 0.78) - prop-1: 0.89
+#   - repnum 4  (0.30, 0.71) - prop-1: 0.58
 netid = "n100r10"
-replicatenum = 1
+replicatenum = 6
 maxsubsetsize = 15
 dmethod = "internode_count"
 nsim = 500
