@@ -28,12 +28,12 @@ function plot_negative_one_prop(netid, std0)
         end
     end
     plot!([first_non_one - stepsize / 8, first_non_one - stepsize / 8], [0, 1], color="red", label=nothing)
-    plot!([start_all_zero + stepsize / 8, start_all_zero + stepsize / 8], [0, 1], color="red", label=nothing)
+    plot!([start_all_zero - stepsize / 8, start_all_zero - stepsize / 8], [0, 1], color="red", label=nothing)
     display(p)
 
     # Print some relevant values
     
-    println("$(netid), ($(round(first_non_one, digits=2)), $(round(start_all_zero, digits=2)))")
+    println("$(netid), ($(round(first_non_one, digits=2)), $(round(start_all_zero, digits=2))) - prop-1: $(round(mean(esterrors .== -1), digits=2))")
 
     return p
 end
