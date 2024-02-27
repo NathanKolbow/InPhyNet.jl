@@ -38,7 +38,11 @@ function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto
 
     # Log the reticulation
     if fromorto == "from"
-        if (r.map[constraintedge][1] !== nothing) throw(ErrorException("Overriding from edge")) end
+        if (r.map[constraintedge][1] !== nothing)
+            if r.map[constraintedge][1] != subnetedge
+                throw(ErrorException("Overriding `from` edge"))
+            end
+        end
         if r.map[constraintedge][2] == subnetedge
             @error("Attempting to set `from` edge to a duplicate of the `to` edge.")
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the `to` edge."))
@@ -73,6 +77,7 @@ function check_reticmap(r::ReticMap)
         if length(r.map[key]) != 3
             error("ReticMap key $i has $(length(r.map[key])) attached edges.")
         elseif sum(r.map[key] .!== nothing) != 2 && sum(r.map[key] .!== nothing) != 3
+            println("r.map length: $(length(r.map))")
             println(r.map[key])
             println(key.number)
             error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
