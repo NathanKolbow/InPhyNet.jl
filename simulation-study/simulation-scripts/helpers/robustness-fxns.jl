@@ -94,7 +94,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     ac = AtomicCounter(0)
     #
 
-    fortime = @elapsed for iter=1:nsim  # Threads.@threads for iter=1:nsim
+    fortime = @elapsed for iter=1:nsim # Threads.@threads for iter=1:nsim
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
         gausserrors[iter] = gaussSd
@@ -445,7 +445,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         esterror = getNetDistances(truenet, mnet)
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
-        if typeof(e) != InPhyNet.SolutionDNEError
+        if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
             println("ERROR RECEIVED")
             @show typeof(e)
             println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")
