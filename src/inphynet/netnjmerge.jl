@@ -63,7 +63,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
             # lead directly to hybrids.
             children = getchildren(c.node[c.root])
             hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
-            println(hybridbools)
+            needtowarn = supressunsampledwarning
 
             if sum(hybridbools[1]) == 2
                 rootretics[i] = (children[1].edge[1], children[1].edge[2])
@@ -71,13 +71,13 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
                 rootretics[i] = (children[2].edge[1], children[2].edge[2])
             else
                 rootretics[i] = nothing
+                needtowarn = false
             end
         end
     end
     rootreticprocessed = [false for _ in 1:length(constraints)]
 
     # Main algorithm loop
-    println(rootretics)
     while n > 1
         # DEBUG STATEMENT
         # @show n
