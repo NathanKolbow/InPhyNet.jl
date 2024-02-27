@@ -116,7 +116,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
 
         # Display progress
         @atomic :sequentially_consistent ac.iterspassed += 1
-        if Threads.threadid() == 1
+        if Threads.threadid() == 1 && displayprogress
             print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
         end
     end
@@ -445,7 +445,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         esterror = getNetDistances(truenet, mnet)
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
-        if typeof(e) != ArgumentError
+        if typeof(e) != InPhyNet.SolutionDNEError
             println("ERROR RECEIVED")
             @show typeof(e)
             println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")

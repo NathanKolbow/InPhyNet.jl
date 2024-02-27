@@ -80,8 +80,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
             if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
                 fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
                 subnets[i], edgei, _ = mergesubnets!(subnets[i], fakesubnet)
-
-                println("E")
+                
                 trylogretic!(reticmap, rootretics[cidx], edgei, "from")
                 # println("logging retic for edge number $(rootretics[cidx].number)")
                 rootreticprocessed[cidx] = true
@@ -153,7 +152,6 @@ end
 Checks validity of a single input constraint networks. Checks include:
 1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
 2. Reticulations do not lead directly into other reticulations
-3. No node has children that are *both* reticulations
 """
 function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=false, autofix::Bool=true)
     if net.numTaxa == 1 return end
@@ -187,44 +185,8 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
             end
         end
     end
-
-    # Check 3
-    checking_three = true   # if we end up changing the net's topology,
-                            # we want to restart the `for` loop.
-    while checking_three
-        checking_three = false
-        for (node_idx, node) in enumerate(net.node)
-            children = getchildren(node)
-            if length(children) == 2 && all(child.hybrid for child in children)
-                if autofix
-                    println("Check #3 autofix not implemented yet.")
-                    break
-                    checking_three = true
-                    fix_check_three!(net, node)
-                    break
-                else
-                    throw(ConstraintError(idx, "Node #$(node.number) (net.node[$(node_idx)]) has a hybrid for *both* of its children; this is not allowed. "*
-                        "This can be automatically fixed by setting `autofix=true`."))
-                end
-            end
-        end
-    end
 end
 check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
-
-
-"""
-`node` has two children *each* of which are hybrids. This function
-adjusts the network so the topology is functionally unchanged, but
-so that the node no longer has 2 hybrid children.
-"""
-function fix_check_three!(net::HybridNetwork, node::Node)
-    hyb1, hyb2 = getchildren(node)
-    new_node = Node(minimum(n.number for n in net.node if !n.leaf) - 1, false, false)
-    new_edge = Edge(length(net.edge) + 1)
-
-    # error("Automatic fix for check #3 not implemented yet.")
-end
 
 
 """
@@ -373,11 +335,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         for edge in net.edge
             if edge.hybrid && !edge.isMajor
                 if reticmap.map[edge][1] === nothing
-                    println("A")
                     logretic!(reticmap, edge, subnetedgei, "from")
                 end
                 if reticmap.map[edge][2] === nothing
-                    println("B")
                     logretic!(reticmap, edge, subnetedgej, "to")
                 end
             end
@@ -508,7 +468,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             # TODO: direction shouldn't lead to any rooting issues b/c
             # we're at the leaves, but direction not being retained here is bad
             hybedgelogged = true
-            println("C")
             logretic!(reticmap, hybedge, subnetedgei, "from")
             logretic!(reticmap, hybedge, subnetedgej, "to")
         elseif newtip === nothing && any(ishybedge)
@@ -519,28 +478,103 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             println(nodej)
             error("Unknown case. No newtip found but we also don't take a hybrid path.")
         end
-        println(sum(ishybedge))
 
         # find the retics that we need to keep track of
         # our a_star path goes from `i` to `j`, so any retics we find are relevant to `i` up
         # until we cross the new tip, at which point they become relevant to `j`
         relevanttoi = true
-        for node in nodesinpath
-            if node == newtip || hybedgelogged
+        for (node_idx, node) in enumerate(nodesinpath)
+            if node == newtip
                 relevanttoi = false
             end
-            for edge in node.edge
-                if edge.hybrid && !edge.isMajor
-                    fromorto = ifelse(getChild(edge) == node, "to", "from")
-                    if subnetedgei == subnetedgej
-                        @error("equiv edges C")
-                    end
+            ######## NEW VERSION ########
+            node_edges = node.edge
+            isminorhyb = [e.hybrid && !e.isMajor for e in node_edges]
 
+            if sum(isminorhyb) == 1
+                edge = node_edges[isminorhyb][1]
+                fromorto = ifelse(getChild(edge) == node, "to", "from")
+                
+                if !hybedgelogged || edge != hybedge
                     # println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
                     logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-                    if !hybedgelogged hybedgelogged = true end
+                    # relevanttoi = false
+                    if edge == hybedge hybedgelogged = true end
                 end
+            elseif sum(isminorhyb) == 2
+                hyb_edges = node_edges[isminorhyb]
+                if hyb_edges[1] in edgesinpath && hyb_edges[2] in edgesinpath
+                    error("Unaccounted for scenario.")
+                end
+
+                # `edge_i` corresponds to `node_i`, and `_j` to `_j`.
+                # only one of these edges will appear in `edgesinpath`.
+                # say `hyb_edges[1]` (call it `hybedge1`) appears in `edgesinpath`.
+                # if its index in `edgesinpath` is the index of `node` in `nodesinpath`
+                # MINUS ONE, then the hybrid is directed from `nodej` into `nodei`.
+                # Otherwise, it is directed from `nodei` into `nodej`.
+                in_path_idx = 1
+                not_in_path_idx = 2
+                edge_path_idx = findfirst(edgesinpath .== [hyb_edges[1]])
+                if edge_path_idx === nothing
+                    in_path_idx = 2
+                    not_in_path_idx = 1
+                    edge_path_idx = findfirst(edgesinpath .== [hyb_edges[2]])
+                end
+
+                edge_in_path_fromi = true
+                if edge_path_idx == (node_idx - 1)
+                    edge_in_path_fromi = false
+                elseif edge_path_idx == node_idx
+                    edge_in_path_fromi = true
+                else
+                    error("This code should never be reachable. :(")
+                end
+
+                # Now we know the direction of the retic, so let's place them.
+                if edge_in_path_fromi
+                    # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "from")
+                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "to")
+                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgei, "from")
+                else
+                    # println("F: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "from")
+                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "to")
+                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgej, "from")
+                end
+
+                # println("path idxs: ($(edge_1_path_idx), $(edge_2_path_idx))")
+                # if edge_1_path_idx < edge_2_path_idx
+                #     edge_i = hyb_edges[1]
+                #     edge_j = hyb_edges[2]
+                # else
+                #     edge_i = hyb_edges[2]
+                #     edge_j = hyb_edges[1]
+                # end
+
+                # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                # logretic!(reticmap, edge_i, subnetedgei, "from")
+                # logretic!(reticmap, edge_j, subnetedgej, "from")
             end
+            ######## NEW VERSION ########
+
+            ######## OLD VERSION ########
+            # for edge in node.edge
+            #     if edge.hybrid && !edge.isMajor
+            #         fromorto = ifelse(getChild(edge) == node, "to", "from")
+            #         if subnetedgei == subnetedgej
+            #             @error("equiv edges C")
+            #         end
+
+            #         if !hybedgelogged || edge != hybedge
+            #             println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+            #             logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+            #             relevanttoi = false
+            #         end
+            #     end
+            # end
+            ######## OLD VERSION ########
         end
 
         # purge all the nodes we've passed through to this point from the network
