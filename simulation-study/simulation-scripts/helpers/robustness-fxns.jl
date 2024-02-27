@@ -94,7 +94,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     ac = AtomicCounter(0)
     #
 
-    fortime = @elapsed for iter=1:nsim # Threads.@threads for iter=1:nsim
+    fortime = @elapsed Threads.@threads for iter=1:nsim # for iter=1:nsim # 
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
         gausserrors[iter] = gaussSd
