@@ -9,7 +9,7 @@ include("helpers/simple-plot-fxns.jl")
 # - n50r5       (0.57, 1.01)
 # - n100r5      (0.43, 0.79)
 # - n100r10     (ERROR)
-netid = "n100r10"
+netid = "n50r2"
 replicatenum = 1
 maxsubsetsize = 15
 dmethod = "internode_count"
