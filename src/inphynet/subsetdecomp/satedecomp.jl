@@ -75,7 +75,7 @@ function getMidSplitEdge(tre::HybridNetwork)
 
     for edge in tre.edge
         splitdiff = abs(length(getLeavesUnderEdge(edge)) - (tre.numTaxa / 2))
-        if splitdiff < minsplitdiff && edge != tre.node[tre.root]
+        if splitdiff < minsplitdiff
             minsplitedge = edge
             minsplitdiff = splitdiff
         end
