@@ -22,7 +22,8 @@ module InPhyNet
         parsequartets, SubNet,
         findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
         njHierarchDecomp, pruneTruthFromDecomp,
-        sateIdecomp, sateIIdecomp
+        sateIdecomp, sateIIdecomp,
+        SolutionDNEError, ConstraintError
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")
