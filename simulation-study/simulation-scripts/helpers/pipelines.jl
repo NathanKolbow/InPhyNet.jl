@@ -40,6 +40,8 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
 
     D, namelist = (nothing, nothing)
     if dmethod == "internode_count"
+        D, namelist = majorinternodecount(truenet)
+    elseif dmethod == "internode_distance"
         D, namelist = majorinternodedistance(truenet)
     else
         error("Unrecognized distance method specified.")
