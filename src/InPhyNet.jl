@@ -19,6 +19,7 @@ module InPhyNet
     export netnj, netnj!,
         decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,
+        majorinternodecount, internodecount, calculateAGIC,
         parsequartets, SubNet,
         findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
         njHierarchDecomp, pruneTruthFromDecomp,
