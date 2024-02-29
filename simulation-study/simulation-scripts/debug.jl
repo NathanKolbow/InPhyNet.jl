@@ -8,12 +8,19 @@ include("helpers/simple-plot-fxns.jl")
 # - n50r2       (0.48, 0.92) - prop-1: 0.59
 # - n50r5       (0.52, 1.07) - prop-1: 0.49
 # - n100r5      (0.49, 0.91) - prop-1: 0.58
-# - n100r10     (0.02, 0.78) - prop-1: 0.89
+# - n100r10     (0.34, 0.73) - prop-1: 0.62
 #   - repnum 4  (0.40, 0.84) - prop-1: 0.63
 #   - repnum 6  (0.30, 0.71) - prop-1: 0.58
-netid = "n100r10"
+# - n200r10     (0.16, 0.61) - prop-1: 0.67
+#   - repnum 2  (0.32, 0.62) - prop-1: 0.68
+# - n200r20     (0.37, 0.62) - prop-1: 0.66
+# - n500r25     (0.30, 0.50) - prop-1: 0.71
+# - n500r50     (0.31, 0.53) - prop-1: 0.74
+# - n1000r100   (0.29, 0.44) - prop-1: 0.73
+
+netid = "n1000r100"
 replicatenum = 1
-maxsubsetsize = 15
+maxsubsetsize = 50
 dmethod = "internode_count"
 nsim = 500
 
