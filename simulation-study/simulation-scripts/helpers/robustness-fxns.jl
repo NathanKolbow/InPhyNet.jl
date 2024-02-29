@@ -1,6 +1,8 @@
 using Distributions, Distributed, SharedArrays, Random, Combinatorics, StatsBase, 
       InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
 
+include("progress-display.jl")
+
 
 # Main driver for manuscript sim 2(i)
 function randomPartitionRobustness(truenet::HybridNetwork, constraintsizes::Vector{Int64}, D, namelist; nsim::Int64=1000)
@@ -94,6 +96,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     ac = AtomicCounter(0)
     #
 
+    start_time = time()
     fortime = @elapsed Threads.@threads for iter=1:nsim # for iter=1:nsim # 
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
@@ -117,11 +120,13 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         # Display progress
         @atomic :sequentially_consistent ac.iterspassed += 1
         if Threads.threadid() == 1 && displayprogress
-            print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
+            print_monophyleticRobustnessProgress(ac.iterspassed, nsim, start_time)
         end
     end
-    print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
-    print("Took $(round(fortime, digits=2)) seconds\n")
+    if displayprogress
+        print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
+        print("Took $(round(fortime, digits=2)) seconds\n")
+    end
     return esterrors, gausserrors, constraintdiffs, nretics_est
 end
 
