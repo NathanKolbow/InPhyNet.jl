@@ -9,9 +9,12 @@ implemented pathfinding algorithms.
       Otherwise, only tree-like edges (other than those in `alwaysinclude`) are retained.
 - alwaysinclude (default=nothing): edges that should always be included in the graph,
       regardless of the value of `includeminoredges`
+- withweights (default=false): return a set of weights corresponding to branch lengths as well
 """
-function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing)
+function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false)
     graph = SimpleGraph(net.numNodes)
+    weights = Matrix{Float64}(undef, net.numNodes, net.numNodes)
+    weights .= Inf
     nodemap = Dict{Node, Int64}(n => i for (i, n) in enumerate(net.node))   # 10x faster for n100r5 than using `findfirst`
     for edge in net.edge
         if !includeminoredges && edge.hybrid && !edge.isMajor && edge != alwaysinclude continue end
@@ -19,7 +22,15 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         enode2 = edge.node[2]
         if haskey(nodemap, enode1) && haskey(nodemap, enode2)
             add_edge!(graph, nodemap[enode1], nodemap[enode2])
+            if withweights
+                weights[nodemap[enode1], nodemap[enode2]] =
+                    weights[nodemap[enode2], nodemap[enode1]] = ifelse(edge.length == -1., 1, edge.length)
+            end
         end
+    end
+
+    if withweights
+        return graph, weights
     end
     return graph
 end

@@ -491,7 +491,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             logretic!(reticmap, hybedge, subnetedgei, "from")
             logretic!(reticmap, hybedge, subnetedgej, "to")
         elseif newtip === nothing && any(ishybedge)
-            error("Unknown case. Multiple hybrid edges in the path.")
+            error("Unknown case. Multiple hybrid edges in the path merging $(nodei.name) and $(nodej.name).")
         elseif newtip === nothing
             println(net)
             println(nodei)
