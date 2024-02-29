@@ -65,7 +65,7 @@ function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVect
     removeredundantedges!(Ngraph)
     nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
 
-    for i=1:(net.numTaxa-1)
+    for i=1:(N.numTaxa-1)
         paths = bellman_ford_shortest_paths(Ngraph, nodelistidx[i])
         D[i, :] .= D[:, i] .= paths.dists[nodelistidx] .- 1
         D[i, i] = 0.
