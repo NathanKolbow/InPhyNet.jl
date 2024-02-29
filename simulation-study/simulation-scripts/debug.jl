@@ -18,11 +18,13 @@ include("helpers/simple-plot-fxns.jl")
 # - n500r50     (0.31, 0.53) - prop-1: 0.74
 # - n1000r100   (0.29, 0.44) - prop-1: 0.73
 
-netid = "n1000r100"
+netid = "n200r10"
 replicatenum = 1
-maxsubsetsize = 50
-dmethod = "internode_count"
-nsim = 500
+maxsubsetsize = 15
+dmethod = "internode_count" # distance: mean(esterrors[esterrors .!= -1.]) == 135.88
+                            #           (0.07, 0.50) - prop-1: 0.85
+                            #           (0.26, 0.69) - prop-1: 0.68
+nsim = 1000
 
 truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
 esterrors, gausserrors, constraintdiffs, nretics_est =
