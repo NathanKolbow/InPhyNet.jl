@@ -350,6 +350,7 @@ end
 
 
 function doRandomNNI!(net; maxattempts::Int64=100)
+    if net.numTaxa < 3 return nothing end
     j = 0
     e = sample(net.edge, 1, replace=false)[1]
     while j < 100 && nni!(net, e) === nothing
