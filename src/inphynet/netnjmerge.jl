@@ -38,6 +38,12 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         throw(ArgumentError("Names must be unique."))
     end
 
+    # Used for path-finding
+    # TODO: `Graph` is a limiting factor in algo speed. If it seems that
+    #       we still need to improve algo speed, we can re-use graphs
+    #       that are created here instead of making them on-demand
+    # full_netgraphs = [Graph(c) for c in constraints]
+
     # Empty network
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
@@ -695,7 +701,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
     validpairs .= -1
 
     # go through the constraint networks and validate/invalidate pairs
-    for net in constraints
+    for (net_idx, net) in enumerate(constraints)
         if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
 
@@ -704,7 +710,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
         netpairs[netpairs .== 1] .= -1
 
         # Find valid sibling pairs
-        nodepairs = findsiblingpairs(net)   # returned as nodes, need to convert to idxs
+        nodepairs = findsiblingpairs(net)   # returned as a BitArray w/ indices mirroring net.leaf, need to convert to idxs
         nodestoidx(nodepair) = CartesianIndex(idx(nodepair[1].name), idx(nodepair[2].name))
         pairidxs = map(nodestoidx, nodepairs)
 
@@ -740,37 +746,49 @@ These pairs are valid for `net` but may not be valid when the
 Returns a vector of tuples of nodes corresponding to siblings.
 """
 function findsiblingpairs(net::HybridNetwork)
-    pairs = Vector{Tuple{Node, Node}}()
+    pairs = BitArray(undef, net.numTaxa, net.numTaxa)
+    pairs .= false
 
     # new, simpler method just using Graphs.jl
     hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
     if length(hybedges) == 0 hybedges = [nothing] end
-    for (nodei, nodej) in combinations(net.leaf, 2)
-        for hybedge in hybedges
-            graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
-            removeredundantedges!(graph, keeproot=net)
+    for hybedge in hybedges
+        graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
+        InPhyNet.removeredundantedges!(graph, keeproot=net)
+        
+        for nodei_idx in 1:(net.numTaxa-1)
+            nodei = net.leaf[nodei_idx]
 
-            idxnodei = findfirst(net.node .== [nodei])
-            idxnodej = findfirst(net.node .== [nodej])
-            edgepath = a_star(graph, idxnodei, idxnodej)
+            for nodej_idx in (nodei_idx+1):net.numTaxa
+                nodej = net.leaf[nodej_idx]
 
-            nodesinpath = Array{Node}(undef, length(edgepath)+1)
-            for (i, gedge) in enumerate(edgepath)
-                srcnode = net.node[gedge.src]
-                dstnode = net.node[gedge.dst]
+                idxnodei = findfirst(net.node .== [nodei])
+                idxnodej = findfirst(net.node .== [nodej])
+                edgepath = a_star(graph, idxnodei, idxnodej)
 
-                if i == 1 nodesinpath[1] = net.node[gedge.src] end
-                nodesinpath[i+1] = dstnode
-            end
+                nodesinpath = Array{Node}(undef, length(edgepath)+1)
+                for (i, gedge) in enumerate(edgepath)
+                    srcnode = net.node[gedge.src]
+                    dstnode = net.node[gedge.dst]
 
-            if length(edgepath) == 2 || length(edgepath) == 1 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
-                push!(pairs, (nodei, nodej))
-                break
+                    if i == 1 nodesinpath[1] = net.node[gedge.src] end
+                    nodesinpath[i+1] = dstnode
+                end
+
+                if length(edgepath) == 2 || length(edgepath) == 1 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
+                    pairs[nodei_idx, nodej_idx] = true
+                end
             end
         end
     end
 
-    return pairs
+    # Convert pairs to Tuples of Nodes
+    nodepairs = Array{Tuple{Node, Node}}(undef, sum(pairs))
+    for (arr_idx, leaf_idxs) in enumerate(findall(pairs))
+        nodepairs[arr_idx] = (net.leaf[leaf_idxs[1]], net.leaf[leaf_idxs[2]])
+    end
+
+    return nodepairs
 end
 
 
