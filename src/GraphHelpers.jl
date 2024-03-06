@@ -11,7 +11,7 @@ implemented pathfinding algorithms.
       regardless of the value of `includeminoredges`
 - withweights (default=false): return a set of weights corresponding to branch lengths as well
 """
-function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false)
+function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1.)
     graph = SimpleGraph(net.numNodes)
     weights = Matrix{Float64}(undef, net.numNodes, net.numNodes)
     weights .= Inf
@@ -23,6 +23,13 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         if haskey(nodemap, enode1) && haskey(nodemap, enode2)
             add_edge!(graph, nodemap[enode1], nodemap[enode2])
             if withweights
+                weight = edge.length
+                if edge.hybrid && !edge.isMajor
+                    weight = minoredgeweight
+                elseif edge.length == -1.
+                    weight = 1
+                end
+                
                 weights[nodemap[enode1], nodemap[enode2]] =
                     weights[nodemap[enode2], nodemap[enode1]] = ifelse(edge.length == -1., 1, edge.length)
             end
