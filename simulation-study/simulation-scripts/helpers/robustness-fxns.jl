@@ -354,6 +354,7 @@ function doRandomNNI!(net; maxattempts::Int64=100)
     e = sample(net.edge, 1, replace=false)[1]
     while j < 100 && nni!(net, e) === nothing
         e = sample(net.edge, 1, replace=false)[1]
+        j += 1
     end
     if j < 100
         return e
@@ -428,11 +429,13 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
     length(NNImoves) == length(constraints) || error("Must specify same number of NNI moves as exist constraints.")
 
+    println("A")
     # Add noise
     if gaussSd > 0
         addnoise!(D, Normal(gaussMean, gaussSd))
     end
     copyD = deepcopy(D)
+    println("B")
 
     # Do NNI moves
     constraintdiffs = zeros(length(constraints))
@@ -443,11 +446,15 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         end
     end
     tempcs = copyConstraints(constraints)
+    println("C")
 
     # Merge the nets
     try
+        println("D")
         mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
+        println("E")
         esterror = getNetDistances(truenet, mnet)
+        println("F")
         return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
