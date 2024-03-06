@@ -354,6 +354,7 @@ function doRandomNNI!(net; maxattempts::Int64=100)
     e = sample(net.edge, 1, replace=false)[1]
     while j < 100 && nni!(net, e) === nothing
         e = sample(net.edge, 1, replace=false)[1]
+        j += 1
     end
     if j < 100
         return e
