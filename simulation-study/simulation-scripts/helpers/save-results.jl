@@ -4,7 +4,7 @@ include("retic-metric.jl")
 using CSV, DataFrames
 
 const AV = AbstractVector
-function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
+function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real}, majortreeRFs::AV{<:Real},
     gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64,
     max_subset_size::Real)
 
@@ -36,6 +36,7 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
         constraint_sizes=constraint_sizes,
         max_subset_size=max_subset_size,
         estRFerror=esterrors,
+        majortreeRF=majortreeRFs,
         gauss_error=gausserrors,
         constraint_error_sum=constraintdiffs,
         replicate_num=repeat([replicate_num], nrows)
