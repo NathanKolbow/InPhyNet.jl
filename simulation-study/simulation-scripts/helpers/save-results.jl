@@ -5,7 +5,8 @@ using CSV, DataFrames
 
 const AV = AbstractVector
 function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
-    gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64)
+    gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64,
+    max_subset_size::Real)
 
     # Quick checks for bad input
     a = length(gausserrors)
@@ -33,6 +34,7 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
         nretics_outside=repeat([nretics_outside], nrows),
         nretics_duplicated=repeat([nretics_duplicated], nrows),
         constraint_sizes=constraint_sizes,
+        max_subset_size=max_subset_size,
         estRFerror=esterrors,
         gauss_error=gausserrors,
         constraint_error_sum=constraintdiffs,
