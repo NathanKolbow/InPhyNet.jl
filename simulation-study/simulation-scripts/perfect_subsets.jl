@@ -40,7 +40,8 @@ savePerfectResults(
     gausserrors,
     constraintdiffs,
     nretics_est,
-    replicatenum
+    replicatenum,
+    maxsubsetsize
 )
 
 #############
