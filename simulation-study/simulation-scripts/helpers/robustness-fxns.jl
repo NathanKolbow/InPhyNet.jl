@@ -81,6 +81,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
+    majortreeRFs = zeros(nsim) .- 1.
     esterrors = zeros(nsim) .- 1.
     constraintdiffs = zeros(length(constraints), nsim) .- 1.
     gausserrors = zeros(nsim) .- 1.
@@ -108,7 +109,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
         # try
-        esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
+        esterrors[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
             runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
         # catch e
         #     if typeof(e) != ArgumentError
@@ -127,7 +128,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
         print("Took $(round(fortime, digits=2)) seconds\n")
     end
-    return esterrors, gausserrors, constraintdiffs, nretics_est
+    return esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est
 end
 
 # w/ 1 proc: 8.77s
@@ -450,7 +451,8 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
     try
         mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
         esterror = getNetDistances(truenet, mnet)
-        return esterror, constraintdiffs, writeTopology(mnet), mnet.numHybrids
+        majortreeRF = hardwiredClusterDistance(majorTree(truenet), majorTree(mnet), false)
+        return esterror, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
             println("ERROR RECEIVED")
@@ -468,7 +470,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
             throw(e)
         else
-            return -1, constraintdiffs, "", -1
+            return -1, -1, constraintdiffs, "", -1
         end
     end
 end

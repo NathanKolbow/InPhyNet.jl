@@ -3,7 +3,6 @@
 # - `julia --project=../.. -tX ./perfect_subsets.jl ...`
 # - example params: `julia ... ./perfect_subsets.jl n50r2 1 15 internode_count 100`
 
-#error("Double check in Slack how we're choosing the Gaussian standard error and refactor `monophyleticRobustness` to use this schema.")
 if length(ARGS) != 4 && length(ARGS) != 5
     error("Usage: julia perfect_subsets.jl \"<true network abbreviation>\" <replicate number> <maximum subset size> \"<distance method>\" [number of sims]")
 end
@@ -28,7 +27,7 @@ truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubs
 
 # 2. run robustness testing
 println("- Running robustness testing for $(netid) ($(replicatenum)), max: $(maxsubsetsize)")
-esterrors, gausserrors, constraintdiffs, nretics_est =
+esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
     monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim, displayprogress=true)
 constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
@@ -37,6 +36,7 @@ savePerfectResults(
     truenet,
     constraints,
     esterrors,
+    majortreeRFs,
     gausserrors,
     constraintdiffs,
     nretics_est,
