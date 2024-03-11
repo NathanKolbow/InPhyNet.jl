@@ -3,19 +3,21 @@ library(ggplot2)
 
 options(dplyr.summarise.inform = FALSE)
 
-result_files <- dir("simulation-study/data/output/")
-result_files <- result_files[grepl("n[0-9]*r[0-9]*.csv", result_files)]
-
-full_df <- lapply(
-    result_files,
-    function(x) {
-        read.csv(paste0("simulation-study/data/output/", x))
-    }) %>%
-    do.call("rbind", .) %>%
-    mutate(
-        netid = as.factor(paste0("n", numtaxa, "r", nretics_true)),
-        constraint_sizes = NULL # not using these for now
-    )
+read.df <- function() {
+    result_files <- dir("simulation-study/data/output/")
+    result_files <- result_files[grepl("n[0-9]*r[0-9]*.csv", result_files)]
+    full_df <- lapply(
+        result_files,
+        function(x) {
+            read.csv(paste0("simulation-study/data/output/", x))
+        }) %>%
+        do.call("rbind", .) %>%
+        mutate(
+            netid = as.factor(paste0("n", numtaxa, "r", nretics_true)),
+            constraint_sizes = NULL # not using these for now
+        )
+}
+full_df <- read.df()
 
 # -1 proportion plots
 plot_neg_one_props <- function(df, step_size = 0.1, std0=1, title = "") {
@@ -48,8 +50,47 @@ plot_neg_one_props <- function(df, step_size = 0.1, std0=1, title = "") {
 
 
 # Accuracy vs. everything (n50r2 & n50r5)
-gg_df <- filter(full_df, estRFerror >= 0 & (netid %in% c("n50r2", "n50r5"))) %>%
-    sample_n(1e4)
+major_tree_RF_plot <- function(df, title="Successful runs only", do_sample_n=TRUE) {
+    if(do_sample_n)
+        df <- df %>% sample_n(min(1e4, nrow(df)))
+
+    ggplot(df, aes(x = gauss_error, y = constraint_error_sum, color = majortreeRF)) +
+        geom_jitter(width = 0, height = 1, alpha = 0.5) +
+        facet_grid(netid ~ max_subset_size) +
+        scale_color_gradientn(
+            colors = rainbow(7),
+            breaks = c(0, 10, 25, 50, 75, 100)
+        ) +
+        labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
+        ggtitle(title)
+}
+major_tree_RF_tile <- function(df, title="Successful runs only", do_sample_n=TRUE, width=0.35, height=2) {
+    if(do_sample_n)
+        df <- df %>% sample_n(min(1.5e4, nrow(df)))
+
+    ggplot(df, aes(x = gauss_error, y = constraint_error_sum, fill = majortreeRF)) +
+        geom_tile(width=width, height=height, alpha=0.45) +
+        facet_grid(netid ~ max_subset_size) +
+        scale_fill_gradientn(
+            colors = rainbow(7),
+            breaks = c(0, 10, 25, 50, 75, 100)
+        ) +
+        labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
+        ggtitle(title)
+}
+
+nonzero_df <- filter(full_df, estRFerror >= 0)
+n50_df <- filter(nonzero_df, netid %in% c("n50r2", "n50r5"))
+n1000_df <- filter(nonzero_df, netid %in% c("n1000r50", "n1000r100"))
+
+n50_df %>% major_tree_RF_tile()
+n1000_df %>% major_tree_RF_tile(width=0.3, height=35)
+
+
+
+
+
+
 
 
 ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)) +
@@ -62,14 +103,6 @@ ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)
     labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
     ggtitle("Successful runs only")
 
-gg_df %>%
-    filter(gauss_error <= 2) %>%
-    ggplot(aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)) +
-        geom_jitter(width = 0, height = 1, alpha = 0.5) +
-        facet_grid(netid ~ max_subset_size) +
-        scale_color_gradientn(colors = rainbow(7)) +
-    labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
-    ggtitle("Successful runs only")
 
 # Accuracy vs. everything (n200r10 & n200r20)
 gg_df <- filter(full_df, estRFerror >= 0 & (netid %in% c("n200r10", "n200r20")))
@@ -88,19 +121,3 @@ ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = majortreeRF
     labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
     ggtitle("Successful runs only")
 
-gg_df %>%
-    filter(gauss_error <= 2) %>%
-    ggplot(aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)) +
-        geom_jitter(width = 0, height = 1, alpha = 0.5) +
-        facet_grid(netid ~ max_subset_size) +
-        scale_color_gradientn(colors = rainbow(7)) +
-    labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
-    ggtitle("Successful runs only")
-gg_df %>%
-    filter(gauss_error <= 2) %>%
-    ggplot(aes(x = gauss_error, y = constraint_error_sum, color = majortreeRF)) +
-        geom_jitter(width = 0, height = 1, alpha = 0.5) +
-        facet_grid(netid ~ max_subset_size) +
-        scale_color_gradientn(colors = rainbow(7)) +
-    labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
-    ggtitle("Successful runs only")
