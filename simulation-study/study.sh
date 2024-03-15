@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Run from simulation-study/simulation-scripts/
-for rep in $(seq 1 10)   # going to 4 right now just to get some preliminary results, we don't need every replicate yet...
+for rep in $(seq 1 10)   # going to 10 right now just to get some preliminary results, we don't need every replicate yet...
 do
-    for maxsubsetsize in 5 10 15 20 25
+    for maxsubsetsize in 5 10 25 30
     do
         for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20 n500r25 n500r50 n1000r50 n1000r100
         do

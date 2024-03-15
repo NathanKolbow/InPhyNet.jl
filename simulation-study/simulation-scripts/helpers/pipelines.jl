@@ -1,4 +1,4 @@
-using InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV
+using InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, Random
 include("robustness-fxns.jl")
 
 # FILE PATH HELPERS
