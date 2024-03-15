@@ -464,7 +464,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             println("gaussSd: $(gaussSd)")
             println()
 
-            d_path = "/mnt/home/nkolbow/repos/network-merging/dmat$(Threads.threadid()).csv"
+            d_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/dmat$(Threads.threadid()).csv"
             println("SAVING DISTANCE MATRIX TO \"$(d_path)\"")
             CSV.write(d_path, DataFrame(copyD, :auto))
 

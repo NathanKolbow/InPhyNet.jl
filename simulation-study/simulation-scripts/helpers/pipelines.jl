@@ -3,7 +3,7 @@ include("robustness-fxns.jl")
 
 # FILE PATH HELPERS
 function getBaseDir()
-    basedir = "/mnt/ws/home/nkolbow/repos/network-merging/simulation-study/"
+    basedir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/"
     if !isdir(basedir)
         basedir = "C:\\Users\\Nathan\\repos\\network-merging\\simulation-study\\"
     end
