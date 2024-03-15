@@ -61,7 +61,7 @@ for(idx in 1:length(top_params$num_taxa)) {
 
             if(subnet_nretics[idx] > 0) {
                 subnet_newick <- rename_retics(subnet_newick, retic_idx)
-                retic_idx <- retic_idx + subnet_nretic
+                retic_idx <- retic_idx + subnet_nretics[idx]
             }
 
             final_newick <- str_replace(final_newick, paste0("placeholder", idx, ":"), paste0(subnet_newick, ":"))
