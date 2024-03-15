@@ -1,4 +1,98 @@
 # Helper functions
+
+# Rename the retics in `subnet_newick` to "#HX"
+# with X starting at `retic_idx` and incrementing by 1.
+rename_retics <- function(subnet_newick, retic_idx) {
+    temp_idx <- retic_idx
+    regex_result <- regexpr("#H[0-9]*:", subnet_newick)
+    while(regex_result != -1) {
+        start_idx <- as.integer(regex_result)
+        end_idx <- start_idx + attr(regex_result, "match.length") - 2   # -2 so we don't include ":"
+
+        matching_substring <- str_sub(subnet_newick, start_idx, end_idx)
+        subnet_newick <- str_replace_all(subnet_newick, matching_substring, paste0("__RETIC", temp_idx, "__"))
+        temp_idx <- temp_idx + 1
+
+        regex_result <- regexpr("#H[0-9]*:", subnet_newick)
+    }
+
+    while(retic_idx < temp_idx) {
+        subnet_newick <- str_replace_all(subnet_newick, paste0("__RETIC", retic_idx, "__"), paste0("#H", retic_idx))
+        retic_idx <- retic_idx + 1
+    }
+
+    return(subnet_newick)
+}
+
+# Rename the tips to "tX", where X is from 1-N.
+#
+# For some reason a copy of the list of subnets is passed
+# as an argument, not a reference. Probably b/c it's a
+# custom data type that isn't optimally implemented. So,
+# we return the list instead of operating on it in-place.
+rename_subnet_tips <- function(subnet_list, subnet_size, nretic) {
+    # Rename tips so that labels are unique across all subnets
+    ntaxa <- length(subnet_list) * subnet_size
+    namelist <- paste0("t", 1:ntaxa)
+    name_idx <- 1
+
+    for(subnet_idx in 1:length(subnet_list)) {
+        subnet_list[[subnet_idx]]$tip.label <- namelist[name_idx:(name_idx+24)]
+        name_idx <- name_idx + 25
+    }
+
+    return(subnet_list)
+}
+
+# Generates the tree structure used to place subnets.
+generate_tree <- function(ntips) {
+    sim.bdh.taxa.ssa(
+        n = ntips, numbsim = 1, nu = 0, hybprops = c(1, 0, 0),
+        mu = 0, hyb.inher.fxn = make.beta.draw(10, 10), lambda = 1
+    )[[1]]
+}
+
+# Generates subnets to be fitted into the tree generated
+# w/ generate_tree. `n_subnets` is the number of networks
+# to be generated, `n_taxa` is the number of taxa in
+# *each subnet*.
+#
+# `n_retics_total` is the number of total reticulations
+# *across all subnets*.
+generate_subnets <- function(n_subnets, n_taxa, n_retics_total, nu) {
+    total_runs <- 0
+    while(TRUE) {
+        total_runs <- total_runs + 1
+        if(total_runs > 1e5) {
+            cat("1e5 runs w/o success, quitting.\n")
+            return(-1)
+        }
+
+        nets <- sim.bdh.taxa.ssa(
+            n = n_taxa, numbsim = n_subnets, nu = nu, hybprops = c(0.5, 0, 0.5),
+            mu = 0, hyb.inher.fxn = make.beta.draw(10, 10),
+            lambda = 1
+        )
+        if(any_failures(nets)) { next }
+        
+        nhybs_total <- sum(getnhybs(nets))
+        if(nhybs_total == n_retics_total) {
+            return(list(subnets=nets, nu=nu))
+        } else if(nhybs_total < n_retics_total) {
+            nu <- 1.5 * nu
+        } else {
+            nu <- 2 * nu / 3
+        }
+    }
+}
+
+# Did any of the network simulations fail?
+any_failures <- function(net_list) {
+    any(unlist(lapply(
+        net_list, is.numeric
+    )))
+}
+
 getnhybs <- function(ssa_nets) {
     nhyblist <- c()
     for(i in 1:length(ssa_nets)) {
