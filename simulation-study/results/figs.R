@@ -110,7 +110,8 @@ n1000_df %>% major_tree_RF_prop_tile(width=0.3, height=20, do_sample_n=F)
 
 
 
-
+full_df$Perfect <- ifelse(full_df$estRFerror <= 2, TRUE, FALSE)
+gg_df <- filter(full_df, estRFerror >= 0)
 
 ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)) +
     geom_jitter(width = 0, height = 1, alpha = 0.5) +
@@ -120,7 +121,8 @@ ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)
         breaks = c(0, 10, 25, 50, 75, 100)
     ) +
     labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
-    ggtitle("Successful runs only")
+    ggtitle("Successful runs only") +
+    geom_point(aes(shape = Perfect), alpha = gg_df$Perfect)
 
 
 # Accuracy vs. everything (n200r10 & n200r20)
