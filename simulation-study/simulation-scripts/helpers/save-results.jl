@@ -18,7 +18,7 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
     # Relevant variables
     nrows = length(gausserrors)
     output_path = getOutputFilepath(truenet)
-    if !isfile(output_path) touch(output_path) end
+    if !isfile(output_path) copy_csv_template(output_path) end
     
     # Calculate some relevant data points
     nretics_inside, nretics_outside, nretics_duplicated = calculateReticData(truenet, constraints)
