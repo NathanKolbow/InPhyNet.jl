@@ -28,7 +28,7 @@ for(idx in 1:length(top_params$num_taxa)) {
         basedir,
         paste0("data/networks/n", ntaxa, "r", nretic, ".netfile")
     )
-    if(file.exists(output_file)) { file.rename(output_file, paste0(output_file, "_copy")) }
+    if(file.exists(output_file)) { file.remove(output_file, paste0(output_file, "_copy")) }
 
     basemsg <- paste0("\rSimulating n", ntaxa, "r", nretic, " networks ")
     cat(paste0(basemsg, "(0/100)"))
