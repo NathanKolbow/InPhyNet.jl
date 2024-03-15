@@ -79,7 +79,7 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
                     if !((temp_numbers[1] == true_numbers[1] && temp_numbers[2] == true_numbers[2]) ||
                         (temp_numbers[1] == true_numbers[2] && temp_numbers[2] == true_numbers[1]))
                         # Remove the hybrid edges attached here
-                        @warn "`pruneTruthFromDecomp` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
+                        # @warn "`pruneTruthFromDecomp` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
                         for temp_edge in temp_node.edge
                             if temp_edge.hybrid
                                 PhyloNetworks.deletehybridedge!(tempnet, temp_edge)
@@ -90,8 +90,7 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
                 elseif length(temp_numbers) == 1
                     if temp_numbers[1] != true_numbers[1]
                         # Remove the hybrid edges attached here
-                        @warn "`pruneTruthFromDecomp` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
-                        looping = true
+                        # @warn "`pruneTruthFromDecomp` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
                         for temp_edge in temp_node.edge
                             if temp_edge.hybrid
                                 PhyloNetworks.deletehybridedge!(tempnet, temp_edge)
