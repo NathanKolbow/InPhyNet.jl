@@ -28,7 +28,7 @@ for(idx in 1:length(top_params$num_taxa)) {
         basedir,
         paste0("data/networks/n", ntaxa, "r", nretic, ".netfile")
     )
-    if(file.exists(output_file)) { file.remove(output_file, paste0(output_file, "_copy")) }
+    if(file.exists(output_file)) { file.remove(output_file) }
 
     basemsg <- paste0("\rSimulating n", ntaxa, "r", nretic, " networks ")
     cat(paste0(basemsg, "(0/100)"))
@@ -44,6 +44,8 @@ for(idx in 1:length(top_params$num_taxa)) {
         # 2. Generate the subnetworks & rename them
         subnet_data <- generate_subnets(ntips_tre, subnet_size, nretic, nu)
         subnets <- rename_subnet_tips(subnet_data$subnets, subnet_size)
+        subnet_nretics <- getnhybs(subnets)
+        subnet_newicks <- fix_subnet_roots(subnets)
         nu <- subnet_data$nu
 
         # 3. Place the subnetworks
@@ -54,16 +56,15 @@ for(idx in 1:length(top_params$num_taxa)) {
 
         retic_idx <- 1
         for(idx in 1:ntips_tre) {
-            subnet_newick <- write.net(subnets[[idx]])
+            subnet_newick <- subnet_newicks[idx]
             subnet_newick <- str_sub(subnet_newick, 1, str_length(subnet_newick)-1)
 
-            subnet_nretic <- nrow(subnets[[idx]]$reticulation)
-            if(subnet_nretic > 0) {
+            if(subnet_nretics[idx] > 0) {
                 subnet_newick <- rename_retics(subnet_newick, retic_idx)
                 retic_idx <- retic_idx + subnet_nretic
             }
 
-            final_newick <- str_replace(final_newick, paste0("placeholder", idx, ":"), subnet_newick)
+            final_newick <- str_replace(final_newick, paste0("placeholder", idx, ":"), paste0(subnet_newick, ":"))
         }
 
         # 4. Save results
