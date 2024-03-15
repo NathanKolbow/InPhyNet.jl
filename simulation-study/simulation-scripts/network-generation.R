@@ -4,7 +4,7 @@ library(SiPhyNetwork)
 source("helpers/net-gen-helpers.R")
 
 # Multiple workstations...
-basedir <- "/mnt/ws/home/nkolbow/repos/network-merging/"
+basedir <- "/mnt/dv/wid/projects4/SolisLemus-network-merging/"
 if(!dir.exists(basedir)) basedir <- "C:\\Users\\Nathan\\repos\\network-merging\\"
 if(!dir.exists(basedir)) basedir <- "/Users/Nathan/repos/network-merging/"
 
