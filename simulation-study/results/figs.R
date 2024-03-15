@@ -73,7 +73,22 @@ major_tree_RF_tile <- function(df, title="Successful runs only", do_sample_n=TRU
         facet_grid(netid ~ max_subset_size) +
         scale_fill_gradientn(
             colors = rainbow(7),
-            breaks = c(0, 10, 25, 50, 75, 100)
+            # breaks = c(0, 10, 25, 50, 75, 100)
+        ) +
+        labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
+        ggtitle(title)
+}
+major_tree_RF_prop_tile <- function(df, title="Successful runs only", do_sample_n=TRUE, width=0.35, height=2) {
+    if(do_sample_n)
+        df <- df %>% sample_n(min(1.5e4, nrow(df)))
+
+    fill_val <- (df$majortreeRF - df$constraint_error_sum)
+    ggplot(df, aes(x = gauss_error, y = constraint_error_sum, fill = fill_val)) +
+        geom_tile(width=width, height=height, alpha=0.45) +
+        facet_grid(netid ~ max_subset_size) +
+        scale_fill_gradientn(
+            colors = rainbow(7),
+            # breaks = c(0, 10, 25, 50, 75, 100)
         ) +
         labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
         ggtitle(title)
@@ -86,7 +101,11 @@ n1000_df <- filter(nonzero_df, netid %in% c("n1000r50", "n1000r100"))
 n50_df %>% major_tree_RF_tile()
 n1000_df %>% major_tree_RF_tile(width=0.3, height=35)
 
+n1000_df %>%
+    filter(majortreeRF < 200) %>%
+    major_tree_RF_tile(width=0.3, height=20, do_sample_n=F)
 
+n1000_df %>% major_tree_RF_prop_tile(width=0.3, height=20, do_sample_n=F)
 
 
 
