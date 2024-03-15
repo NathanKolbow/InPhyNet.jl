@@ -25,6 +25,9 @@ InPhyNet.TIEWARNING = true  # disables the warning message when there are ties
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
 
+seed = parse(Int64, "$(truenet.numTaxa)42$(truenet.numHybrids)42$(replicatenum)")
+Random.seed!(seed)
+
 # 2. run robustness testing
 println("- Running robustness testing for $(netid) ($(replicatenum)), max: $(maxsubsetsize)")
 esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
