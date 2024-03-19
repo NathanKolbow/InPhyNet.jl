@@ -111,11 +111,12 @@ n1000_df %>% major_tree_RF_prop_tile(width=0.3, height=20, do_sample_n=F)
 
 
 full_df$Perfect <- ifelse(full_df$estRFerror <= 2, TRUE, FALSE)
-gg_df <- filter(full_df, estRFerror >= 0 & netid == "n200r10")
+gg_df <- filter(full_df, estRFerror >= 0 & (max_subset_size == 25 | max_subset_size == 30)) %>%
+    mutate(NetError = estRFerror)
 
-ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = estRFerror)) +
+ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = NetError)) +
     geom_jitter(width = 0, height = 1, alpha = 0.5) +
-    facet_grid(netid ~ max_subset_size) +
+    facet_grid(max_subset_size ~ netid) +
     scale_color_gradientn(
         colors = rainbow(7),
         # breaks = c(0, 10, 25, 50, 75, 100)
