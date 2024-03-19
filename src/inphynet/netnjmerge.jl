@@ -317,6 +317,10 @@ By convention we keep `nodenamei` and replace node names with `nodenamej`
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
     constraints::Vector{HybridNetwork}, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
 
+    # print("(\"$(nodenamei)\",\"$(nodenamej)\"), ")
+    # println("merging ($(nodenamei), $(nodenamej))")
+    # println("\t- $(writeTopology(constraints[1]))")
+
     for (netidx, net) in enumerate(constraints)
         # DEBUG STATEMENTS
         # println("\t$(netidx): $(writeTopology(net))")
@@ -438,22 +442,27 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
 
         # find the node that should be the new tip after merging
-        newtip = nothing
-        for node in nodesinpath
-            if node.leaf continue end
-            isnewtip = true
-            for edge in node.edge
-                if edge.hybrid && !edge.isMajor
-                    isnewtip = false
-                    break
-                end
-            end
-            if isnewtip
-                newtip = node
-                break
-            end
+        newtip = nodesinpath[1]
+        while length(getparents(newtip)) > 0 && getparent(newtip) in nodesinpath
+            newtip = getparent(newtip)
         end
-        # @show newtip.name
+        
+        # newtip = nothing
+        # for node in nodesinpath
+        #     if node.leaf continue end
+        #     isnewtip = true
+        #     for edge in node.edge
+        #         if edge.hybrid && !edge.isMajor
+        #             isnewtip = false
+        #             break
+        #         end
+        #     end
+        #     if isnewtip
+        #         newtip = node
+        #         break
+        #     end
+        # end
+        # @show newtip
         # @show [n.name for n in nodesinpath]
         
         ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
@@ -510,21 +519,20 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # until we cross the new tip, at which point they become relevant to `j`
         relevanttoi = true
         for (node_idx, node) in enumerate(nodesinpath)
-            if node == newtip
-                relevanttoi = false
-            end
+
             ######## NEW VERSION ########
             node_edges = node.edge
             isminorhyb = [e.hybrid && !e.isMajor for e in node_edges]
 
             if sum(isminorhyb) == 1
                 edge = node_edges[isminorhyb][1]
-                fromorto = ifelse(getChild(edge) == node, "to", "from")
+                fromorto = ifelse(getchild(edge) == node, "to", "from")
                 
                 if !hybedgelogged || edge != hybedge
                     # println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                    # println(newtip == node)
+
                     logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-                    # relevanttoi = false
                     if edge == hybedge hybedgelogged = true end
                 end
             elseif sum(isminorhyb) == 2
@@ -547,6 +555,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     not_in_path_idx = 1
                     edge_path_idx = findfirst(edgesinpath .== [hyb_edges[2]])
                 end
+                not_in_path_direction = ifelse(getchild(hyb_edges[not_in_path_idx]) == node, "to", "from")
 
                 edge_in_path_fromi = true
                 if edge_path_idx == (node_idx - 1)
@@ -554,7 +563,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 elseif edge_path_idx == node_idx
                     edge_in_path_fromi = true
                 else
-                    error("This code should never be reachable. :(")
+                    error("This code should never be reachable :(")
                 end
 
                 # Now we know the direction of the retic, so let's place them.
@@ -562,12 +571,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
                     logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "from")
                     logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "to")
-                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgei, "from")
+                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgei, not_in_path_direction)
                 else
                     # println("F: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
                     logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "from")
                     logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "to")
-                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgej, "from")
+                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgej, not_in_path_direction)
                 end
 
                 # println("path idxs: ($(edge_1_path_idx), $(edge_2_path_idx))")
@@ -582,6 +591,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
                 # logretic!(reticmap, edge_i, subnetedgei, "from")
                 # logretic!(reticmap, edge_j, subnetedgej, "from")
+            end
+
+            if node == newtip
+                relevanttoi = false
             end
             ######## NEW VERSION ########
 
