@@ -44,6 +44,8 @@ function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto
             end
         end
         if r.map[constraintedge][2] == subnetedge
+            @show constraintedge
+            @show getchild(constraintedge)
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the `to` edge."))
         elseif r.map[constraintedge][3] == subnetedge
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the (second) `to` edge."))
@@ -77,6 +79,8 @@ function check_reticmap(r::ReticMap)
             println(r.map[key])
             println(key.number)
             error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
+        elseif r.map[key][1] === nothing
+            error("ReitcMap key $i has no \"from\" edge.")
         end
     end
 end
