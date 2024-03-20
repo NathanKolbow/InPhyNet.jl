@@ -18,7 +18,7 @@ dmethod = ARGS[4]
 nsim = 1000
 if length(ARGS) == 5 nsim = parse(Int64, ARGS[5]) end
 ###########################
-# netid, replicatenum, maxsubsetsize, dmethod, nsim = ("n200r20", 1, 25, "internode_count", 1000)
+# netid, replicatenum, maxsubsetsize, dmethod, nsim = ("n1000r50", 2, 25, "internode_count", 1000)
 
 include("helpers/helpers.jl")
 InPhyNet.TIEWARNING = true  # disables the warning message when there are ties
