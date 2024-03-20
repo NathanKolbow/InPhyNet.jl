@@ -359,6 +359,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
+    # println("merging ($(nodei.name), $(nodej.name))")
+
     if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
         # println("a: ($(nodei.name), $(nodej.name))")
 
@@ -519,22 +521,50 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # our a_star path goes from `i` to `j`, so any retics we find are relevant to `i` up
         # until we cross the new tip, at which point they become relevant to `j`
         relevanttoi = true
+        edgeinpath_logged = false
         for (node_idx, node) in enumerate(nodesinpath)
-
             ######## NEW VERSION ########
             node_edges = node.edge
             isminorhyb = [e.hybrid && !e.isMajor for e in node_edges]
 
             if sum(isminorhyb) == 1
                 edge = node_edges[isminorhyb][1]
-                fromorto = ifelse(getchild(edge) == node, "to", "from")
-                
-                if !hybedgelogged || edge != hybedge
-                    # println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                    # println(newtip == node)
 
-                    logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-                    if edge == hybedge hybedgelogged = true end
+                if !(edge in edgesinpath)
+                    # Edge is not traversed in the path
+                    fromorto = ifelse(getchild(edge) == node, "to", "from")
+                    
+                    if !hybedgelogged || edge != hybedge
+                        if edge !== nothing && getchild(edge).name == "H32"
+                            println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                            println(newtip == node)
+                            println(edge in edgesinpath)
+                        end
+    
+                        logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                        if edge == hybedge hybedgelogged = true end
+                    end
+                else
+                    # Edge *IS* traversed in the path
+                    if !edgeinpath_logged
+                        if edge !== nothing && getchild(edge).name == "H32"
+                            println("F: relevanttoi: $(relevanttoi): $(subnetedgei.number) --> $(subnetedgej.number)")
+                            println(newtip == node)
+                            println(edge in edgesinpath)
+                        end
+    
+                        if getchild(edge) == node
+                            # edge goes from j --> i
+                            logretic!(reticmap, edge, subnetedgej, "from")
+                            logretic!(reticmap, edge, subnetedgei, "to")
+                        else
+                            # edge goes from i --> j
+                            logretic!(reticmap, edge, subnetedgei, "from")
+                            logretic!(reticmap, edge, subnetedgej, "to")
+                        end
+
+                        edgeinpath_logged = true
+                    end
                 end
             elseif sum(isminorhyb) == 2
                 hyb_edges = node_edges[isminorhyb]
@@ -548,37 +578,32 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 # if its index in `edgesinpath` is the index of `node` in `nodesinpath`
                 # MINUS ONE, then the hybrid is directed from `nodej` into `nodei`.
                 # Otherwise, it is directed from `nodei` into `nodej`.
-                in_path_idx = 1
-                not_in_path_idx = 2
-                edge_path_idx = findfirst(edgesinpath .== [hyb_edges[1]])
-                if edge_path_idx === nothing
-                    in_path_idx = 2
-                    not_in_path_idx = 1
-                    edge_path_idx = findfirst(edgesinpath .== [hyb_edges[2]])
-                end
-                not_in_path_direction = ifelse(getchild(hyb_edges[not_in_path_idx]) == node, "to", "from")
+                inpath_edge = ifelse(hyb_edges[1] in edgesinpath, hyb_edges[1], hyb_edges[2])
+                notinpath_edge = ifelse(hyb_edges[1] in edgesinpath, hyb_edges[2], hyb_edges[1])
 
-                edge_in_path_fromi = true
-                if edge_path_idx == (node_idx - 1)
-                    edge_in_path_fromi = false
-                elseif edge_path_idx == node_idx
-                    edge_in_path_fromi = true
-                else
-                    error("This code should never be reachable :(")
-                end
+                inpath_edge_childnode = getchild(inpath_edge)
+                inpath_edge_parentnode = getparent(inpath_edge)
+                inpath_from_i_to_j = findfirst([inpath_edge_parentnode] .== nodesinpath) < findfirst([inpath_edge_childnode] .== nodesinpath)
+
+                notinpath_direction = ifelse(getchild(notinpath_edge) == node, "to", "from")
 
                 # Now we know the direction of the retic, so let's place them.
-                if edge_in_path_fromi
+                if inpath_from_i_to_j
                     # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "from")
-                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "to")
-                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgei, not_in_path_direction)
+                    # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgej.number) --> $(subnetedgei.number)")
+
+                    logretic!(reticmap, inpath_edge, subnetedgei, "from")
+                    logretic!(reticmap, inpath_edge, subnetedgej, "to")
+                    logretic!(reticmap, notinpath_edge, subnetedgei, notinpath_direction)
                 else
                     # println("F: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgej, "from")
-                    logretic!(reticmap, hyb_edges[in_path_idx], subnetedgei, "to")
-                    logretic!(reticmap, hyb_edges[not_in_path_idx], subnetedgej, not_in_path_direction)
+                    # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgei.number) --> $(subnetedgej.number)")
+
+                    logretic!(reticmap, inpath_edge, subnetedgej, "from")
+                    logretic!(reticmap, inpath_edge, subnetedgei, "to")
+                    logretic!(reticmap, notinpath_edge, subnetedgej, notinpath_direction)
                 end
+                edgeinpath_logged = true
 
                 # println("path idxs: ($(edge_1_path_idx), $(edge_2_path_idx))")
                 # if edge_1_path_idx < edge_2_path_idx
