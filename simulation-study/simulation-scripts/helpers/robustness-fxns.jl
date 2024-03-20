@@ -1,5 +1,5 @@
 using Distributions, Distributed, SharedArrays, Random, Combinatorics, StatsBase, 
-      InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra
+      InPhyNet, PhyloNetworks, StatsBase, DataFrames, CSV, LinearAlgebra, Dates
 
 include("progress-display.jl")
 
@@ -454,19 +454,23 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         majortreeRF = hardwiredClusterDistance(majorTree(truenet), majorTree(mnet), false)
         return esterror, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
+        trace = stacktrace()
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
-            println("ERROR RECEIVED")
-            @show typeof(e)
-            println("CONSTRAINTS AFTER NNI MOVES BUT BEFORE MERGING:")
-            for c in tempcs println("$(writeTopology(c))") end
-            println("TRUE NET")
-            println("$(writeTopology(truenet))")
-            println("gaussSd: $(gaussSd)")
-            println()
+            logfile = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_$(Threads.threadid()).log"
+
+            write(logfile, "---- $(now()) ----")
+            write(logfile, "Constraints after NNI:\n")
+
+            for c in tempcs write(logfile, "$(writeTopology(c))") end
+            write(logfile, "\nTrue net: \n")
+            write(logfile, "$(writeTopology(truenet))")
+            write(logfile, "gaussSd: $(gaussSd)")
 
             d_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/dmat$(Threads.threadid()).csv"
-            println("SAVING DISTANCE MATRIX TO \"$(d_path)\"")
+            write(logfile, "SAVING DISTANCE MATRIX TO \"$(d_path)\"")
             CSV.write(d_path, DataFrame(copyD, :auto))
+
+            write(logfile, "\n$(trace)\n----------------\n")
 
             throw(e)
         else
