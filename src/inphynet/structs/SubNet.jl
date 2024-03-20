@@ -42,7 +42,7 @@ Deals with all the overhead of connecting two nodes with an edge.
 Returns the edge used to connect the nodes.
 """
 function connectnodes!(child::Node, parent::Node)
-    edge = Edge(0, -1.)
+    edge = Edge(rand(Int64), -1.)
     edge.node = [child, parent]
     push!(child.edge, edge)
     push!(parent.edge, edge)
