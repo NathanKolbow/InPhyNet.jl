@@ -458,19 +458,21 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
             logfile = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_$(Threads.threadid()).log"
             open(logfile, "a") do f
-                write(f, "---- $(now()) ----")
+                write(f, "---- $(now()) ----\n")
                 write(f, "Constraints after NNI:\n")
     
-                for c in tempcs write(f, "$(writeTopology(c))") end
+                for c in tempcs write(f, "$(writeTopology(c))\n") end
                 write(f, "\nTrue net: \n")
-                write(f, "$(writeTopology(truenet))")
-                write(f, "gaussSd: $(gaussSd)")
+                write(f, "$(writeTopology(truenet))\n")
+                write(f, "gaussSd: $(gaussSd)\n")
     
                 d_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/dmat$(Threads.threadid()).csv"
                 write(f, "SAVING DISTANCE MATRIX TO \"$(d_path)\"")
                 CSV.write(d_path, DataFrame(copyD, :auto))
     
-                write(f, "\n$(trace)\n----------------\n")
+                write(f, "\nStack trace:\n")
+                for stk in trace write(f, "$(stk)\n") end
+                write(f, "\n--------------------------------\n")
             end
 
             throw(e)
