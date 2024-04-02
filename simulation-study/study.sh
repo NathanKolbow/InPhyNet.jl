@@ -16,7 +16,7 @@ done
 # Small sample of runs to test new code changes...
 for rep in $(seq 1 10)   # going to 10 right now just to get some preliminary results, we don't need every replicate yet...
 do
-    for maxsubsetsize in 5 10 25 30
+    for maxsubsetsize in 5 10 15 20 25 30
     do
         echo "julia --project=../.. -t4 ./perfect_subsets.jl ${top} ${rep} ${maxsubsetsize} "internode_count" 1000 2>> perfect_subsets.log"
         julia --project=../.. -t4 ./perfect_subsets.jl ${top} ${rep} ${maxsubsetsize} "internode_count" 1000 2>> perfect_subsets.log
