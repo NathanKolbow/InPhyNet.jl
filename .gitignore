@@ -38,7 +38,8 @@ old-sims/n40h4/*
 old-sims/report/*
 old-sims/
 *treefile*
-*seq-gen*
+simulation-study/simulation-scripts/data/*
+simulation-study/simulation-scripts/data/temp_data/*
 
 # Julia
 artifacts/
@@ -47,8 +48,4 @@ compiled/
 benchmarks/
 packages/
 registries/
-<<<<<<< HEAD
 scratchspaces/
-=======
-scratchspaces/
->>>>>>> 52384d789d9a8de183377661fbfd7e9a9b5b7152
