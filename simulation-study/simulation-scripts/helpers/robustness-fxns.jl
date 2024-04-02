@@ -108,15 +108,13 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
-        # try
+        if nsim == 1
+            nnimoves .= 0
+            gaussMean = gaussSd = 0
+        end
+
         esterrors[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
             runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
-        # catch e
-        #     if typeof(e) != ArgumentError
-        #         println("\n\n\n\n\n----------------------------------------------------------------------------------------------------------------------------------\n\n\n\n\n\n")
-        #         return nothing
-        #     end
-        # end
 
         # Display progress
         @atomic :sequentially_consistent ac.iterspassed += 1
