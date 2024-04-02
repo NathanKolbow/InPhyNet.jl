@@ -111,7 +111,7 @@ n1000_df %>% major_tree_RF_prop_tile(width=0.3, height=20, do_sample_n=F)
 
 
 full_df$Perfect <- ifelse(full_df$estRFerror <= 2, TRUE, FALSE)
-gg_df <- filter(full_df, estRFerror >= 0 & (max_subset_size == 25 | max_subset_size == 30)) %>%
+gg_df <- filter(full_df, estRFerror >= 0) %>%
     mutate(NetError = estRFerror)
 
 ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = NetError)) +
@@ -123,4 +123,4 @@ ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = NetError)) 
     ) +
     labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
     ggtitle("Successful runs only") +
-    geom_point(aes(shape = Perfect), alpha = gg_df$Perfect)
+    geom_point(aes(shape = Perfect), alpha = gg_df$Perfect, color = "black")
