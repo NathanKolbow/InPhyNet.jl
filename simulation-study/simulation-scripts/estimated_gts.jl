@@ -69,10 +69,22 @@ end
 println("Inferring networks")
 net_file = joinpath(data_dir, "estnets_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile")
 Random.seed!(seed)
-infer_constraints(estgt_file, net_file, subsets, nhybrids)
+est_constraints = infer_constraints(estgt_file, net_file, subsets, nhybrids)
 
-# 8. InPhyNet inference
-println("Merging networks")
-est_constraints = readMultiTopology(net_file)
+try
+    # 8. InPhyNet inference
+    println("Merging networks")
 
-mnet = netnj(est_D, est_constraints, est_namelist)
+    mnet = netnj(est_D, est_constraints, est_namelist)
+
+    # 9. Save results
+    #### ----> WE NEED TO SAVE THE RUNTIME FOR EACH INDIVIDUAL SNAQ RUN SO WE CAN COMPUTE T_serial AND T_parallel
+    ####       i.e. one column in the CSV will have entries looking like "[10, 20, 13, 5]"
+    writeTopology(mnet, "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/data/output/estimated_gt_output/finalnet_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile")
+catch e
+    open("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/data/output/estimated_gt_output/finalnet_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile", "w+") do f
+        write(f, "FAILED")
+    end
+end
+
+writeMultiTopology(est_constraints, "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/data/output/estimated_gt_output/estconstraints_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile")
