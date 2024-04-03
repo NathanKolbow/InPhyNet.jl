@@ -1,7 +1,7 @@
 # Full pipeline going from truenet > simulated gene trees > simulated sequences > inferred gene trees > inferred networks > netmerge
 
 if length(ARGS) != 5
-    error("Usage: julia estimated_gts.jl \"<true network abbreviation>\" <replicate number> <maximum subset size> \"<distance method>\", <number of gene trees>")
+    error("Usage: julia --project=X -tY estimated_gts.jl \"<true network abbreviation>\" <replicate number> <maximum subset size> \"<distance method>\", <number of gene trees>")
 end
 
 ###### Input parsing ######
@@ -20,9 +20,10 @@ include("helpers/helpers.jl")
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 println("Loading data")
 truenet, constraints, D, namelist = loadPerfectData(netid, replicatenum, maxsubsetsize, dmethod)
-
-# 1.1 set seed
 seed = parse(Int64, "$(truenet.numTaxa)42$(truenet.numHybrids)42$(replicatenum)")
+for e in truenet.edge
+    if e.length == -1. e.length = 0.473 end
+end
 
 # 2. simulate gene trees
 println("Simulating gene trees")
@@ -42,7 +43,7 @@ end
 println("Simulating sequences")
 seq_file_prefix = joinpath(data_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt).phy")
 Random.seed!(seed)
-seq_files = simulate_sequence_data(gts, truegt_file, seq_file)
+seq_files = simulate_sequence_data(gts, truegt_file, seq_file_prefix)
 
 # 4. infer gene trees w/ iqtree
 println("Inferring gene trees")
@@ -60,6 +61,9 @@ nj_tre = nj(nj_df)
 # 6. decompose into disjoint subsets
 println("Decomposing taxa into disjoint subsets")
 subsets = sateIdecomp(nj_tre, maxsubsetsize)
+if minimum([length(s) for s in subsets]) < 4
+    error("Smallest subset must have at least 4 taxa for SNaQ.")
+end
 
 # 7. infer constraints w/ SNaQ
 println("Inferring networks")
