@@ -9,29 +9,48 @@ df <- read.csv("nni_distribution_data.csv") %>%
     mutate(`Total Moves` = as.factor(num_total_moves),
            prop_nets_with_moves = as.factor(paste0(round(100 * num_nets_with_moves / ifelse(net_id == "n100r5", 5, 21), digits=0), "% have NNI")))
 
-# n100r5
-pdf("nni_distribution_figs_n100r5.pdf", 12, 5)
-df %>% 
-    filter(net_id == "n100r5") %>%
-    ggplot(aes(x = constraint_diffs, y = est_errors, color = `Total Moves`)) +
-    facet_wrap(~ prop_nets_with_moves) +
-    geom_jitter(alpha = 0.5) +
-    geom_abline(slope = 1, intercept = 0, color = "black") +
-    labs(x = "Sum of NNI errors", y = "Merged network error") +
-    ggtitle("Net: n100r5")
-dev.off()
+# Plot fxns
+save_n500_plot <- function(df, experiment_num) {
+    filename <- paste0("nni_distribution_figs/n500r25_", experiment_num, ".pdf")
+    p_title <- ifelse(experiment_num == 1, "subset=25, rep=1", "subset=20, rep=2")
+    p_title <- paste0("Net: n500r25 (", p_title, ")")
+    print(filename)
+    
+    pdf(filename, 12, 8)
+    p <- df %>% 
+        filter(net_id == "n500r25") %>%
+        ggplot(aes(x = constraint_diffs, y = est_errors, color = `Total Moves`)) +
+        facet_wrap(~ prop_nets_with_moves) +
+        geom_jitter(alpha = 0.5) +
+        geom_abline(slope = 1, intercept = 0, color = "black") +
+        labs(x = "Sum of NNI errors", y = "Merged network error") +
+        ggtitle(p_title)
+    plot(p)
+    dev.off()
+    return(p)
+}
+save_n100_plot <- function(df, experiment_num) {
+    filename <- paste0("nni_distribution_figs/n100r5_", experiment_num, ".pdf")
+    p_title <- ifelse(experiment_num == 1, "subset=25, rep=1", "subset=20, rep=2")
+    p_title <- paste0("Net: n100r5 (", p_title, ")")
+    print(filename)
+    
+    pdf(filename, 12, 5)
+    p <- df %>% 
+        filter(net_id == "n100r5") %>%
+        ggplot(aes(x = constraint_diffs, y = est_errors, color = `Total Moves`)) +
+        facet_wrap(~ prop_nets_with_moves) +
+        geom_jitter(alpha = 0.5) +
+        geom_abline(slope = 1, intercept = 0, color = "black") +
+        labs(x = "Sum of NNI errors", y = "Merged network error") +
+        ggtitle(p_title)
+    plot(p)
+    dev.off()
+    return(p)
+}
 
-# n500r25
-pdf("nni_distribution_figs_n500r25.pdf", 12, 8)
-df %>% 
-    filter(net_id == "n500r25") %>%
-    ggplot(aes(x = constraint_diffs, y = est_errors, color = `Total Moves`)) +
-    facet_wrap(~ prop_nets_with_moves) +
-    geom_jitter(alpha = 0.5) +
-    geom_abline(slope = 1, intercept = 0, color = "black") +
-    labs(x = "Sum of NNI errors", y = "Merged network error") +
-    ggtitle("Net: n500r25")
-dev.off()
+save_n100_plot(df, 1)
+save_n500_plot(df, 1)
 
 
 # Data for `max subset size = 20` and `replicatenum = 2`
@@ -39,3 +58,7 @@ df <- read.csv("nni_distribution_data_2.csv") %>%
     filter(est_errors >= 0) %>%
     mutate(`Total Moves` = as.factor(num_total_moves),
            prop_nets_with_moves = as.factor(paste0(round(100 * num_nets_with_moves / ifelse(net_id == "n100r5", 5, 21), digits=0), "% have NNI")))
+min(df$est_errors)
+
+save_n100_plot(df, 2)
+save_n500_plot(df, 2)
