@@ -39,22 +39,22 @@ function estimate_gene_trees(seq_files::Vector{String}, estgt_output_file::Strin
 end
 
 
-function infer_constraints(estgt_file::String, output_file::String, subsets::Vector{Vector}, nhybrids::Int64; data_dir::AbstractString="/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/temp_data/")
+function infer_constraints(estgt_file::String, output_file::String, subsets::Vector{Vector{String}}, nhybrids::Int64; data_dir::AbstractString="/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/temp_data/")
     if isfile(output_file) return end
     
     est_gts = readMultiTopology(estgt_file)
-    q, t = countquartetsintrees(trees)
+    q, t = countquartetsintrees(est_gts)
     constraints = Vector{HybridNetwork}([])
 
     for (i, subset_taxa) in enumerate(subsets)
         # reduce (q, t) to only quartets w/ the taxa in `subset`
-        temp_q = []
+        temp_q = Vector{typeof(q[1])}([])
         valid_taxonnumbers = Set([i for i=1:length(t) if t[i] in subset_taxa])
         taxonnumber_map = Dict(old_number => findfirst(subset_taxa .== t[old_number]) for old_number in valid_taxonnumbers)
         map_fxn(old_number::Int64) = taxonnumber_map(old_number)
 
         for quartet in q
-            if all(num in valid_taxonnumbers for num in q.taxonnumber)
+            if all(num in valid_taxonnumbers for num in quartet.taxonnumber)
                 new_svec = @SVector [taxonnumber_map[quartet.taxonnumber[i]] for i = 1:4]
                 quartet_copy = PhyloNetworks.QuartetT{MVector{4, Float64}}(
                     length(temp_q) + 1,
@@ -65,15 +65,19 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
             end
         end
 
-        df = readTableCF(writeTableCF(temp_q, subset_taxa))
+        df = nothing
+        
+        redirect_stdout(devnull) do
+            df = readTableCF(writeTableCF(temp_q, subset_taxa))
+        end
         
         # infer w/ snaq
         temp_out_file = joinpath(data_dir, "snaq_temp_output_$(i)_")
-        snaq!(est_gts[1], df, filename=temp_out_file, hmax=nhybrids, seed=42)
-
-        # read the network from snaq
-        constraint_newick = ???
-        push!(constraints, readTopology(constraint_newick))
+        snaq_net = nothing
+        redirect_stdout(devnull) do
+            snaq_net = snaq!(est_gts[1], df, filename=temp_out_file, hmax=nhybrids, seed=42)
+        end
+        push!(constraints, snaq_net)
     end
 
     writeMultiTopology(constraints, output_file)
