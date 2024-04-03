@@ -43,7 +43,12 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
     if isfile(output_file) return end
     
     est_gts = readMultiTopology(estgt_file)
-    q, t = countquartetsintrees(est_gts)
+    q = t = nothing
+    
+    redirect_stdout(devnull) do
+        q, t = countquartetsintrees(est_gts)
+    end
+
     constraints = Vector{HybridNetwork}([])
 
     for (i, subset_taxa) in enumerate(subsets)
@@ -65,11 +70,7 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
             end
         end
 
-        df = nothing
-        
-        redirect_stdout(devnull) do
-            df = readTableCF(writeTableCF(temp_q, subset_taxa))
-        end
+        df = readTableCF(writeTableCF(temp_q, subset_taxa))
         
         # infer w/ snaq
         temp_out_file = joinpath(data_dir, "snaq_temp_output_$(i)_")
@@ -81,6 +82,7 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
     end
 
     writeMultiTopology(constraints, output_file)
+    return constraints
 end
 
 
