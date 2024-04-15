@@ -23,3 +23,18 @@ function calculateReticData(truenet::HybridNetwork, constraints::Vector{HybridNe
 
     return nretics_inside, nretics_outside, nretics_duplicated
 end
+
+
+function calculate_net_pseudolik(net::HybridNetwork, gts::Vector{HybridNetwork})
+    q, t = countquartetsintrees(gts, showprogressbar=false)
+    df = readTableCF(writeTableCF(q, t))
+
+    net0 = deepcopy(net)
+    PhyloNetworks.parameters!(net0)
+    Threads.@threads for q in df.quartet
+        PhyloNetworks.extractQuartet!(net0, q)
+        PhyloNetworks.calculateExpCFAll!(q.qnet)
+    end
+
+    return PhyloNetworks.logPseudoLik(df)
+end
