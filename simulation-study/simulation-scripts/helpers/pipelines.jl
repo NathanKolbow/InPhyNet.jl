@@ -21,8 +21,9 @@ copy_csv_template(output_path::String) = cp(joinpath(getDataDir(), "output", "fi
 # DATA LOADING FUNCTIONS
 function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String)
     truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
+    avg_bl = get_avg_bl(truenet)
     newick = writeTopology(truenet)
-    newick = "($(newick[1:(length(newick)-1)]),OUTGROUP:1.0);"
+    newick = "($(newick[1:(length(newick)-1)]):$(avg_bl),OUTGROUP:1.0);"
     truenet = readTopology(newick)
 
     constraints = sateIdecomp(majorTree(truenet), maxsize)
@@ -48,6 +49,17 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
         error("Unrecognized distance method specified.")
     end
     return truenet, constraints, D, namelist
+end
+@inline function get_avg_bl(net::HybridNetwork)
+    bl_sum = 0.
+    num_edges = 0
+    for e in net.edge
+        if e.length != -1. && e.length != 0.
+            bl_sum += e.length
+            num_edges += 1
+        end
+    end
+    return bl_sum / num_edges
 end
 
 
