@@ -86,6 +86,28 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
 end
 
 
+function load_true_net_ils_adjusted(netid::String, replicatenum::Int64, ils::String)
+    truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
+    newick = writeTopology(truenet)
+    avg_bl = get_avg_bl(truenet)
+    newick = "($(newick[1:(length(newick)-1)]):$(avg_bl),OUTGROUP:1.0);"
+    truenet = readTopology(newick)
+
+    # ils level : desired average branch length
+    # - low       : 2.0
+    # - med       : 1.0
+    # - high      : 0.5
+    # - very high : 0.1
+    desired_avg = ils == "low" ? 2. : (ils == "med" ? 1. : (ils == "high" ? 0.5 : 0.1))
+    
+    avg_bl = get_avg_bl(truenet)
+    for e in truenet.edge
+        e.length *= desired_avg / avg_bl
+    end
+
+    abs(get_avg_bl(truenet) - desired_avg) < 1e-8 || error("avg: $(get_avg_bl(truenet)), desired: $desired_avg")
+    return truenet
+end
 
 
 
