@@ -40,7 +40,12 @@ end
 
 
 function infer_constraints(estgt_file::String, output_file::String, subsets::Vector{Vector{String}}, nhybrids::Int64; data_dir::AbstractString="/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/temp_data/")
-    if isfile(output_file) return end
+    if isfile(output_file) && isfile("$(output_file).runtimes")
+        constraints = readMultiTopology(output_file)
+        runtimes = readlines("$(output_file).runtimes")[1]
+        runtimes = [parse(Float64, n) for n in split(runtimes, ",")]
+        return constraints, runtimes
+    end
     
     est_gts = readMultiTopology(estgt_file)
     q = t = nothing
@@ -50,6 +55,7 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
     end
 
     constraints = Vector{HybridNetwork}([])
+    runtimes = Vector{Float64}([])
 
     for (i, subset_taxa) in enumerate(subsets)
         # reduce (q, t) to only quartets w/ the taxa in `subset`
@@ -75,14 +81,21 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
         # infer w/ snaq
         temp_out_file = joinpath(data_dir, "snaq_temp_output_$(i)_")
         snaq_net = nothing
+        snaq_runtime = -1.
         redirect_stdout(devnull) do
-            snaq_net = snaq!(est_gts[1], df, filename=temp_out_file, hmax=nhybrids, seed=42)
+            snaq_runtime = @elapsed snaq_net = snaq!(est_gts[1], df, filename=temp_out_file, hmax=nhybrids, seed=42)
         end
         push!(constraints, snaq_net)
+        push!(runtimes, snaq_runtime)
     end
 
     writeMultiTopology(constraints, output_file)
-    return constraints
+    open("$(output_file).runtimes", "w+") do f
+        for (idx, t) in enumerate(runtimes)
+            write(f, idx == length(runtimes) ? "$t" : "$t, ")
+        end
+    end
+    return constraints, runtimes
 end
 
 

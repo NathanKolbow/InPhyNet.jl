@@ -1,5 +1,5 @@
 # Need to map out how the results will be stored first.
-include("retic-metric.jl")
+include("misc-metrics.jl")
 
 using CSV, DataFrames
 
@@ -45,4 +45,71 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
 end
 
 
-# function save_estimated_gts_results
+function save_estimated_gts_results(netid::String, true_network::HybridNetwork, replicatenum::Int64, nloci::Int64,
+    ils_level::String, max_subset_size::Int64, distance_method::String, seq_len::Int64,
+    est_network::HybridNetwork, est_constraints::Vector{HybridNetwork}, est_gts::Vector{HybridNetwork},
+    est_constraint_runtimes::Vector{Float64})
+
+    # Basic info to make plotting easier
+    num_taxa = split(netid, "r")
+    num_retics_true = num_taxa[2]
+    num_taxa = split(num_taxa[1], "n")[2]
+    num_retics_est = readTopology(est_newick).numHybrids
+
+    # Inference errors
+    est_newick = ""
+    est_net_hwcd = -1.
+    S = -1.
+
+    if est_network !== nothing
+        @debug "Starting HWCD calculation for mnet"
+        est_newick = writeTopology(est_network)
+        rootatnode!(est_network, "OUTGROUP")
+        rootatnode!(true_network, "OUTGROUP")
+        est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
+        @debug "Finished HWCD calculation for mnet"
+
+        # Calculate S
+        @debug "Starting S calculation"
+        S = calculate_net_logpseudolik(est_network, est_gts) / calculate_net_logpseudolik(true_network, est_gts)
+        @debug "Finished S calculation"
+    end
+
+    @debug "Starting HWCD calculation for constraints"
+    est_constraint_hwcd_sum = 0.
+    for est_constraint in est_constraints
+        taxa_names = [leaf.name for leaf in est_constraint.name]
+        true_constraint = pruneTruthFromDecomp(true_network, taxa_names)
+        est_constraint_hwcd_sum += hardwiredClusterDistance(true_constraint, est_constraint, false)
+    end
+    @debug "Finished HWCD calculation for constraints"
+
+    # Create a DF then write the results
+    df = DataFrame(
+        # input param data
+        net_id = [netid],
+        replicate_num = [replicatenum],
+        n_loci = [nloci],
+        seq_len = [seq_len],
+        ils_level = [ils_level],
+        max_subset_size = [max_subset_size],
+        distance_method = [distance_method],
+
+        # basic topological info
+        num_taxa = [num_taxa],
+        num_retics_true = [num_retics_true],
+        num_retics_est = [num_retics_est],
+
+        # inferred newick
+        est_newick = [est_newick],
+
+        # inference errors
+        est_net_hwcd = [est_net_hwcd],
+        est_constraint_hwcd_sum = [est_constraint_hwcd_sum],
+        S = [S],
+
+        # time taken
+        time_seconds_parallel = [maximum(est_constraint_runtimes)],
+        time_seconds_series = [sum(est_constraint_runtimes)]
+    )
+end
