@@ -25,8 +25,13 @@ function calculateReticData(truenet::HybridNetwork, constraints::Vector{HybridNe
 end
 
 
-function calculate_net_pseudolik(net::HybridNetwork, gts::Vector{HybridNetwork})
+"""
+Calculates the network `net`'s pseudo-likelihood given gene trees `gts`.
+Code taken from PhyloNetworks `pseudolik.jl`
+"""
+function calculate_net_logpseudolik(net::HybridNetwork, gts::Vector{HybridNetwork}; max_num_quartets::Real=Inf)
     q, t = countquartetsintrees(gts, showprogressbar=false)
+    q = q[1:Int64(min(max_num_quartets, length(q)))]
     df = readTableCF(writeTableCF(q, t))
 
     net0 = deepcopy(net)
