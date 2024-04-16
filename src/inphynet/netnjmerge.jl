@@ -9,9 +9,9 @@ end
 
 
 """
-    netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork})
+    netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
 
-Creates a super-network based on the constraint trees/networks in `constraints` and
+Creates a supernetwork based on the constraint trees/networks in `constraints` and
 distance matrix `D`.
 
 # Arguments
