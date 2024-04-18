@@ -1,4 +1,4 @@
-# Full pipeline going from truenet > simulated gene trees > simulated sequences > inferred gene trees > inferred networks > netmerge
+# Full pipeline going from true_net > simulated gene trees > simulated sequences > inferred gene trees > inferred networks > netmerge
 
 if length(ARGS) != 5
     error("Usage: julia --project=X -tY estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)>")
@@ -24,9 +24,9 @@ include("helpers/helpers.jl")
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 @info "Loading data"
-truenet = load_true_net_ils_adjusted(netid, replicatenum, ils_level)
-seed = parse(Int64, "$(truenet.numTaxa)42$(truenet.numHybrids)42$(replicatenum)")
-for e in truenet.edge
+true_net = load_true_net_ils_adjusted(netid, replicatenum, ils_level)
+seed = parse(Int64, "$(true_net.numTaxa)42$(true_net.numHybrids)42$(replicatenum)")
+for e in true_net.edge
     if e.length == -1. e.length = 0.473 end
 end
 
@@ -40,7 +40,7 @@ if isfile(truegt_file)
     gts = readMultiTopology(truegt_file)
 else
     Random.seed!(seed)
-    gts = simulatecoalescent(truenet, ngt, 1)
+    gts = simulatecoalescent(true_net, ngt, 1)
     writeMultiTopology(gts, truegt_file)
 end
 
@@ -74,18 +74,21 @@ end
 @info "Inferring networks"
 net_file = joinpath(data_dir, "estnets_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile")
 Random.seed!(seed)
-est_constraints, est_constraint_runtimes = infer_constraints(estgt_file, net_file, subsets, nhybrids)
+est_constraints, est_constraint_runtimes = infer_constraints(estgt_file, net_file, subsets, true_net)
 
 # 8. InPhyNet inference
 @info "Merging networks"
 mnet = nothing
 try
+    global mnet
     mnet = netnj(est_D, est_constraints, est_namelist)
+    @info "Network merge step succeeded."
 catch e
+    @info "Network merge step failed: $(typeof(e))"
 end
 
 # 9. Save results
 @info "Saving results"
-save_estimated_gts_results(netid, truenet, replicatenum, ngt,
+save_estimated_gts_results(netid, true_net, replicatenum, ngt,
     ils_level, maxsubsetsize, dmethod, seq_len,
     mnet, est_constraints, est_gts, est_constraint_runtimes)
