@@ -39,7 +39,12 @@ function estimate_gene_trees(seq_files::Vector{String}, estgt_output_file::Strin
 end
 
 
-function infer_constraints(estgt_file::String, output_file::String, subsets::Vector{Vector{String}}, nhybrids::Int64; data_dir::AbstractString="/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/temp_data/")
+"""
+Infers constraint networks with taxa in `subsets` given the estimated gene trees in `estgt_file`.
+Writes network results to `output_file`, writes runtime results to `output_file.runtimes`
+Returns estimated constraint networks and the time to estimate each network.
+"""
+function infer_constraints(estgt_file::String, output_file::String, subsets::Vector{Vector{String}}, true_net::HybridNetwork; data_dir::AbstractString="/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/temp_data/")
     if isfile(output_file) && isfile("$(output_file).runtimes")
         constraints = readMultiTopology(output_file)
         runtimes = readlines("$(output_file).runtimes")[1]
@@ -79,6 +84,7 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
         df = readTableCF(writeTableCF(temp_q, subset_taxa))
         
         # infer w/ snaq
+        nhybrids = retics_in_subnet(true_net, subset_taxa)
         temp_out_file = joinpath(data_dir, "snaq_temp_output_$(i)_")
         snaq_net = nothing
         snaq_runtime = -1.
@@ -96,6 +102,16 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
         end
     end
     return constraints, runtimes
+end
+
+
+"""
+Finds how many reticulations are in the subnetwork of `true_net` composed of the taxa in `subset_taxa`.
+Used to determine how many reticulations should be inferred w/ SNaQ.
+"""
+function retics_in_subnet(true_net, subset_taxa)
+    subnet = pruneTruthFromDecomp(true_net, subset_taxa)
+    return subnet.numHybrids
 end
 
 
@@ -184,7 +200,7 @@ end
 
 
 function run_seqgen(seqgen_s::AbstractFloat, temp_gtfile::AbstractString, temp_seqfile::AbstractString; seq_length::Int64=1000)
-    software_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-software/"
+    software_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/software/"
     if Sys.isapple()
         run(pipeline(`$software_path/seq-gen-macos -s$seqgen_s -n1 -f0.3,0.2,0.2,0.3 -mHKY -op -l$(seq_length) $temp_gtfile`, stdout=temp_seqfile, stderr=devnull))
     elseif Sys.islinux()
@@ -217,7 +233,7 @@ end
 
 
 function run_iqtree(temp_seqfile::AbstractString)
-    software_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-software/"
+    software_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/software/"
     if Sys.isapple()
         try
             run(pipeline(`$software_path/iqtree-1.6.12-macos -quiet -s $temp_seqfile`, stdout=devnull, stderr=devnull))
@@ -241,7 +257,7 @@ end
 
 
 function calc_gtee(true_newick::AbstractString, est_newick::AbstractString)
-    scriptpath = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-software/compare_two_trees.py"
+    scriptpath = "/mnt/dv/wid/projects4/SolisLemus-network-merging/software/compare_two_trees.py"
     gtee_nrf = Pipe()
     run(pipeline(`python3 $scriptpath -t1 $true_newick -t2 $est_newick`, stdout=gtee_nrf))
     close(gtee_nrf.in)

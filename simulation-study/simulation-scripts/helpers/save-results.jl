@@ -54,7 +54,7 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
     num_taxa = split(netid, "r")
     num_retics_true = num_taxa[2]
     num_taxa = split(num_taxa[1], "n")[2]
-    num_retics_est = readTopology(est_newick).numHybrids
+    num_retics_est = est_network.numHybrids
 
     # Inference errors
     est_newick = ""
@@ -64,6 +64,8 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
     if est_network !== nothing
         @debug "Starting HWCD calculation for mnet"
         est_newick = writeTopology(est_network)
+        @show writeTopology(est_network)
+        @show writeTopology(true_network)
         rootatnode!(est_network, "OUTGROUP")
         rootatnode!(true_network, "OUTGROUP")
         est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
