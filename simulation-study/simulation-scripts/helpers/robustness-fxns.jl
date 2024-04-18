@@ -108,7 +108,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
-        if nsim == 1
+        if iter == 1
             nnimoves .= 0
             gaussMean = gaussSd = 0
         end
