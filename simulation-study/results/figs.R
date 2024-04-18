@@ -124,3 +124,12 @@ ggplot(gg_df, aes(x = gauss_error, y = constraint_error_sum, color = NetError)) 
     labs(x = "Noise = Normal(x, x)", y = "Sum of constraint errors (HWCD)") +
     ggtitle("Successful runs only") +
     geom_point(aes(shape = Perfect), alpha = gg_df$Perfect, color = "black")
+
+
+
+# Need to change to gauss_error == 0 when that data arrives...
+no_added_error_df <- filter(full_df, constraint_error_sum == 0 & gauss_error < 1e-1 & estRFerror != -1) %>%
+    filter(max_subset_size %in% c(10, 15, 20, 25))  # just so there are fewer things to look @ in the plot pane
+ggplot(no_added_error_df, aes(x = netid, y = estRFerror, group = netid)) +
+    geom_boxplot() +
+    facet_wrap(~max_subset_size)
