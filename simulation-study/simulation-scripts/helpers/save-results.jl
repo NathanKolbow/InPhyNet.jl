@@ -48,13 +48,18 @@ end
 function save_estimated_gts_results(netid::String, true_network::HybridNetwork, replicatenum::Int64, nloci::Int64,
     ils_level::String, max_subset_size::Int64, distance_method::String, seq_len::Int64,
     est_network::HybridNetwork, est_constraints::Vector{HybridNetwork}, est_gts::Vector{HybridNetwork},
-    est_constraint_runtimes::Vector{Float64})
+    est_constraint_runtimes::Vector{Float64}, inphynet_runtime::Float64)
 
+    output_path = get_estimated_sim_output_filepath(true_network)
+    if !isfile(output_path) copy_est_csv_template(output_path) end
     # Basic info to make plotting easier
     num_taxa = split(netid, "r")
     num_retics_true = num_taxa[2]
     num_taxa = split(num_taxa[1], "n")[2]
     num_retics_est = est_network.numHybrids
+
+    # Retic data
+    nretics_inside, nretics_outside, nretics_duplicated = calculateReticData(true_network, est_constraints)
 
     # Inference errors
     est_newick = ""
@@ -76,7 +81,6 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         @debug "Starting HWCD calculation for mnet"
         est_newick = writeTopology(est_network)
         est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
-        @debug "Finished HWCD calculation for mnet"
 
         # Calculate S
         @debug "Optimizing branch lengths of estimated network"
@@ -96,7 +100,6 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         @debug "Starting S calculation"
         est_net_pseudolik = PhyloNetworks.logPseudoLik(df)  # relevant values in `df` are updated in `optBL!`, need to redo for true net though
         S = est_net_pseudolik / calculate_net_logpseudolik(true_network, df)
-        @debug "Finished S calculation"
     end
 
     @debug "Starting HWCD calculation for constraints"
@@ -106,9 +109,9 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         true_constraint = pruneTruthFromDecomp(true_network, taxa_names)
         est_constraint_hwcd_sum += hardwiredClusterDistance(true_constraint, est_constraint, false)
     end
-    @debug "Finished HWCD calculation for constraints"
 
     # Create a DF then write the results
+    @debug "Creating DF"
     df = DataFrame(
         # input param data
         net_id = [netid],
@@ -123,17 +126,23 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         num_taxa = [num_taxa],
         num_retics_true = [num_retics_true],
         num_retics_est = [num_retics_est],
+        num_retics_inside = [nretics_inside],
+        num_retics_outside = [nretics_outside],
+        num_retics_duplicated = [nretics_duplicated],
 
         # inferred newick
         est_newick = [est_newick],
 
         # inference errors
         est_net_hwcd = [est_net_hwcd],
+        est_net_hwcd_only_identified_retics = [est_net_hwcd_only_identified_retics],
         est_constraint_hwcd_sum = [est_constraint_hwcd_sum],
         S = [S],
 
         # time taken
-        time_seconds_parallel = [maximum(est_constraint_runtimes)],
-        time_seconds_series = [sum(est_constraint_runtimes)]
+        time_seconds_parallel = [maximum(est_constraint_runtimes) + inphynet_runtime],
+        time_seconds_series = [sum(est_constraint_runtimes) + inphynet_runtime]
     )
+    @debug "Writing to file $(output_path)"
+    CSV.write(output_path, df, append=true)
 end
