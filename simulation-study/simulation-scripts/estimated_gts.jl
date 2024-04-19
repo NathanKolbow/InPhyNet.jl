@@ -79,7 +79,7 @@ est_constraints, est_constraint_runtimes = infer_constraints(estgt_file, net_fil
 # 8. InPhyNet inference
 @info "Merging networks"
 mnet = nothing
-try
+inphynet_time = @elapsed try
     global mnet
     mnet = netnj(est_D, est_constraints, est_namelist)
     @info "Network merge step succeeded."
@@ -91,4 +91,4 @@ end
 @info "Saving results"
 save_estimated_gts_results(netid, true_net, replicatenum, ngt,
     ils_level, maxsubsetsize, dmethod, seq_len,
-    mnet, est_constraints, est_gts, est_constraint_runtimes)
+    mnet, est_constraints, est_gts, est_constraint_runtimes, inphynet_time)
