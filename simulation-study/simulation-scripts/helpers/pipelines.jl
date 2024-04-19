@@ -16,7 +16,9 @@ end
 getDataDir() = joinpath(getBaseDir(), "data")
 getNetworkFilepath(netid::String) = joinpath(getDataDir(), "networks", "$(netid).netfile")
 getOutputFilepath(truenet::HybridNetwork) = joinpath(getDataDir(), "output", "n$((truenet.numTaxa)-1)r$(truenet.numHybrids).csv")
+get_estimated_sim_output_filepath(truenet::HybridNetwork) = joinpath(getDataDir(), "est_data_output", "n$((truenet.numTaxa)-1)r$(truenet.numHybrids).csv")
 copy_csv_template(output_path::String) = cp(joinpath(getDataDir(), "output", "fields.csv"), output_path)
+copy_est_csv_template(output_path::String) = cp(joinpath(getDataDir(), "est_data_output", "fields.csv"), output_path)
 
 # DATA LOADING FUNCTIONS
 function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String)
