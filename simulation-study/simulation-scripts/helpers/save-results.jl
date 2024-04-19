@@ -94,8 +94,8 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         PhyloNetworks.optBL!(est_network, df)
 
         @debug "Starting S calculation"
-        error("Need to optimize branch lengths on estimated network (because they are empty) before calcing mpl")
-        S = calculate_net_logpseudolik(est_network, df) / calculate_net_logpseudolik(true_network, df)
+        est_net_pseudolik = PhyloNetworks.logPseudoLik(df)  # relevant values in `df` are updated in `optBL!`, need to redo for true net though
+        S = est_net_pseudolik / calculate_net_logpseudolik(true_network, df)
         @debug "Finished S calculation"
     end
 
