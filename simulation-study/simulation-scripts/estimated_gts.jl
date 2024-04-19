@@ -11,8 +11,8 @@ ngt = parse(Int64, ARGS[3])
 seq_len = parse(Int64, ARGS[4])
 ils_level = ARGS[5]
 
-(ngt == 100 || ngt == 1000) || error("Number of loci $ngt not allowed; must be 100 or 1,000.")
-(seq_len == 100 || seq_len == 1000) || error("Sequence length $seq_len not allowed; must be 100 or 1,000.")
+(ngt == 100 || ngt == 1000 || ngt == 5000) || error("Number of loci $ngt not allowed; must be 100 or 1,000.")
+(seq_len == 500 || seq_len == 1000) || error("Sequence length $seq_len not allowed; must be 100 or 1,000.")
 maxsubsetsize = 15
 dmethod = "AGIC"
 ###########################
