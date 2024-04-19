@@ -7,7 +7,9 @@ function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String,
     if all(isfile(f) for f in seq_file_paths) return seq_file_paths end
 
     # find the correct `-s` flag to use w/ seq-gen
-    s = find_seqgen_s(gts)
+    # s = find_seqgen_s(gts)
+    s = 0.036
+    
 
     # simulate sequences w/ seq-gen
     seq_file_paths = run_seqgen_multi(s, gts, output_file_prefix)
