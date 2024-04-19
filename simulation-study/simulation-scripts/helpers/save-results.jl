@@ -62,18 +62,40 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
     S = -1.
 
     if est_network !== nothing
+        @debug "Trying to re-root estimated network"
+        try
+            rootatnode!(est_network, "OUTGROUP")
+        catch
+        end
+        @debug "Trying to re-root true network"
+        try
+            rootatnode!(true_network, "OUTGROUP")
+        catch
+        end
+
         @debug "Starting HWCD calculation for mnet"
         est_newick = writeTopology(est_network)
-        @show writeTopology(est_network)
-        @show writeTopology(true_network)
-        rootatnode!(est_network, "OUTGROUP")
-        rootatnode!(true_network, "OUTGROUP")
         est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
         @debug "Finished HWCD calculation for mnet"
 
         # Calculate S
+        @debug "Optimizing branch lengths of estimated network"
+        q, t = countquartetsintrees(est_gts)
+        df = readTableCF(writeTableCF(q, t))
+        avg_bl = get_avg_bl(true_network)
+
+        for e in est_network.edge       # optBL! needs non-negative starting branch lengths
+            if e.hybrid && !e.isMajor
+                e.length = 0.
+            else
+                e.length = avg_bl
+            end
+        end
+        PhyloNetworks.optBL!(est_network, df)
+
         @debug "Starting S calculation"
-        S = calculate_net_logpseudolik(est_network, est_gts) / calculate_net_logpseudolik(true_network, est_gts)
+        error("Need to optimize branch lengths on estimated network (because they are empty) before calcing mpl")
+        S = calculate_net_logpseudolik(est_network, df) / calculate_net_logpseudolik(true_network, df)
         @debug "Finished S calculation"
     end
 
