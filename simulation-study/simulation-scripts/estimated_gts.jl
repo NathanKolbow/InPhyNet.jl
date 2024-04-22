@@ -10,7 +10,7 @@ if length(ARGS) == 0
     push!(ARGS, "1000")
     push!(ARGS, "med")
 elseif length(ARGS) != 5
-    error("Usage: julia --project=X -tY estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)>")
+    error("Usage: julia --project=X -tY -p10 estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)>")
 end
 
 ###### Input parsing ######
