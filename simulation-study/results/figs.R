@@ -31,6 +31,7 @@ plot_success_rate_vs_binned_errors(filter(full_df, netid == "n50r2"))
 # Heatmap for `netid`
 plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2)
 plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2, without_extra_retics = TRUE)
+plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
 
 # HWCD w/ all retics vs. only identified retics
 plot_compare_hwcd_with_and_wo_identified_retics(net_df(df, "n50r2"))
