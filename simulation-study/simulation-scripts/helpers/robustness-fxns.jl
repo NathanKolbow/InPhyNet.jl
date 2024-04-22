@@ -127,7 +127,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         print("\r\t$(round(100*ac.iterspassed/nsim, digits=2))% ($(ac.iterspassed)/$(nsim)) complete    ")
         print("Took $(round(fortime, digits=2)) seconds\n")
     end
-    return esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est
+    return esterrors, esterrors_without_missing_retics, majortreeRFs, gausserrors, constraintdiffs, nretics_est
 end
 
 # w/ 1 proc: 8.77s
