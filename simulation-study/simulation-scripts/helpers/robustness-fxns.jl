@@ -474,8 +474,10 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
             end
 
             throw(e)
-        else
+        elseif typeof(e) == InPhyNet.SolutionDNEError
             return -1, -1, constraintdiffs, "", -1
+        else    # ConstraintError
+            return -2, -2, constraintdiffs, "", -2
         end
     end
 end
