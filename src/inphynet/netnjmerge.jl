@@ -21,7 +21,7 @@ function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist:
     return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist; kwargs...)
 end
 
-function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false)
+function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false, copy_retic_names::Bool=false)
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, requirerooted=false)
@@ -143,7 +143,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     mnet.root = mnet.numNodes
     mnet.node[mnet.root].name = "root"
 
-    mnet = placeretics!(mnet, reticmap)
+    mnet = placeretics!(mnet, reticmap, copy_retic_names=copy_retic_names)
     removeplaceholdernames!(mnet)
 
     return mnet
@@ -223,8 +223,9 @@ check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwarg
 Updates `net` to include the reticulations that we've kept track of along the way
 in our algo but haven't placed yet.
 """
-function placeretics!(net::HybridNetwork, reticmap::ReticMap)
+function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::Bool=false)
     namepairs = []
+    retic_names = []
     counter = 0
     
     check_reticmap(reticmap)
@@ -253,6 +254,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
 
         if !(newpair in namepairs)
             push!(namepairs, newpair)
+            push!(retic_names, getchild(retic).name)
         end
     end
     mnet = readTopology(writeTopology(net))
@@ -283,6 +285,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap)
         fromedge, toedge = edgepairs[i]
 
         hybnode, hybedge = addhybridedge!(mnet, fromedge, toedge, true)
+        hybnode.name = copy_retic_names ? retic_names[i] : hybnode.name
         mnet.root = findfirst([n.name == "root" for n in mnet.node])
 
         for j=(i+1):length(edgepairs)

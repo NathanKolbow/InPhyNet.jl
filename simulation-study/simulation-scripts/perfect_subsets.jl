@@ -38,7 +38,7 @@ Random.seed!(seed)
 
 # 2. run robustness testing
 println("- Running robustness testing for $(netid) ($(replicatenum)), max: $(maxsubsetsize)")
-esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
+esterrors, esterrors_without_missing_retics, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
     monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim, displayprogress=true)
 constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
@@ -50,6 +50,7 @@ savePerfectResults(
     truenet,
     constraints,
     esterrors[keep_idxs],
+    esterrors_without_missing_retics[keep_idxs],
     majortreeRFs[keep_idxs],
     gausserrors[keep_idxs],
     constraintdiffs[keep_idxs],
