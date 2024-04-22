@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Run from simulation-study/simulation-scripts/
-for rep in $(seq 11 100)
+for rep in $(seq 1 100)
 do
     for maxsubsetsize in 5 10 15 20 25 30
     do
