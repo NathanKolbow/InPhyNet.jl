@@ -81,11 +81,12 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
-    majortreeRFs = zeros(nsim) .- 1.
-    esterrors = zeros(nsim) .- 1.
-    constraintdiffs = zeros(length(constraints), nsim) .- 1.
-    gausserrors = zeros(nsim) .- 1.
-    nretics_est = zeros(nsim) .- 1.
+    majortreeRFs = zeros(nsim) .- 100.
+    esterrors = zeros(nsim) .- 100.
+    esterrors_without_missing_retics = zeros(nsim) .- 100.
+    constraintdiffs = zeros(length(constraints), nsim) .- 100.
+    gausserrors = zeros(nsim) .- 100.
+    nretics_est = zeros(nsim) .- 100.
     #
 
     # Base values
@@ -113,7 +114,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
             gaussMean = gaussSd = 0
         end
 
-        esterrors[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
+        esterrors[iter], esterrors_without_missing_retics[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
             runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
 
         # Display progress
@@ -135,11 +136,13 @@ end
 # Same as above, but uses `pmap` for distributed computing
 function monophyleticRobustnessDistributed(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
     D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000)
-
+    
+    error("Deprecated")
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
     esterrors = SharedVector{Float64}(nsim)
+    esterrors_without_unidentified_retics = SharedVector{Float64}(nsim)
     constraintdiffs = SharedArray{Float64, 2}(length(constraints), nsim)
     gausserrors = SharedVector{Float64}(nsim)
     nretics_est = SharedVector{Float64}(nsim)
@@ -166,7 +169,7 @@ function monophyleticRobustnessDistributed(truenet::HybridNetwork, constraints::
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
 
         try
-            esterrors[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
+            esterrors[iter], esterrors_without_unidentified_retics[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
                 runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
         catch e
             if typeof(e) != ArgumentError
@@ -450,7 +453,8 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
         esterror = getNetDistances(truenet, mnet)
         majortreeRF = hardwiredClusterDistance(majorTree(truenet), majorTree(mnet), false)
-        return esterror, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
+        error_without_missing_retics = get_error_without_missing_retics(truenet, mnet)
+        return esterror, error_without_missing_retics, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         trace = stacktrace()
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
@@ -475,9 +479,9 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
             throw(e)
         elseif typeof(e) == InPhyNet.SolutionDNEError
-            return -1, -1, constraintdiffs, "", -1
+            return -1, -1, -1, constraintdiffs, "", -1
         else    # ConstraintError
-            return -2, -2, constraintdiffs, "", -2
+            return -2, -2, -2, constraintdiffs, "", -2
         end
     end
 end
