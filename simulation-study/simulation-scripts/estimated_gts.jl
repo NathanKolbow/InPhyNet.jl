@@ -1,6 +1,15 @@
 # Full pipeline going from true_net > simulated gene trees > simulated sequences > inferred gene trees > inferred networks > netmerge
 
-if length(ARGS) != 5
+
+if length(ARGS) == 0
+    # Inputs for testing
+    @warn "No input arguments provided, running script w/ test parameters (netid = n200r10, replicatenum = 2, ngt = seq_len = 1000, ils_level = med)"
+    push!(ARGS, "n200r10")
+    push!(ARGS, "2")
+    push!(ARGS, "1000")
+    push!(ARGS, "1000")
+    push!(ARGS, "med")
+elseif length(ARGS) != 5
     error("Usage: julia --project=X -tY estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)>")
 end
 
@@ -21,6 +30,12 @@ data_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/si
 ###########################
 
 include("helpers/helpers.jl")
+
+# 0. check if we've already run these sims. if so, don't bother running again
+if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level)
+    @info "Simulations already performed for $(netid)-$(replicatenum) w/ ngt $(ngt), seq_len $(seq_len), ils_level $(ils_level); skipping."
+    exit()
+end
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
 @info "Loading data"
