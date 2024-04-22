@@ -88,6 +88,20 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         @debug "Starting HWCD calculation for mnet"
         est_newick = writeTopology(est_network)
         est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
+        
+        true_major = majorTree(true_network)
+        est_major = majorTree(est_network)
+
+        try
+            rootatnode!(true_major, "OUTGROUP")
+        catch
+        end
+        try
+            rootatnode!(est_major, "OUTGROUP")
+        catch
+        end
+
+        est_major_tree_hwcd = hardwiredClusterDistance(true_major, est_major, true)
     end
 
     @debug "Starting HWCD calculation for constraints"
@@ -125,6 +139,7 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
     
             # inference errors
             est_net_hwcd = [est_net_hwcd],
+            est_major_tree_hwcd = [est_major_tree_hwcd],
             est_net_hwcd_only_identified_retics = ["not implemented"],
             est_constraint_hwcd_sum = [est_constraint_hwcd_sum],
     
