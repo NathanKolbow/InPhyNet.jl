@@ -1,4 +1,5 @@
 simulation-study/data/output/*.csv
+simulation-study/data/est_data_output/*.csv
 .vscode/
 
 # MacOS files
