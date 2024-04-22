@@ -81,31 +81,12 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         @debug "Starting HWCD calculation for mnet"
         est_newick = writeTopology(est_network)
         est_net_hwcd = hardwiredClusterDistance(true_network, est_network, true)
-
-        # Calculate S
-        @debug "Optimizing branch lengths of estimated network"
-        q, t = countquartetsintrees(est_gts)
-        df = readTableCF(writeTableCF(q, t))
-        avg_bl = get_avg_bl(true_network)
-
-        for e in est_network.edge       # optBL! needs non-negative starting branch lengths
-            if e.hybrid && !e.isMajor
-                e.length = 0.
-            else
-                e.length = avg_bl
-            end
-        end
-        PhyloNetworks.optBL!(est_network, df)
-
-        @debug "Starting S calculation"
-        est_net_pseudolik = PhyloNetworks.logPseudoLik(df)  # relevant values in `df` are updated in `optBL!`, need to redo for true net though
-        S = est_net_pseudolik / calculate_net_logpseudolik(true_network, df)
     end
 
     @debug "Starting HWCD calculation for constraints"
     est_constraint_hwcd_sum = 0.
     for est_constraint in est_constraints
-        taxa_names = [leaf.name for leaf in est_constraint.name]
+        taxa_names = [leaf.name for leaf in est_constraint.leaf]
         true_constraint = pruneTruthFromDecomp(true_network, taxa_names)
         est_constraint_hwcd_sum += hardwiredClusterDistance(true_constraint, est_constraint, false)
     end
@@ -135,9 +116,8 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
 
         # inference errors
         est_net_hwcd = [est_net_hwcd],
-        est_net_hwcd_only_identified_retics = [est_net_hwcd_only_identified_retics],
+        est_net_hwcd_only_identified_retics = ["not implemented"],
         est_constraint_hwcd_sum = [est_constraint_hwcd_sum],
-        S = [S],
 
         # time taken
         time_seconds_parallel = [maximum(est_constraint_runtimes) + inphynet_runtime],
@@ -145,4 +125,28 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
     )
     @debug "Writing to file $(output_path)"
     CSV.write(output_path, df, append=true)
+end
+
+
+function estimated_sims_already_performed(netid::String, replicatenum::Int64, ngt::Int64, seq_len::Int64, ils_level::String)
+
+    output_path = get_estimated_sim_output_filepath(netid)
+    if !isfile(output_path) return false end
+
+    df = CSV.read(output_path, DataFrame)
+    filt_df = filter(row -> row.net_id == netid && row.replicate_num == replicatenum &&
+        row.n_loci == ngt && row.seq_len == seq_len && row.ils_level == ils_level, df)
+    return nrow(filt_df) > 0
+end
+
+
+function perfect_sims_already_performed(netid::String, replicatenum::Int64, maxsubsetsize::Int64)
+    output_path = get_output_filepath(netid)
+    if !isfile(output_path) return false end
+    ntaxa = split(netid, "r")
+    nretic = parse(Int64, ntaxa[2])
+    ntaxa = parse(Int64, split(ntaxa[1], "n")[2])
+
+    df = CSV.read(output_path, DataFrame)
+    return nrow(filter(row -> row.max_subset_size == maxsubsetsize, df)) > 0
 end
