@@ -97,7 +97,7 @@ mnet = nothing
 inphynet_time = @elapsed try
     global mnet
     mnet = netnj(est_D, est_constraints, est_namelist)
-    @info "Network merge step succeeded."
+    @info "Network merge step succeeded"
 catch e
     @info "Network merge step failed: $(typeof(e))"
 end
