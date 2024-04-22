@@ -24,7 +24,8 @@ include("helpers/helpers.jl")
 InPhyNet.TIEWARNING = true  # disables the warning message when there are ties
 
 # 0. if the sims have already been performed, skip this
-if perfect_sims_already_performed(netid, replicatenum, maxsubsetsize)
+nsim += 1 - n_perfect_sims_already_performed(netid, replicatenum, maxsubsetsize)    # +1 for the 0 error sims
+if nsim <= 0
     @info "Simulations already performed for $(netid)-$(replicatenum) w/ subset size $(maxsubsetsize); skipping."
     exit()
 end
@@ -41,28 +42,18 @@ esterrors, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
     monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim, displayprogress=true)
 constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
-# 3. save results
+# 3. filter out the results that had constraint errors
+keep_idxs = esterrors .!= -2.
+
+# 4. save results
 savePerfectResults(
     truenet,
     constraints,
-    esterrors,
-    majortreeRFs,
-    gausserrors,
-    constraintdiffs,
-    nretics_est,
+    esterrors[keep_idxs],
+    majortreeRFs[keep_idxs],
+    gausserrors[keep_idxs],
+    constraintdiffs[keep_idxs],
+    nretics_est[keep_idxs],
     replicatenum,
     maxsubsetsize
 )
-
-#############
-# Profiling #
-#############
-
-# include("helpers/helpers.jl")
-# truenet, constraints, D, namelist = loadPerfectData("n100r5", 1, 15, "internode_count")
-# _ = monophyleticRobustness(truenet, constraints, D, namelist, nsim=15)
-# # Original:                 13.85   seconds
-# # `findfirst` -> `nodemap`: 3.84    seconds
-
-# using StatProfilerHTML
-# @profilehtml esterrors, gausserrors, constraintdiffs, nretics_est = monophyleticRobustness(truenet, constraints, D, namelist, nsim=100)
