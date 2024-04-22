@@ -4,7 +4,8 @@ include("misc-metrics.jl")
 using CSV, DataFrames, Pidfile
 
 const AV = AbstractVector
-function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real}, majortreeRFs::AV{<:Real},
+function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
+    esterrors_without_missing_retics::AV{<:Real}, majortreeRFs::AV{<:Real},
     gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64,
     max_subset_size::Real)
 
@@ -38,6 +39,7 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
             constraint_sizes=constraint_sizes,
             max_subset_size=max_subset_size,
             estRFerror=esterrors,
+            esterror_without_missing_retics=esterrors_without_missing_retics,
             majortreeRF=majortreeRFs,
             gauss_error=gausserrors,
             constraint_error_sum=constraintdiffs,
