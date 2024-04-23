@@ -117,16 +117,6 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         for l in 1:n
             if l != i && l != j
                 D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
-                
-                # try this triangle equality updating rule instead
-                # a = D[l, i]
-                # b = D[l, j]
-                # c = D[i, j]
-                # # J = acos(-(a^2-b^2-c^2)/(2*b*c))
-                # # d = sqrt(b^2 + (c/2)^2 - b*c*cos(J))
-                # d = sqrt(b^2/2 + a^2/2)
-
-                # D[l, i] = D[i, l] = d
             end
         end
 
