@@ -3,7 +3,11 @@ library(ggplot2)
 source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/fig-helpers.R")
 
 
-df <- read.df()
+# `df` and `df_std0` are loaded in `fig-helpers.R` and
+# are used automatically instead of needing to be passed into each function
+#
+# df <- read_df()
+
 
 ##########################################
 # FIGURES FOR DATA W/ PERFECT INPUT DATA #
@@ -21,7 +25,7 @@ ggplot(no_added_error_df, aes(x = netid, y = estRFerror, group = netid)) +
 ##################################################
 
 # x = Gauss error, y = NNI error, color = probability to fail
-plot_success_rate_vs_binned_errors(filter(full_df, netid == "n50r2"))
+plot_success_rate_vs_binned_errors(net_df("n200r10"))
 
 ###################################################################
 # HWCD & HWCD W/O MISSING RETIC FIGURES FOR DATA W/ PERTURBATIONS #
@@ -29,9 +33,15 @@ plot_success_rate_vs_binned_errors(filter(full_df, netid == "n50r2"))
 
 
 # Heatmap for `netid`
-plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2)
-plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2, without_extra_retics = TRUE)
-plot_hwcd_heatmap(net_df(df, "n50r2"), plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
+plot_hwcd_heatmap("n50r2", plot_factor = 2)
+plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE)
+plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
+
+# Heatmap w/ std0 as x-axis
+plot_hwcd_heatmap_std0("n50r2", plot_factor = 10, without_extra_retics = TRUE)
+plot_hwcd_heatmap_std0("n50r5", plot_factor = 10, without_extra_retics = TRUE)
+plot_hwcd_heatmap_std0("n100r5", plot_factor = 10, without_extra_retics = TRUE)
+plot_hwcd_heatmap_std0("n100r10", plot_factor = 10, without_extra_retics = TRUE)
 
 # HWCD w/ all retics vs. only identified retics
 plot_compare_hwcd_with_and_wo_identified_retics(net_df(df, "n50r2"))
