@@ -9,8 +9,8 @@ if length(ARGS) == 0
     push!(ARGS, "1000")
     push!(ARGS, "1000")
     push!(ARGS, "med")
-elseif length(ARGS) != 5
-    error("Usage: julia --project=X -tY -p10 estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)>")
+elseif length(ARGS) != 5 && length(ARGS) != 6
+    error("Usage: julia --project=X -tY -p10 estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)> [max subset size]")
 end
 
 ###### Input parsing ######
@@ -19,10 +19,11 @@ replicatenum = parse(Int64, ARGS[2])
 ngt = parse(Int64, ARGS[3])
 seq_len = parse(Int64, ARGS[4])
 ils_level = ARGS[5]
+maxsubsetsize = 15
+if length(ARGS) == 6 maxsubsetsize = parse(Int64, ARGS[6]) end
 
 (ngt == 100 || ngt == 1000 || ngt == 5000) || error("Number of loci $ngt not allowed; must be 100, 1,000, or 5,000.")
 (seq_len == 500 || seq_len == 1000) || error("Sequence length $seq_len not allowed; must be 500 or 1,000.")
-maxsubsetsize = 15
 dmethod = "AGIC"
 ###########################
 nhybrids = parse(Int64, split(netid, "r")[2])
@@ -33,7 +34,7 @@ data_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/si
 include("helpers/helpers.jl")
 
 # 0. check if we've already run these sims. if so, don't bother running again
-if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level)
+if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level, maxsubsetsize)
     @info "Simulations already performed for $(netid)-$(replicatenum) w/ ngt $(ngt), seq_len $(seq_len), ils_level $(ils_level); skipping."
     exit()
 else
