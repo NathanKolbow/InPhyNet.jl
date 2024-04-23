@@ -49,10 +49,64 @@ read_df <- function() {
 df <- read_df()
 
 
+add_error_bins <- function(df) {
+    factor_lvls <- c("low", "med", "high", "very high")
+    gauss_cuts <- quantile(df$gauss_error, c(0.1, 0.4, 0.7))
+    nni_cuts <- quantile(df$constraint_error_sum, c(0.1, 0.4, 0.7))
+    if(!("gauss_error_level" %in% colnames(df))) {
+        df <- df %>%
+            mutate(
+                gauss_error_level = ifelse(gauss_error < gauss_cuts[1], "low", ifelse(gauss_error < gauss_cuts[2], "med", ifelse(gauss_error < gauss_cuts[3], "high", "very high"))),
+                gauss_error_level = ordered(gauss_error_level, levels = factor_lvls),
+                nni_error_level = ifelse(constraint_error_sum < nni_cuts[1], "low", ifelse(constraint_error_sum < nni_cuts[2], "med", ifelse(constraint_error_sum < nni_cuts[3], "high", "very high"))),
+                nni_error_level = ordered(nni_error_level, levels = factor_lvls)
+            )
+    }
+    df
+}
+
 
 ###################
 ##### Figures #####
 ###################
+
+plot_hwcd_grouped_boxplots <- function(netid, without_extra_retics = FALSE, subset_facet = FALSE, best_replicate = FALSE) {
+    gg_df <- net_df(netid) %>%
+        filter(estRFerror != -1) %>%
+        add_error_bins()
+
+    fig_title <- netid
+    if(best_replicate) {
+        best_rep <- -1
+        best_rep_median <- Inf
+        for(rep in unique(gg_df$replicate_num)) {
+            rep_med <- median(filter(gg_df, replicate_num == rep & gauss_error_level == "very high" & nni_error_level == "low")$esterror_without_missing_retics)
+
+            if(rep_med < best_rep_median) {
+                best_rep_median <- rep_med
+                best_rep <- rep
+            }
+        }
+        gg_df <- filter(gg_df, replicate_num == best_rep)
+        fig_title <- paste0(netid, " best replicate (", best_rep, ")")
+    }
+
+    if(without_extra_retics) {gg_df$yval <- gg_df$esterror_without_missing_retics}
+    else {gg_df$yval <- gg_df$estRFerror}
+    ylabel <- ifelse(without_extra_retics, "HWCD(truth w/o missing retics, est)", "HWCD(truth, est)")
+    
+    ggplot(gg_df, aes(x = gauss_error_level, 
+                      y = yval,
+                      fill = nni_error_level)) +
+        geom_boxplot() +
+        labs(x = "Gaussian Noise Level", y = ylabel, title = fig_title)
+}
+
+
+plot_best_replicate_hwcd_grouped_boxplots <- function(netid, ...) {
+    plot_hwcd_grouped_boxplots(netid, best_replicate = TRUE, ...)
+}
+
 
 plot_compare_hwcd_with_and_wo_identified_retics <- function(gg_df, sample_size = 1e3) {
     gg_df %>%
@@ -115,18 +169,7 @@ plot_hwcd_heatmap_std0 <- function(netid, ...) {
 
 
 plot_success_rate_vs_binned_errors <- function(gg_df) {
-    factor_lvls <- c("low", "med", "high", "very high")
-    gauss_cuts <- quantile(gg_df$gauss_error, c(0.1, 0.4, 0.7))
-    nni_cuts <- quantile(gg_df$constraint_error_sum, c(0.1, 0.4, 0.7))
-    if(!("gauss_error_level" %in% colnames(gg_df))) {
-        gg_df <- gg_df %>%
-            mutate(
-                gauss_error_level = ifelse(gauss_error < gauss_cuts[1], "low", ifelse(gauss_error < gauss_cuts[2], "med", ifelse(gauss_error < gauss_cuts[3], "high", "very high"))),
-                gauss_error_level = ordered(gauss_error_level, levels = factor_lvls),
-                nni_error_level = ifelse(constraint_error_sum < nni_cuts[1], "low", ifelse(constraint_error_sum < nni_cuts[2], "med", ifelse(constraint_error_sum < nni_cuts[3], "high", "very high"))),
-                nni_error_level = ordered(nni_error_level, levels = factor_lvls)
-            )
-    }
+    gg_df <- add_error_bins(gg_df)
 
     gg_df <- gg_df %>%
         group_by(gauss_error_level, nni_error_level) %>%
