@@ -155,14 +155,14 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
 end
 
 
-function estimated_sims_already_performed(netid::String, replicatenum::Int64, ngt::Int64, seq_len::Int64, ils_level::String)
+function estimated_sims_already_performed(netid::String, replicatenum::Int64, ngt::Int64, seq_len::Int64, ils_level::String, max_subset_size::Int64)
 
     output_path = get_estimated_sim_output_filepath(netid)
     if !isfile(output_path) return false end
 
     df = CSV.read(output_path, DataFrame)
     filt_df = filter(row -> row.net_id == netid && row.replicate_num == replicatenum &&
-        row.n_loci == ngt && row.seq_len == seq_len && row.ils_level == ils_level, df)
+        row.n_loci == ngt && row.seq_len == seq_len && row.ils_level == ils_level && row.max_subset_size == max_subset_size, df)
     return nrow(filt_df) > 0
 end
 
