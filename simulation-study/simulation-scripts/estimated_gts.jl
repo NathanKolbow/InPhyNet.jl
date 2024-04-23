@@ -29,12 +29,21 @@ nhybrids = parse(Int64, split(netid, "r")[2])
 data_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data"
 ###########################
 
+@info "Loading helpers.jl"
 include("helpers/helpers.jl")
 
 # 0. check if we've already run these sims. if so, don't bother running again
 if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level)
     @info "Simulations already performed for $(netid)-$(replicatenum) w/ ngt $(ngt), seq_len $(seq_len), ils_level $(ils_level); skipping."
     exit()
+else
+    @debug "netid: $(netid)"
+    @debug "replicatenum: $(replicatenum)"
+    @debug "ngt: $(ngt)"
+    @debug "seq_len: $(seq_len)"
+    @debug "ils_level: $(ils_level)"
+    @debug "maxsubsetsize: $(maxsubsetsize)"
+    @debug "dmethod: $(dmethod)"
 end
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
