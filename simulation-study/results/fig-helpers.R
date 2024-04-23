@@ -1,6 +1,7 @@
 library(ggplot2)
 library(tidyverse)
 options(dplyr.summarise.inform = FALSE)
+theme_set(theme_linedraw())
 
 ########################
 ##### Data loading #####
@@ -99,6 +100,7 @@ plot_hwcd_grouped_boxplots <- function(netid, without_extra_retics = FALSE, subs
                       y = yval,
                       fill = nni_error_level)) +
         geom_boxplot() +
+        scale_y_continuous(limits = c(0, max(gg_df$yval))) +
         labs(x = "Gaussian Noise Level", y = ylabel, title = fig_title)
 }
 
