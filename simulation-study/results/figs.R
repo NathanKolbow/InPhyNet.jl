@@ -31,7 +31,6 @@ plot_success_rate_vs_binned_errors(net_df("n200r10"))
 # HWCD & HWCD W/O MISSING RETIC FIGURES FOR DATA W/ PERTURBATIONS #
 ###################################################################
 
-
 # Heatmap for `netid`
 plot_hwcd_heatmap("n50r2", plot_factor = 2)
 plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE)
@@ -45,3 +44,17 @@ plot_hwcd_heatmap_std0("n100r10", plot_factor = 10, without_extra_retics = TRUE)
 
 # HWCD w/ all retics vs. only identified retics
 plot_compare_hwcd_with_and_wo_identified_retics(net_df(df, "n50r2"))
+
+# HWCD vs binned noise levels boxplots
+plot_hwcd_grouped_boxplots("n50r2", without_extra_retics = TRUE)
+plot_hwcd_grouped_boxplots("n100r5", without_extra_retics = TRUE)
+plot_hwcd_grouped_boxplots("n200r10", without_extra_retics = TRUE)
+plot_hwcd_grouped_boxplots("n500r25", without_extra_retics = TRUE)
+plot_hwcd_grouped_boxplots("n1000r100", without_extra_retics = TRUE)
+
+# Best replicate plots
+plot_best_replicate_hwcd_grouped_boxplots("n50r2", without_extra_retics = TRUE)
+plot_best_replicate_hwcd_grouped_boxplots("n100r5", without_extra_retics = TRUE)
+plot_best_replicate_hwcd_grouped_boxplots("n200r10", without_extra_retics = TRUE)
+plot_best_replicate_hwcd_grouped_boxplots("n500r25", without_extra_retics = TRUE)
+plot_best_replicate_hwcd_grouped_boxplots("n1000r100", without_extra_retics = TRUE)
