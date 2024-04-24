@@ -58,7 +58,7 @@ end
 # 2. simulate gene trees
 @info "Simulating gene trees"
 using PhyloCoalSimulations
-truegt_file = joinpath(data_dir, "truegt_$(netid)_$(replicatenum)_$(ngt).treefile")
+truegt_file = joinpath(data_dir, "truegt_$(netid)_$(replicatenum)_$(ngt)_$(ils_level).treefile")
 gts = nothing
 
 if isfile(truegt_file)
@@ -71,13 +71,13 @@ end
 
 # 3. simulate sequences w/ seq-gen
 @info "Simulating sequences"
-seq_file_prefix = joinpath(data_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt).phy")
+seq_file_prefix = joinpath(data_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt)_$(ils_level).phy")
 Random.seed!(seed)
 seq_files = simulate_sequence_data(gts, truegt_file, seq_file_prefix)
 
 # 4. infer gene trees w/ iqtree
 @info "Inferring gene trees"
-estgt_file = joinpath(data_dir, "estgt_$(netid)_$(replicatenum)_$(ngt).treefile")
+estgt_file = joinpath(data_dir, "estgt_$(netid)_$(replicatenum)_$(ngt)_$(ils_level).treefile")
 Random.seed!(seed)
 estimate_gene_trees(seq_files, estgt_file)
 
@@ -97,7 +97,7 @@ end
 
 # 7. infer constraints w/ SNaQ
 @info "Inferring networks"
-net_file = joinpath(data_dir, "estnets_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt).netfile")
+net_file = joinpath(data_dir, "estnets_$(netid)_$(replicatenum)_$(maxsubsetsize)_$(dmethod)_$(ngt)_$(ils_level).netfile")
 Random.seed!(seed)
 est_constraints, est_constraint_runtimes = infer_constraints(estgt_file, net_file, subsets, true_net)
 
