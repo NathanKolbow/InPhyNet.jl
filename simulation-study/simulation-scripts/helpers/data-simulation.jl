@@ -4,7 +4,10 @@ using PhyloCoalSimulations, StaticArraysCore, StaticArrays
 
 function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String, output_file_prefix::String)
     seq_file_paths = ["$(output_file_prefix)_$(i)" for i=1:length(gts)]
-    if all(isfile(f) for f in seq_file_paths) return seq_file_paths end
+    if all(isfile(f) for f in seq_file_paths)
+        @debug "Sequence data files already exist"
+        return seq_file_paths
+    end
 
     # find the correct `-s` flag to use w/ seq-gen
     # s = find_seqgen_s(gts)
@@ -18,7 +21,10 @@ end
 
 
 function estimate_gene_trees(seq_files::Vector{String}, estgt_output_file::String)
-    if isfile(estgt_output_file) return end
+    if isfile(estgt_output_file)
+        @debug "Estimated gene tree file already exists"
+        return
+    end
     
     estgt_newicks = Array{String}(undef, length(seq_files))
     Threads.@threads for i=1:length(seq_files)
@@ -51,6 +57,7 @@ function infer_constraints(estgt_file::String, output_file::String, subsets::Vec
         constraints = readMultiTopology(output_file)
         runtimes = readlines("$(output_file).runtimes")[1]
         runtimes = [parse(Float64, n) for n in split(runtimes, ",")]
+        @debug "Estimated network files already exist"
         return constraints, runtimes
     end
     
