@@ -84,6 +84,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     rootreticprocessed = [false for _ in 1:length(constraints)]
 
     # Main algorithm loop
+    @debug "----- ENTERING MAIN ALGO LOOP -----"
     while n > 1
         # DEBUG STATEMENT
         # @show n
@@ -91,6 +92,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         
         # Find optimal (i, j) idx pair for matrix Q
         i, j = findoptQidx(D, possible_siblings)
+        @debug "(i, j) = ($(i), $(j))"
 
         # connect subnets i and j
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
@@ -381,8 +383,15 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         net.numEdges = 0
         net.root = 1
         nodei.edge = []
+    elseif parentsi == parentsj && (parentsi == net.node[net.root] || length(getchildren(parentsi)) > 2)
+        # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
+        # e.g., this case would happen when joining a & b in (a, b, c, d)
+        deleteleaf!(net, nodej) # yup, this is all we have to do.
     elseif parentsi == parentsj
         # println("b: ($(nodei.name), $(nodej.name))")
+        # 04/25/2024:   (this note is written well after this code was first written)
+        #               this code could likely be simplified almost entirely
+        #               to just `deleteleaf!(nodei)`
 
         # no reticulations: just merge the nodes
         parent = parentsi
