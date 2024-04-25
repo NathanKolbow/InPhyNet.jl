@@ -38,13 +38,7 @@ if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level
     @info "Simulations already performed for $(netid)-$(replicatenum) w/ ngt $(ngt), seq_len $(seq_len), ils_level $(ils_level); skipping."
     exit()
 else
-    @debug "netid: $(netid)"
-    @debug "replicatenum: $(replicatenum)"
-    @debug "ngt: $(ngt)"
-    @debug "seq_len: $(seq_len)"
-    @debug "ils_level: $(ils_level)"
-    @debug "maxsubsetsize: $(maxsubsetsize)"
-    @debug "dmethod: $(dmethod)"
+    @debug "Parameter set: ($(netid), rep=$(replicatenum), ngt=$(ngt), len=$(seq_len), ils=$(ils_level), m=$(maxsubsetsize), d=$(dmethod))"
 end
 
 # 1. gather ground truth network, constraint, distance matrix, and namelist
