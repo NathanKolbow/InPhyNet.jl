@@ -136,20 +136,63 @@ function load_true_net_ils_adjusted(netid::String, replicatenum::Int64, ils::Str
     # - med       : 1.0
     # - high      : 0.5
     # - very high : 0.1
-    desired_avg = ils == "low" ? 2. : (ils == "med" ? 1. : (ils == "high" ? 0.5 : 0.1))
-    
+
+    # 1. make the network have low ILS branch lengths. after adjusting for ILS, we extend branch
+    #    lengths such that root to tip distance is unchanged, so this needs to be our baseline
+    desired_avg = 2.
     avg_bl = get_avg_bl(truenet)
     for e in truenet.edge
         e.length *= desired_avg / avg_bl
     end
 
-    abs(get_avg_bl(truenet) - desired_avg) < 1e-8 || error("avg: $(get_avg_bl(truenet)), desired: $desired_avg")
+    # 2. record desired final depths
+    leaf_depths = get_leaf_depths(truenet)
+
+    # 3. adjust network to desired branch length avg for desired level of ILS
+    desired_avg = ils == "low" ? 2. : (ils == "med" ? 1. : (ils == "high" ? 0.5 : 0.1))
+    avg_bl = get_avg_bl(truenet)
+    for e in truenet.edge
+        e.length *= desired_avg / avg_bl
+    end
+    
+    # 4. extend leaves to desired length
+    extend_leaves!(truenet, leaf_depths)
+    minimum(e.length for e in majorTree(truenet).edge) >= 0. || error("Negative branch lengths") # sanity check
+
     return truenet
 end
 
 
 
 ### Helper functions for the main functions above ###
+
+# Extends the branches above leaves in `net` such that the root to tip distance
+# matches that in `desired_depths`.
+function extend_leaves!(net::HybridNetwork, desired_depths::AbstractVector{Float64})
+    curr_depths = get_leaf_depths(net)
+    for (i, adder) in enumerate(desired_depths .- curr_depths)
+        edge = getparentedge(net.leaf[i])
+        edge.length += adder
+    end
+end
+
+
+# Finds the root to tip distance for each tip in net's major tree.
+function get_leaf_depths(net::HybridNetwork)
+    tre = majorTree(net)
+    depths = Array{Float64}(undef, net.numTaxa)
+
+    for (i, leaf) in enumerate(net.leaf)
+        curr = leaf
+        while curr != net.node[net.root]
+            depths[i] += getparentedge(curr).length
+            curr = getparent(curr)
+        end
+    end
+
+    return depths
+end
+
 
 # Finds the `-s` parameter for seq-gen such that gene
 # tree estimation error is in a reasonable range
