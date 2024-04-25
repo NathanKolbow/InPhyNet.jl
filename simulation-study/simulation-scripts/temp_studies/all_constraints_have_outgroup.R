@@ -36,6 +36,18 @@ ggplot(gg_df, aes(x = gauss_error_level_og, y = prop_better, color = result, sha
         color = "Which succeeds more often?") +
     scale_shape_discrete(guide = "none")
 
+# Prop either succeeds
+gg_df <- df %>%
+    group_by(netid, replicate_num, max_subset_size_label, gauss_error_level, gauss_error_level_og) %>%
+    summarise(prop_runs_good_default = mean(net_hwcd_default >= 0),
+        prop_runs_good_outgroup = mean(net_hwcd_outgroup >= 0),
+        prop_any_succeed = mean(net_hwcd_default >= 0 | net_hwcd_outgroup >= 0))
+ggplot(gg_df, aes(x = gauss_error_level_og)) +
+    geom_point(aes(y = prop_runs_good_default, shape = "Default", color = "Default")) +
+    geom_point(aes(y = prop_runs_good_outgroup, shape = "Outgroup", color = "Outgroup")) +
+    geom_point(aes(y = prop_any_succeed, shape = "Either", color = "Either")) +
+    facet_grid(max_subset_size_label ~ netid)
+
 # HWCD
 gg_df <- filter(df, net_hwcd_default >= 0 & net_hwcd_outgroup >= 0)
 ggplot(gg_df) +
