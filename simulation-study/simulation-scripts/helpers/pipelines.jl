@@ -45,15 +45,17 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
     InPhyNet.check_constraints(constraints)
 
     D, namelist = (nothing, nothing)
-    if dmethod == "internode_count"
+    if dmethod == "internode_count" || dmethod == "AGIC"
         D, namelist = majorinternodecount(truenet)
-    elseif dmethod == "internode_distance"
+    elseif dmethod == "internode_distance" || dmethod == "AGID"
         D, namelist = majorinternodedistance(truenet)
     else
         error("Unrecognized distance method specified.")
     end
     return truenet, constraints, D, namelist
 end
+
+
 @inline function get_avg_bl(net::HybridNetwork)
     bl_sum = 0.
     num_edges = 0
