@@ -10,7 +10,7 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 
 
 ##########################################
-# FIGURES FOR DATA W/ PERFECT INPUT DATA #
+# FIGURES FOR SIMS W/ PERFECT INPUT DATA #
 ##########################################
 
 no_added_error_df <- filter(full_df, constraint_error_sum == 0 & gauss_error == 0 & estRFerror != -1) %>%
@@ -25,6 +25,8 @@ ggplot(no_added_error_df, aes(x = netid, y = estRFerror, group = netid)) +
 ##################################################
 
 # x = Gauss error, y = NNI error, color = probability to fail
+plot_success_rate_vs_binned_errors(net_df("n50r2"))
+plot_success_rate_vs_binned_errors(net_df("n100r10"))
 plot_success_rate_vs_binned_errors(net_df("n200r10"))
 
 ###################################################################
