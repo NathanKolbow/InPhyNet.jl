@@ -1,5 +1,4 @@
 ######################################## README ########################################
-# 
 # In this file, we experiment to see which of the following gives better results:
 # - InPhyNet run w/ normal subset decomposition from SATe-I
 # - InPhyNet run w/ the outgroup placed in EVERY subset, after SATe-I chooses subsets
@@ -103,12 +102,65 @@ function run_experiment(netid::String, replicate_num::Int64, max_subset_size::In
     return df
 end
 
+n_existing_results(df, id, rep, m) = nrow(filter(row -> row.netid == id && row.replicate_num == rep && row.max_subset_size == m, df))
+
+# Output file
 output_file = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/temp_studies/all_constraints_have_outgroups.csv"
-for rep_num in 1:10
-    for max_subset_size in [25, 15]
-        for net_id in ["n100r5", "n200r10", "n50r2"]
-            @info "$(net_id): m=$(max_subset_size), rep=$(rep_num)"
-            res_df = run_experiment(net_id, rep_num, max_subset_size, nsim = 100)
+
+# Make sure we don't re-do results
+existing_results = CSV.read(output_file, DataFrame)
+
+# Run simulations
+nsim = 100
+for rep_num in 1:100
+    for max_subset_size in [25, 30, 20, 15]
+        for net_id in ["n100r5", "n200r10", "n50r2", "n500r25", "n200r20"]
+            n_done = n_existing_results(existing_results, net_id, rep_num, max_subset_size)
+            if n_done >= nsim
+                @info "Skipping $(net_id): m=$(max_subset_size), rep=$(rep_num) - ($(n_done) sims already done)"
+                continue
+            end
+
+            @info "$(net_id): m=$(max_subset_size), rep=$(rep_num) - $(n_done) / $(nsim) already exist"
+            res_df = run_experiment(net_id, rep_num, max_subset_size, nsim = nsim - n_done)
+            CSV.write(output_file, res_df, append = isfile(output_file))
+        end
+    end
+end
+
+# Run more simulations
+existing_results = CSV.read(output_file, DataFrame)
+nsim = 250
+for rep_num in 1:100
+    for max_subset_size in [25, 30, 20, 15]
+        for net_id in ["n100r5", "n200r10", "n50r2", "n500r25", "n200r20"]
+            n_done = n_existing_results(existing_results, net_id, rep_num, max_subset_size)
+            if n_done >= nsim
+                @info "Skipping $(net_id): m=$(max_subset_size), rep=$(rep_num) - ($(n_done) sims already done)"
+                continue
+            end
+
+            @info "$(net_id): m=$(max_subset_size), rep=$(rep_num) - $(n_done) / $(nsim) already exist"
+            res_df = run_experiment(net_id, rep_num, max_subset_size, nsim = nsim - n_done)
+            CSV.write(output_file, res_df, append = isfile(output_file))
+        end
+    end
+end
+
+# Run more simulations
+existing_results = CSV.read(output_file, DataFrame)
+nsim = 1000
+for rep_num in 1:100
+    for max_subset_size in [25, 30, 20, 15]
+        for net_id in ["n100r5", "n200r10", "n50r2", "n500r25", "n200r20"]
+            n_done = n_existing_results(existing_results, net_id, rep_num, max_subset_size)
+            if n_done >= nsim
+                @info "Skipping $(net_id): m=$(max_subset_size), rep=$(rep_num) - ($(n_done) sims already done)"
+                continue
+            end
+
+            @info "$(net_id): m=$(max_subset_size), rep=$(rep_num) - $(n_done) / $(nsim) already exist"
+            res_df = run_experiment(net_id, rep_num, max_subset_size, nsim = nsim - n_done)
             CSV.write(output_file, res_df, append = isfile(output_file))
         end
     end
