@@ -539,11 +539,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     fromorto = ifelse(getchild(edge) == node, "to", "from")
                     
                     if !hybedgelogged || edge != hybedge
-                        if edge !== nothing && getchild(edge).name == "H32"
-                            println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                            println(newtip == node)
-                            println(edge in edgesinpath)
-                        end
+                        # if edge !== nothing && getchild(edge).name == "H32"
+                        #     println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
+                        #     println(newtip == node)
+                        #     println(edge in edgesinpath)
+                        # end
     
                         logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                         if edge == hybedge hybedgelogged = true end
@@ -551,11 +551,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 else
                     # Edge *IS* traversed in the path
                     if !edgeinpath_logged
-                        if edge !== nothing && getchild(edge).name == "H32"
-                            println("F: relevanttoi: $(relevanttoi): $(subnetedgei.number) --> $(subnetedgej.number)")
-                            println(newtip == node)
-                            println(edge in edgesinpath)
-                        end
+                        # if edge !== nothing && getchild(edge).name == "H32"
+                        #     println("F: relevanttoi: $(relevanttoi): $(subnetedgei.number) --> $(subnetedgej.number)")
+                        #     println(newtip == node)
+                        #     println(edge in edgesinpath)
+                        # end
     
                         if getchild(edge) == node
                             # edge goes from j --> i
