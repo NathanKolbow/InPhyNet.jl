@@ -3,12 +3,12 @@
 
 if length(ARGS) == 0
     # Inputs for testing
-    @warn "No input arguments provided, running script w/ test parameters (netid = n200r10, replicatenum = 2, ngt = seq_len = 1000, ils_level = med)"
     push!(ARGS, "n200r10")
-    push!(ARGS, "2")
-    push!(ARGS, "1000")
-    push!(ARGS, "1000")
-    push!(ARGS, "med")
+    push!(ARGS, "1")
+    push!(ARGS, "100")
+    push!(ARGS, "500")
+    push!(ARGS, "low")
+    @warn "No input arguments provided, running script w/ test parameters (netid = $(ARGS[1]), replicatenum = $(ARGS[2]), ngt = $(ARGS[3]), seq_len = $(ARGS[4]), ils_level = $(ARGS[5]))"
 elseif length(ARGS) != 5 && length(ARGS) != 6
     error("Usage: julia --project=X -tY -p10 estimated_gts.jl \"<true network abbreviation>\" <replicate number> <number of loci> <sequence length> <ils level (low/med/high)> [max subset size]")
 end
