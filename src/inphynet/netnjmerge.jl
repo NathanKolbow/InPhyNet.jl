@@ -21,7 +21,7 @@ function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist:
     return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist; kwargs...)
 end
 
-function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false, copy_retic_names::Bool=false)
+function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false)
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, requirerooted=false)
@@ -88,7 +88,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     while n > 1
         # DEBUG STATEMENT
         # @show n
-        possible_siblings = findvalidpairs(constraints, namelist)
+        possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
         
         # Find optimal (i, j) idx pair for matrix Q
         i, j = findoptQidx(D, possible_siblings)
@@ -730,7 +730,7 @@ end
 
 Finds all valid sibling pairs among the constraint networks.
 """
-function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
+function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; major_tree_only::Bool=false)
     n = length(namelist)
 
     # Shorthand functions for name lookups (we'll be doing a lot of these if there are many constraints)
@@ -753,7 +753,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
         netpairs[netpairs .== 1] .= -1
 
         # Find valid sibling pairs
-        nodepairs = findsiblingpairs(net)   # returned as a BitArray w/ indices mirroring net.leaf, need to convert to idxs
+        nodepairs = findsiblingpairs(net, major_tree_only = major_tree_only)   # returned as a BitArray w/ indices mirroring net.leaf, need to convert to idxs
         nodestoidx(nodepair) = CartesianIndex(idx(nodepair[1].name), idx(nodepair[2].name))
         pairidxs = map(nodestoidx, nodepairs)
 
@@ -777,7 +777,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
 
     return validpairs
 end
-findvalidpairs(net::HybridNetwork, namelist::AbstractVector{<:AbstractString}) = findvalidpairs([net], namelist)
+findvalidpairs(net::HybridNetwork, namelist::AbstractVector{<:AbstractString}; kwargs...) = findvalidpairs([net], namelist; kwargs...)
 
 
 """
@@ -788,13 +788,13 @@ These pairs are valid for `net` but may not be valid when the
     other constraint networks are also considered.
 Returns a vector of tuples of nodes corresponding to siblings.
 """
-function findsiblingpairs(net::HybridNetwork)
+function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
     pairs = BitArray(undef, net.numTaxa, net.numTaxa)
     pairs .= false
 
     # new, simpler method just using Graphs.jl
     hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
-    if length(hybedges) == 0 hybedges = [nothing] end
+    if (length(hybedges) == 0 || major_tree_only) hybedges = [nothing] end
     for hybedge in hybedges
         graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
         InPhyNet.removeredundantedges!(graph, keeproot=net)
