@@ -50,6 +50,13 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
         close(lk)
     end
 end
+savePerfectResult(true_net::HybridNetwork, constraints::AV{HybridNetwork},
+    esterror::Real, esterror_without_missing_retics::Real, majortreeRF::Real,
+    gausserror::Real, constraintdiff::Real, nretics_est::Real, rep_num::Int64,
+    max_subset_size::Real) = 
+    savePerfectResults(true_net, constraints, [esterror],
+        [esterror_without_missing_retics], [majortreeRF], [gausserror], [constraintdiff],
+        [nretics_est], rep_num, max_subset_size)
 
 
 function save_estimated_gts_results(netid::String, true_network::HybridNetwork, replicatenum::Int64, nloci::Int64,

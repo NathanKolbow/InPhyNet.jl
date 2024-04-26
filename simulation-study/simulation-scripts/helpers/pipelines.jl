@@ -69,6 +69,9 @@ end
 end
 
 
+get_all_net_ids() = ["n1000r100", "n1000r50", "n100r10", "n100r5", "n200r10", "n200r20", "n500r25", "n500r50", "n50r2", "n50r5"]
+
+
 # PIPELINE FUNCTIONS
 function runGroundTruthRobustnessPipeline(truenet::HybridNetwork, constraints::Vector{HybridNetwork}=Vector{HybridNetwork}([]); nsim::Int64=100)
     if length(constraints) == 0
