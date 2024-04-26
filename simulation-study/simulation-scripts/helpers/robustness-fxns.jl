@@ -102,16 +102,17 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     fortime = @elapsed Threads.@threads for iter=1:nsim # for iter=1:nsim # 
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
+        if iter == 1
+            gaussMean = gaussSd = 0.
+        end
         gausserrors[iter] = gaussSd
 
         # Randomly generate the number of NNI moves
         totalnnimoves = Int64(round(rand(totalnnigen)))
         nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
         nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
-
         if iter == 1
             nnimoves .= 0
-            gaussMean = gaussSd = 0
         end
 
         esterrors[iter], esterrors_without_missing_retics[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
