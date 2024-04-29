@@ -73,14 +73,14 @@ end
 function check_reticmap(r::ReticMap)
     for (i, key) in enumerate(keys(r.map))
         if length(r.map[key]) != 3
-            error("ReticMap key $i has $(length(r.map[key])) attached edges.")
+            throw(ErrorException("ReticMap key $i has $(length(r.map[key])) attached edges."))
         elseif sum(r.map[key] .!== nothing) != 2 && sum(r.map[key] .!== nothing) != 3
             println("r.map length: $(length(r.map))")
             println(r.map[key])
             println(key.number)
-            error("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges.")
+            throw(ErrorException("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges."))
         elseif r.map[key][1] === nothing
-            error("ReitcMap key $i has no \"from\" edge.")
+            throw(ErrorException("ReitcMap key $i has no \"from\" edge."))
         end
     end
 end
