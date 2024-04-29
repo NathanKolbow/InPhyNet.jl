@@ -77,7 +77,7 @@ end
 mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
 
 # Main driver function for manuscript sims 1(i)-(iv)
-function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false)
+function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false, do_no_noise_sim::Bool=true)
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
@@ -102,7 +102,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
     fortime = @elapsed Threads.@threads for iter=1:nsim # for iter=1:nsim # 
         # Randomly generate the Gaussian noise parameters
         gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
-        if iter == 1
+        if iter == 1 && do_no_noise_sim
             gaussMean = gaussSd = 0.
         end
         gausserrors[iter] = gaussSd
@@ -129,61 +129,6 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         print("Took $(round(fortime, digits=2)) seconds\n")
     end
     return esterrors, esterrors_without_missing_retics, majortreeRFs, gausserrors, constraintdiffs, nretics_est
-end
-
-# w/ 1 proc: 8.77s
-
-# Main driver function for manuscript sims 1(i)-(iv)
-# Same as above, but uses `pmap` for distributed computing
-function monophyleticRobustnessDistributed(truenet::HybridNetwork, constraints::Vector{HybridNetwork},
-    D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000)
-    
-    error("Deprecated")
-    totalnnigen = Uniform(0, length(constraints) * 4)
-
-    # Recorded values
-    esterrors = SharedVector{Float64}(nsim)
-    esterrors_without_unidentified_retics = SharedVector{Float64}(nsim)
-    constraintdiffs = SharedArray{Float64, 2}(length(constraints), nsim)
-    gausserrors = SharedVector{Float64}(nsim)
-    nretics_est = SharedVector{Float64}(nsim)
-
-    esterrors .= -1.
-    constraintdiffs .= -1.
-    gausserrors .= -1.
-    nretics_est .= -1.
-    #
-
-    # Base values
-    nrows = size(D, 1)
-    std0 = upperTriangStd(D)
-    #
-
-    fortime = @elapsed @sync @distributed for iter=1:nsim
-        # Randomly generate the Gaussian noise parameters
-        gaussMean = gaussSd = rand(Uniform(0, 1.5*std0))
-        gausserrors[iter] = gaussSd
-
-        # Randomly generate the number of NNI moves
-        totalnnimoves = Int64(round(rand(totalnnigen)))
-        nnimoves = sample(1:length(constraints), totalnnimoves, replace=true)
-        nnimoves = Vector{Int64}([sum(nnimoves .== i) for i=1:length(constraints)])
-
-        try
-            esterrors[iter], esterrors_without_unidentified_retics[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
-                runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
-        catch e
-            if typeof(e) != ArgumentError
-                @show typeof(e)
-                throw(e)
-            end
-        end
-    end
-
-    # results = pmap(iter -> runSingleIter(iter, std0, truenet, constraints, D, namelist, totalnnigen), 1:1000)
-
-    print("Took $(round(fortime, digits=2)) seconds\n")
-    return esterrors, gausserrors, constraintdiffs, nretics_est
 end
 
 
@@ -459,7 +404,10 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
     catch e
         trace = stacktrace()
         if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
-            logfile = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_$(Threads.threadid()).log"
+            error_folder = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_logs/"
+            id = abs(rand(Int64))
+            logfile = joinpath(error_folder, "error_$(id).log")
+
             open(logfile, "a") do f
                 write(f, "---- $(now()) ----\n")
                 write(f, "Constraints after NNI:\n")
@@ -469,7 +417,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
                 write(f, "$(writeTopology(truenet))\n")
                 write(f, "gaussSd: $(gaussSd)\n")
     
-                d_path = "/mnt/dv/wid/projects4/SolisLemus-network-merging/dmat$(Threads.threadid()).csv"
+                d_path = joinpath(error_folder, "dmat_$(id).csv")
                 write(f, "SAVING DISTANCE MATRIX TO \"$(d_path)\"")
                 CSV.write(d_path, DataFrame(copyD, :auto))
     
@@ -477,12 +425,11 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
                 for stk in trace write(f, "$(stk)\n") end
                 write(f, "\n--------------------------------\n")
             end
-
-            throw(e)
+            return -2, -2, -2, constraintdiffs, "", -2  # -2's get wiped from the data before being saved to CSV
         elseif typeof(e) == InPhyNet.SolutionDNEError
             return -1, -1, -1, constraintdiffs, "", -1
         else    # ConstraintError
-            return -2, -2, -2, constraintdiffs, "", -2
+            return -2, -2, -2, constraintdiffs, "", -2  # -2's get wiped from the data before being saved to CSV
         end
     end
 end
