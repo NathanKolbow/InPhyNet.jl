@@ -2,7 +2,7 @@ library(ggplot2)
 library(tidyverse)
 library(hash)
 options(dplyr.summarise.inform = FALSE)
-theme_set(theme_linedraw())
+theme_set(theme_half_open())
 
 # Color palettes
 GRAD_N3_PALETTE <- c("#deebf7", "#9ecae1", "#51a0d8")
@@ -49,19 +49,16 @@ read_df <- function() {
         std0_hash[[paste0(row$net_id, "_", row$replicate_num)]] <- row$D_std
     }
 
-    print("Stitching std0 into df")
     for(netid in unique(full_df$netid)) {
         idx_filt <- full_df$netid == netid
         for(repnum in 1:100) {
             iter_filt <- idx_filt & full_df$replicate_num == repnum
             if(any(iter_filt)) {
                 full_df[iter_filt, ]$std0 <- std0_hash[[paste0(netid, "_", repnum)]]
-                # full_df[iter_filt, ]$std0 <- net_std0(netid, repnum)
             }
         }
     }
-    elaps <- difftime(Sys.time(), time_start, units="seconds")
-    print(paste0("Time elapsed WITH hash: ", round(elaps, digits = 2), "s"))
+    elaps <- difftime(Sys.time(), time_start, units="secs")
 
     full_df
 }
@@ -253,13 +250,28 @@ plot_success_rate_vs_binned_errors <- function(netid) {
         summarise(mean_val = round(100 * mean(estRFerror != -1), digits=2)) %>%
         mutate(prop = mean_val / 100)
 
-    p <- ggplot(gg_df, aes(x = gauss_error_level, y = nni_error_level, fill = mean_val, label = paste0(mean_val, "%"))) +
+    ggplot(gg_df, aes(x = gauss_error_level, y = nni_error_level, fill = mean_val, label = paste0(mean_val, "%"))) +
         geom_tile() +
         geom_text() +
         labs(x = "Distance Matrix Noise Level", y = "Constraint Network Noise Level", fill = "% runs succeeded") +
         scale_fill_gradientn(limits = c(0, 100), colors = GRAD_N3_PALETTE) +
         ggtitle("Percent runs succeeded based on input noise")
-    return(p)
+}
+
+
+plot_success_rate_vs_binned_errors_lineplot <- function(netid) {
+    gg_df <- net_df(netid) %>%
+        add_error_bins() %>%
+        group_by(gauss_error_level, nni_error_level) %>%
+        summarise(mean_val = round(100 * mean(estRFerror != -1), digits=2)) %>%
+        mutate(prop = mean_val / 100)
+
+    ggplot(gg_df, aes(x = gauss_error_level, y = prop, group = nni_error_level, color = nni_error_level)) +
+        geom_point() +
+        geom_line() +
+        labs(x = "Gaussian error level",
+            y = "Proportion of runs succeeded",
+            color = "Constraint error level")
 }
 
 
@@ -267,3 +279,16 @@ plot_no_noise_hwcd <- function(netid, without_extra_retics = FALSE) {
     gg_df <- net_no_noise_df(netid) %>%
         filter(estRFerror != -1)
 }
+
+
+plot_no_noise_success_props <- function() {
+    gg_df <- no_noise_df %>%
+        group_by(netid) %>%
+        summarise(n_success = sum(estRFerror != -1),
+                  prop_success = mean(estRFerror != -1))
+
+    ggplot(gg_df, aes(x = netid, y = prop_success)) +
+        geom_point() +
+        scale_y_continuous(limits = c(0, 1))
+}
+plot_no_noise_success_props()
