@@ -201,8 +201,8 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
             else
                 # throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
                 #     "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
-                error("Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
-                "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE.")
+                throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
+                "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
             end
         end
     end
