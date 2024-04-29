@@ -21,7 +21,9 @@ function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist:
     return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist; kwargs...)
 end
 
-function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false)
+
+function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; 
+    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false)
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, requirerooted=false)
@@ -921,3 +923,247 @@ function getsiblingcandidates(leaf::Node)
 end
 
 getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for e in n.edge], init=Vector{Node}())
+
+
+
+##############################
+####### IN DEVELOPMENT #######
+##############################
+
+
+# after including helpers, run function literally w/ `InPhyNet.test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)`
+function test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)
+    @info "Loading data"
+    truenet, constraints, D, namelist = loadPerfectData("n50r5", 1, 20, "internode_count")
+
+    @info "Adding noise"
+    addnoise!(D, Normal(3.5, 3.5))
+
+    @info "Starting retry driver"
+    netnj_retry_driver(D, constraints, namelist)
+end
+
+
+mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
+function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; max_retry_attempts::Real=1e5)
+    # First, try it normally. if it fails, do some runs
+    ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist))
+
+    if typeof(ret_val) <: Tuple
+        first_seq, first_maxes = ret_val
+        starting_points = [([i], [first_maxes[1]]) for i in first_seq[1:max(length(first_seq), Threads.nthreads())]]
+        any_runs_succeeded = false
+        succeeded_val = nothing
+
+        ac = AtomicCounter(0)
+        Threads.@threads for i=1:length(starting_points)
+            ret_val = deepcopy(starting_points[i])
+
+            while typeof(ret_val) <: Tuple && !any_runs_succeeded && ac.iterspassed <= max_retry_attempts
+                ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = ret_val[1], pick_sequence_max_idxs = ret_val[2])
+                @atomic :sequentially_consistent ac.iterspassed += 1
+                if Threads.threadid() == 1 && (ac.iterspassed % 1000) == 0
+                    @show ac.iterspassed
+                end
+            end
+
+            if ac.iterspassed > max_retry_attempts
+                error("Exceeded maximum retry attempts.")
+            end
+
+            if typeof(ret_val) <: HybridNetwork
+                any_runs_succeeded = true
+                succeeded_val = ret_val
+                break
+            end
+        end
+        @info "One run succeeded."
+
+        return succeeded_val
+    else
+        @info "No retries needed"
+        return ret_val
+    end
+end
+
+
+# retry_sequence: should not be adjusted by the user. Used for finding a successful sequence of mergings
+function netnj_retry!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; 
+    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false,
+    pick_sequence::AbstractVector=[], pick_sequence_max_idxs::AbstractVector=[])
+    
+    PhyloNetworks.check_distance_matrix(D)
+    check_constraints(constraints, requirerooted=false)
+    n = size(D, 1)
+    iter_num = 1
+
+    # If namelist is not provided
+    if isempty(namelist)
+        namelist = string.(1:n)
+    end
+    if length(namelist) != n
+        m = length(namelist)
+        throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
+    elseif length(unique(namelist)) != length(namelist)
+        throw(ArgumentError("Names must be unique."))
+    end
+
+    # Used for path-finding
+    # TODO: `Graph` is a limiting factor in algo speed. If it seems that
+    #       we still need to improve algo speed, we can re-use graphs
+    #       that are created here instead of making them on-demand
+    # full_netgraphs = [Graph(c) for c in constraints]
+
+    # Empty network
+    subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
+    reticmap = ReticMap(constraints)
+
+    # Edge case: remove (but log) retics that emerge from the root of constraints
+    rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
+    for (i, c) in enumerate(constraints)
+        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        if any(hybridbools)
+            sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
+            hybedge = c.node[c.root].edge[hybridbools][1]
+            rootretics[i] = hybedge
+
+            if !supressunsampledwarning
+                @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
+                    "Merging may not behave as expected, see this post for important details: "*
+                    "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
+            end
+        else
+            # None of the nodes coming out of the root are hybrids, but now
+            # we need to make sure that none of the nodes coming out of the
+            # root lead to _only_ hybrids, thus effectively making the root
+            # lead directly to hybrids.
+            children = getchildren(c.node[c.root])
+            hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
+            needtowarn = supressunsampledwarning
+
+            if sum(hybridbools[1]) == 2
+                rootretics[i] = (children[1].edge[1], children[1].edge[2])
+            elseif sum(hybridbools[2]) == 2
+                rootretics[i] = (children[2].edge[1], children[2].edge[2])
+            else
+                rootretics[i] = nothing
+                needtowarn = false
+            end
+        end
+    end
+    rootreticprocessed = [false for _ in 1:length(constraints)]
+
+    # Main algorithm loop
+    @debug "----- ENTERING MAIN ALGO LOOP -----"
+    while n > 1
+        # DEBUG STATEMENT
+        # @show n
+        possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
+        
+        i = j = -1
+        try
+            # Try to find the next pair w/ `pick_sequence`
+            if length(pick_sequence) < iter_num
+                push!(pick_sequence, 1)
+                push!(pick_sequence_max_idxs, length(possible_siblings))
+    
+                # Find optimal (i, j) idx pair for matrix Q
+                i, j = findoptQidx(D, possible_siblings)
+            else
+                i, j = findoptQidx_retry(D, possible_siblings, pick_sequence[iter_num])
+            end
+        catch
+            # Failed to find a valid pair w/ `pick_sequence`, so increment it
+            incr_pick_sequence!(pick_sequence, pick_sequence_max_idxs)
+            return pick_sequence, pick_sequence_max_idxs
+        end
+
+        # connect subnets i and j
+        subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
+        updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
+
+        # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
+        for (cidx, c) in enumerate(constraints)
+            if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
+                fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
+                subnets[i], edgei, edgej = mergesubnets!(subnets[i], fakesubnet)
+                
+                if typeof(rootretics[cidx]) <: Edge
+                    trylogretic!(reticmap, rootretics[cidx], edgei, "from")
+                else # type is Tuple
+                    trylogretic!(reticmap, rootretics[cidx][1], edgei, "from")
+                    trylogretic!(reticmap, rootretics[cidx][2], edgej, "from")
+                end
+                # println("logging retic for edge number $(rootretics[cidx].number)")
+                rootreticprocessed[cidx] = true
+            end
+        end
+
+        # collapse taxa i into j
+        for l in 1:n
+            if l != i && l != j
+                D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
+            end
+        end
+
+        # Remove data elements that corresponded to `j`
+        idxfilter = [1:(j-1); (j+1):n]
+        D = view(D, idxfilter, idxfilter)   # remove j from D
+        subnets = view(subnets, idxfilter)
+        namelist = view(namelist, idxfilter)
+
+        n -= 1
+        iter_num += 1
+    end
+
+    mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
+    mnet.root = mnet.numNodes
+    mnet.node[mnet.root].name = "root"
+
+    mnet = placeretics!(mnet, reticmap, copy_retic_names=copy_retic_names)
+    removeplaceholdernames!(mnet)
+
+    return mnet
+end
+
+
+"""
+Increments the merging sequence, i.e. [1, 1, 2, 1, 2, 3] --> [1, 1, 1, 2, 1, 2, *4*].
+Or, if the last idx had only 3 options, [1, 1, 2, 1, 2, 3] --> [1, 1, 2, 1, 3].
+Notice in the second example `length(pick_sequence)` went down by 1.
+"""
+function incr_pick_sequence!(pick_sequence::AbstractVector, pick_sequence_max_idxs::AbstractVector; max_pick::Int64=2)
+    n = length(pick_sequence)
+    n > 0 || error("Nothing left to pick!")
+
+    pick_sequence[n] += 1
+    if pick_sequence[n] > pick_sequence_max_idxs[n] || pick_sequence[n] > max_pick
+        deleteat!(pick_sequence, n)
+        deleteat!(pick_sequence_max_idxs, n)
+        incr_pick_sequence!(pick_sequence, pick_sequence_max_idxs)
+    end
+end
+
+
+# - pick_num: of all possible siblings, pick the `pick_num`th minimum one. `pick_num` is 1 unless the algo
+#             previously failed and needs to try a new merging sequence
+function findoptQidx_retry(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}, pick_num::Int64)
+    idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
+    if length(idxpairs) == 0 || length(idxpairs) < pick_num
+        throw(SolutionDNEError())
+    end
+
+    n = size(D)[1]
+    sums = sum(D, dims=1)
+    Q_vals = []
+    Q_idxs = []
+
+    for (i, j) in idxpairs
+        qij = (n-2) * D[i,j] - sums[i] - sums[j]
+        push!(Q_vals, qij)
+        push!(Q_idxs, (i, j))
+    end
+
+    Q_order = sortperm(Q_vals)
+    return Q_idxs[Q_order[pick_num]]
+end
