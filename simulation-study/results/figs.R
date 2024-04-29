@@ -16,6 +16,9 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 
 plot_no_noise_success_props("n50r2")
 
+# HWCD for all nets compared across subset sizes
+plot_no_noise_hwcd()
+
 ##################################################
 # SUCCESS RATE FIGURES FOR DATA W/ PERTURBATIONS #
 ##################################################

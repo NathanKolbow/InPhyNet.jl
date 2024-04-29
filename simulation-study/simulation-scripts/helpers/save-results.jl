@@ -7,7 +7,7 @@ const AV = AbstractVector
 function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
     esterrors_without_missing_retics::AV{<:Real}, majortreeRFs::AV{<:Real},
     gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64,
-    max_subset_size::Real)
+    max_subset_size::Real, all_have_outgroups::Bool, outgroup_removed_after_reroot::Bool)
 
     # Quick checks for bad input
     a = length(gausserrors)
@@ -43,7 +43,9 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
             majortreeRF=majortreeRFs,
             gauss_error=gausserrors,
             constraint_error_sum=constraintdiffs,
-            replicate_num=repeat([replicate_num], nrows)
+            replicate_num=repeat([replicate_num], nrows),
+            all_have_outgroups=repeat([all_have_outgroups], nrows),
+            outgroup_removed_after_reroot=repeat([outgroup_removed_after_reroot], nrows)
         )
         CSV.write(output_path, df, append=true)
     finally
@@ -53,10 +55,10 @@ end
 savePerfectResult(true_net::HybridNetwork, constraints::AV{HybridNetwork},
     esterror::Real, esterror_without_missing_retics::Real, majortreeRF::Real,
     gausserror::Real, constraintdiff::Real, nretics_est::Real, rep_num::Int64,
-    max_subset_size::Real) = 
+    max_subset_size::Real, all_have_outgroup::Bool, outgroup_removed_after_reroot::Bool) = 
     savePerfectResults(true_net, constraints, [esterror],
         [esterror_without_missing_retics], [majortreeRF], [gausserror], [constraintdiff],
-        [nretics_est], rep_num, max_subset_size)
+        [nretics_est], rep_num, max_subset_size, all_have_outgroup, outgroup_removed_after_reroot)
 
 
 function save_estimated_gts_results(netid::String, true_network::HybridNetwork, replicatenum::Int64, nloci::Int64,
@@ -183,7 +185,7 @@ function estimated_sims_already_performed(netid::String, replicatenum::Int64, ng
 end
 
 
-function n_perfect_sims_already_performed(netid::String, replicatenum::Int64, maxsubsetsize::Int64)
+function n_perfect_sims_already_performed(netid::String, replicatenum::Int64, maxsubsetsize::Int64, all_have_outgroup::Bool, outgroup_removed_after_reroot::Bool)
     output_path = get_output_filepath(netid)
     if !isfile(output_path) return false end
     ntaxa = split(netid, "r")
@@ -191,5 +193,5 @@ function n_perfect_sims_already_performed(netid::String, replicatenum::Int64, ma
     ntaxa = parse(Int64, split(ntaxa[1], "n")[2])
 
     df = CSV.read(output_path, DataFrame)
-    return nrow(filter(row -> row.replicate_num == replicatenum && row.max_subset_size == maxsubsetsize, df))
+    return nrow(filter(row -> row.replicate_num == replicatenum && row.max_subset_size == maxsubsetsize && row.all_have_outgroup == all_have_outgroup && row.outgroup_removed_after_reroot == outgroup_removed_after_reroot, df))
 end

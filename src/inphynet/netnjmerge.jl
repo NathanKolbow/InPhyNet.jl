@@ -931,20 +931,23 @@ getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for 
 ##############################
 
 
+# using Revise
+# include("simulation-study/simulation-scripts/helpers/helpers.jl")
+# InPhyNet.test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)
+#
 # after including helpers, run function literally w/ `InPhyNet.test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)`
 function test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)
     @info "Loading data"
-    truenet, constraints, D, namelist = loadPerfectData("n50r5", 1, 20, "internode_count")
+    truenet, constraints, D, namelist = loadPerfectData("n50r5", 1, 15, "internode_count")
 
     @info "Adding noise"
-    addnoise!(D, Normal(3.5, 3.5))
+    addnoise!(D, Normal(3.7, 3.7))
 
     @info "Starting retry driver"
-    netnj_retry_driver(D, constraints, namelist)
+    netnj_retry_driver(D, constraints, namelist, max_retry_attempts=1e4)
 end
 
 
-mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
 function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; max_retry_attempts::Real=1e5)
     # First, try it normally. if it fails, do some runs
     ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist))
@@ -952,33 +955,29 @@ function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwor
     if typeof(ret_val) <: Tuple
         first_seq, first_maxes = ret_val
         starting_points = [([i], [first_maxes[1]]) for i in first_seq[1:max(length(first_seq), Threads.nthreads())]]
-        any_runs_succeeded = false
+        any_runs_succeeded = Ref(false)
         succeeded_val = nothing
 
-        ac = AtomicCounter(0)
         Threads.@threads for i=1:length(starting_points)
-            ret_val = deepcopy(starting_points[i])
+            loop_ret_val = deepcopy(starting_points[i])
+            tracking_arr = []
 
-            while typeof(ret_val) <: Tuple && !any_runs_succeeded && ac.iterspassed <= max_retry_attempts
-                ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = ret_val[1], pick_sequence_max_idxs = ret_val[2])
-                @atomic :sequentially_consistent ac.iterspassed += 1
-                if Threads.threadid() == 1 && (ac.iterspassed % 1000) == 0
-                    @show ac.iterspassed
-                end
+            while typeof(loop_ret_val) <: Tuple && !any_runs_succeeded[] && ac.count <= max_retry_attempts
+                loop_ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = loop_ret_val[1], pick_sequence_max_idxs = loop_ret_val[2])
             end
 
-            if ac.iterspassed > max_retry_attempts
+            if ac.count > max_retry_attempts
                 error("Exceeded maximum retry attempts.")
             end
 
-            if typeof(ret_val) <: HybridNetwork
-                any_runs_succeeded = true
-                succeeded_val = ret_val
-                break
+            if typeof(loop_ret_val) <: HybridNetwork
+                any_runs_succeeded[] = true
+                succeeded_val = loop_ret_val
+                return loop_ret_val
             end
         end
-        @info "One run succeeded."
 
+        @info "Succeeded after $(ac.count) iterations."
         return succeeded_val
     else
         @info "No retries needed"

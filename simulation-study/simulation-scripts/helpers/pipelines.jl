@@ -23,7 +23,7 @@ copy_csv_template(output_path::String) = cp(joinpath(getDataDir(), "output", "fi
 copy_est_csv_template(output_path::String) = cp(joinpath(getDataDir(), "est_data_output", "fields.csv"), output_path)
 
 # DATA LOADING FUNCTIONS
-function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String)
+function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String; all_have_outgroup::Bool = false, outgroup_removed_after_reroot::Bool = false)
     truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
     avg_bl = get_avg_bl(truenet)
     newick = writeTopology(truenet)
@@ -31,7 +31,18 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
     truenet = readTopology(newick)
 
     constraints = sateIdecomp(majorTree(truenet), maxsize)
+    if all_have_outgroup
+        for (i, c) in enumerate(constraints)
+            constraints[i] = union(c, ["OUTGROUP"])
+        end
+    end
     constraints = pruneTruthFromDecomp(truenet, constraints)
+    if outgroup_removed_after_reroot
+        for c in constraints
+            rootatnode!(c, "OUTGROUP")
+            deleteleaf!(c, "OUTGROUP")
+        end
+    end
     
     # If any constraints have root-retics, remove them
     for c in constraints
