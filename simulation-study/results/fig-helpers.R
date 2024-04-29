@@ -342,10 +342,18 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
 plot_success_prop_stacked_bar("n500r25")
 
 
-plot_no_noise_hwcd <- function(netid, without_extra_retics = FALSE) {
-    gg_df <- net_no_noise_df(netid) %>%
-        filter(estRFerror != -1)
+plot_no_noise_hwcd <- function(without_extra_retics = FALSE) {
+    gg_df <- no_noise_df %>%
+        filter(estRFerror != -1) %>%
+        group_by(max_subset_size, netid) %>%
+        summarise(mean_RF = mean(estRFerror))
+    
+    ggplot(gg_df, aes(x = max_subset_size, y = mean_RF, color = netid)) +
+        geom_line() +
+        geom_point() +
+        scale_x_continuous(breaks=c(5, 10, 15, 20, 25, 30))
 }
+plot_no_noise_hwcd()
 
 
 plot_no_noise_success_props <- function(netid) {
