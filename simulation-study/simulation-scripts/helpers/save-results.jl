@@ -119,6 +119,15 @@ function save_estimated_gts_results(netid::String, true_network::HybridNetwork, 
         est_constraint_hwcd_sum += hardwiredClusterDistance(true_constraint, est_constraint, false)
     end
 
+    # @debug "Checking whether we should find the minimum retic subset HWCD"
+    est_net_hwcd_only_identified_retics = "skipped"
+    n_combinations = binomial(true_network.numHybrids, est_network.numHybrids)
+    if n_combinations < 1e5
+        est_net_hwcd_only_identified_retics = find_minimum_retic_subset_hwcd(true_network, est_network)
+    else
+        @debug "n_combinations = $(n_combinations) >= 1e5, skipping minimum retic subset HWCD step"
+    end
+
     # Create a DF then write the results
     @debug "Creating DF"
     lk = mkpidlock(output_path*".lk")
