@@ -51,7 +51,8 @@ function get_error_without_missing_retics(true_net::HybridNetwork, mnet::HybridN
     true_hybs = true_net_copy.hybrid
     mnet_hybs = mnet.hybrid
     retics_to_remove = setdiff([h.name for h in true_hybs], [h.name for h in mnet_hybs])
-
+    retics_to_remove = intersect(retics_to_remove, true_hybs)
+    
     for retic_name in retics_to_remove
         hybnode = true_hybs[findfirst([h.name for h in true_hybs] .== retic_name)]
         PhyloNetworks.deletehybridedge!(true_net_copy, getparentedgeminor(hybnode))
@@ -67,4 +68,57 @@ function get_error_without_missing_retics(true_net::HybridNetwork, mnet::HybridN
     end
     
     return hardwiredClusterDistance(true_net_copy, mnet, true)
+end
+
+
+"""
+`true_net` is a baseline network, `est_net` is a network estimated all the way up from
+sequence data (typically). This fxn finds the subset of reticulations in `true_net` such
+that `true_net` has only as many retics as `est_net` and the HWCD is minimized between
+the two networks.
+"""
+function find_minimum_retic_subset_hwcd(true_net::HybridNetwork, est_net::HybridNetwork)
+    # Make sure the nets are properly rooted
+    try_outgroup_root(true_net)
+    try_outgroup_root(est_net)
+
+    # If they have the same number of retics, or `est_net` somehow has more retics
+    # than `true_net`, return their HWCD
+    if est_net.numHybrids >= true_net.numHybrids return hardwiredClusterDistance(true_net, est_net, true) end
+
+    # Find the subset!
+    true_hyb_names = [h.name for h in true_net.hybrid]
+    hyb_combinations = combinations(true_hyb_names, true_net.numHybrids - est_net.numHybrids)
+    hwcds = Array{Float64}(undef, length(hyb_combinations))
+    Threads.@threads for (i, hyb_subset_names) in collect(enumerate(hyb_combinations))
+        # 1. Copy the true net
+        true_net_copy = readTopology(writeTopology(true_net))
+        
+        # 2. Find the set of hybrids in `hyb_subset_names`
+        remove_hybnodes = []
+        for to_remove_name in hyb_subset_names
+            push!(remove_hybnodes, true_net_copy.hybrid[findfirst([h.name == to_remove_name for h in true_net_copy.hybrid])])
+        end
+
+        # 3. Remove the set of hybrids from `true_net_copy`
+        for hyb in remove_hybnodes
+            PhyloNetworks.deletehybridedge!(true_net_copy, getparentedgeminor(hyb))
+        end
+
+        # 4. Compare w/ hardwiredClusterDistance, save if new minimum
+        try
+            rootatnode!(true_net_copy, "OUTGROUP")
+        catch
+        end
+        hwcds[i] = hardwiredClusterDistance(true_net_copy, est_net, true)
+    end
+    return minimum(hwcds)
+end
+
+
+function try_outgroup_root(net::HybridNetwork)
+    try
+        rootatnode!(net, "OUTGROUP")
+    catch
+    end
 end
