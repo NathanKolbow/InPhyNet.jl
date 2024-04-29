@@ -1,5 +1,6 @@
 library(tidyverse)
 library(ggplot2)
+library(cowplot)
 source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/fig-helpers.R")
 
 
@@ -13,7 +14,7 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 # FIGURES FOR SIMS W/ PERFECT INPUT DATA #
 ##########################################
 
-
+plot_no_noise_success_props()
 
 ##################################################
 # SUCCESS RATE FIGURES FOR DATA W/ PERTURBATIONS #
@@ -23,6 +24,9 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 plot_success_rate_vs_binned_errors("n50r2")
 plot_success_rate_vs_binned_errors("n100r10")
 plot_success_rate_vs_binned_errors("n200r10")
+
+plot_success_rate_vs_binned_errors_lineplot("n50r2")
+plot_success_rate_vs_binned_errors_lineplot("n100r5")
 
 ###################################################################
 # HWCD & HWCD W/O MISSING RETIC FIGURES FOR DATA W/ PERTURBATIONS #
