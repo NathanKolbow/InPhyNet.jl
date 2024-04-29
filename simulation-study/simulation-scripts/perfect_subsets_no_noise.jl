@@ -3,27 +3,10 @@ include("helpers/helpers.jl")
 InPhyNet.TIEWARNING = true
 
 function run_perfect_no_noise_sim(net_id::String, rep_num::Int64, m::Int64)
-    true_net, cs, D, namelist = loadPerfectData(net_id, rep_num, m, "AGIC")
-    mnet = nothing
-    try
-        mnet = netnj(D, cs, namelist)
-    catch
-    end
 
-    if mnet === nothing
-        savePerfectResult(
-            true_net,
-            cs,
-            -1.,
-            -1.,
-            -1.,
-            0.,
-            0.,
-            -1.,
-            rep_num,
-            m
-        )
-    else
+    try
+        true_net, cs, D, namelist = loadPerfectData(net_id, rep_num, m, "AGIC")
+        mnet = netnj(D, cs, namelist)
         savePerfectResult(
             true_net,
             cs,
@@ -36,6 +19,21 @@ function run_perfect_no_noise_sim(net_id::String, rep_num::Int64, m::Int64)
             rep_num,
             m
         )
+    catch e
+        if typeof(e) <: SolutionDNEError
+            savePerfectResult(
+                true_net,
+                cs,
+                -1.,
+                -1.,
+                -1.,
+                0.,
+                0.,
+                -1.,
+                rep_num,
+                m
+            )
+        end
     end
 end
 
@@ -45,7 +43,7 @@ for net_id in reverse(get_all_net_ids())
         @info "$(net_id), m=$(m)"
         ac = AtomicCounter(0)
 
-        Threads.@threads for rep_num in 1:100
+        Threads.@threads for rep_num in reverse(collect(1:100))
             # Run sim
             run_perfect_no_noise_sim(net_id, rep_num, m)
 
