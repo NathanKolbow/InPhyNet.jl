@@ -9,6 +9,46 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 #
 # df <- read_df()
 
+####################
+# ALWAYS OUTGROUP? #
+####################
+
+compare_outgroup_plot_succ_vs_binned_errors("n100r10")
+
+# No major completion success difference...
+net_df("n100r10") %>%
+    add_error_bins() %>%
+    group_by(netid, replicate_num, max_subset_size, gauss_error_level, all_have_outgroup, outgroup_removed_after_reroot) %>%
+    summarise(prop = mean(estRFerror >= 0)) %>%
+    mutate(xval = factor(paste0(str_sub(paste0(all_have_outgroup), 1, 1), str_sub(paste0(outgroup_removed_after_reroot), 1, 1)))) %>%
+    ggplot(aes(x = gauss_error_level, y = prop, color = xval, shape = xval)) +
+        geom_jitter(size = 3, height = 0, width = 0.25, alpha = 0.85) +
+        facet_grid(max_subset_size ~ netid) +
+        geom_abline(slope = 0, intercept = 0, linetype = "dashed") +
+        labs(x = "Gaussian Noise Level",
+            y = "(Proportion default runs succeeded) - (Proportion outgroup runs succeeded)",
+            color = "Which succeeds more often?") +
+        scale_shape_discrete(guide = "none")
+
+# No major HWCD differences...
+net_df("n100r10") %>%
+    filter(estRFerror != -1) %>%
+    add_error_bins() %>%
+    group_by(netid, replicate_num, max_subset_size, gauss_error_level, all_have_outgroup, outgroup_removed_after_reroot) %>%
+    mutate(xval = factor(paste0(str_sub(paste0(all_have_outgroup), 1, 1), str_sub(paste0(outgroup_removed_after_reroot), 1, 1)))) %>%
+    ggplot(aes(x = xval, y = estRFerror, color = xval)) +
+        geom_boxplot() +
+        facet_grid(nni_error_level ~ gauss_error_level) +
+        geom_abline(slope = 0, intercept = 0, linetype = "dashed")
+
+# No major differences in mean (or median) HWCDs...
+mean(filter(net_df("n100r10"), !all_have_outgroup & estRFerror != -1)$estRFerror)
+mean(filter(net_df("n100r10"), all_have_outgroup & outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
+mean(filter(net_df("n100r10"), all_have_outgroup & !outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
+
+mean(filter(net_df("n100r10"), !all_have_outgroup)$estRFerror == -1)
+mean(filter(net_df("n100r10"), all_have_outgroup & outgroup_removed_after_reroot)$estRFerror == -1)
+mean(filter(net_df("n100r10"), all_have_outgroup & !outgroup_removed_after_reroot)$estRFerror == -1)
 
 ##########################################
 # FIGURES FOR SIMS W/ PERFECT INPUT DATA #
@@ -86,3 +126,8 @@ plot_best_p_replicates_hwcd_grouped_boxplots("n200r10", p = 0.0001, without_extr
 # Estimated net error vs. input error, binned by Gaussian noise
 plot_est_hwcd_vs_sum_input_error_line("n100r5", without_extra_retics = TRUE)
 plot_est_hwcd_vs_sum_input_error_line("n100r10", without_extra_retics = TRUE)
+
+############################
+# ESTIMATED DATA HWCD FIGS #
+############################
+

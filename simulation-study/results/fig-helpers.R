@@ -1,6 +1,7 @@
 library(ggplot2)
 library(tidyverse)
 library(hash)
+library(patchwork)
 options(dplyr.summarise.inform = FALSE)
 theme_set(theme_half_open())
 
@@ -37,7 +38,9 @@ read_df <- function() {
         do.call("rbind", .) %>%
         mutate(
             netid = as.factor(paste0("n", numtaxa, "r", nretics_true)),
-            constraint_sizes = NULL # not using these for now
+            constraint_sizes = NULL,    # not using these for now
+            all_have_outgroup = as.logical(all_have_outgroup),
+            outgroup_removed_after_reroot = as.logical(outgroup_removed_after_reroot)
         )
     
     # Stitch the std0 values in
@@ -61,6 +64,7 @@ read_df <- function() {
     # }
     # elaps <- difftime(Sys.time(), time_start, units="secs")
 
+    print("Skipping stitch step")
     full_df
 }
 df <- read_df()
@@ -283,6 +287,26 @@ plot_success_rate_vs_binned_errors <- function(netid) {
 }
 
 
+compare_outgroup_plot_succ_vs_binned_errors <- function(netid) {
+    gg_df <- net_df(netid) %>%
+        add_error_bins() %>%
+        group_by(gauss_error_level, nni_error_level, all_have_outgroup, outgroup_removed_after_reroot) %>%
+        summarise(mean_val = round(100 * mean(estRFerror != -1), digits=2)) %>%
+        mutate(prop = mean_val / 100,
+               xval = paste0(str_sub(paste0(all_have_outgroup), 1, 1), str_sub(paste0(outgroup_removed_after_reroot), 1, 1)))
+
+    ggplot(gg_df, aes())
+
+    gg_df %>%
+        ggplot(aes(x = xval, y = prop, color = xval)) +
+        geom_abline(slope = 0, intercept = c(0.0, 0.5, 1.0), linetype = "dashed", alpha = 0.5) +
+        geom_bar(stat = "identity", position = "dodge", fill = "white", linewidth = 1.5, alpha = 0.9) +
+        labs(x = "Distance Matrix Noise Level", y = "Constraint Network Noise Level", fill = "% runs succeeded") +
+        facet_grid(nni_error_level ~ gauss_error_level)
+}
+compare_outgroup_plot_succ_vs_binned_errors("n100r5")
+
+
 plot_success_rate_vs_binned_errors_lineplot <- function(netid) {
     gg_df <- net_df(netid) %>%
         add_error_bins() %>%
@@ -339,7 +363,6 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
         labs(x = "Constraint Error Level", y = "Success Probability",
             fill = "Gaussian Noise Level")
 }
-plot_success_prop_stacked_bar("n500r25")
 
 
 plot_no_noise_hwcd <- function(without_extra_retics = FALSE) {
@@ -351,9 +374,9 @@ plot_no_noise_hwcd <- function(without_extra_retics = FALSE) {
     ggplot(gg_df, aes(x = max_subset_size, y = mean_RF, color = netid)) +
         geom_line() +
         geom_point() +
-        scale_x_continuous(breaks=c(5, 10, 15, 20, 25, 30))
+        scale_x_continuous(breaks=c(5, 10, 15, 20, 25, 30)) +
+        geom_abline(slope=0, intercept=0, linetype="dashed", color="black", alpha=0.5)
 }
-plot_no_noise_hwcd()
 
 
 plot_no_noise_success_props <- function(netid) {
@@ -368,4 +391,3 @@ plot_no_noise_success_props <- function(netid) {
         geom_text(aes(label = round(prop_success, digits = 2), y = prop_success + 0.02)) +
         labs(x = "Network ID", y = "Proportion of Replicates Succeeded")
 }
-plot_no_noise_success_props()
