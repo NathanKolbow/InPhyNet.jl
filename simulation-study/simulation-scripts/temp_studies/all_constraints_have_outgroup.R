@@ -1,9 +1,9 @@
 library(tidyverse)
 library(ggplot2)
 options(dplyr.summarise.inform = FALSE)
-theme_set(theme_linedraw())
+theme_set(theme_light())
 
-ddf <- read.csv("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/temp_studies/all_constraints_have_outgroups.csv") %>%
+df <- read.csv("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/temp_studies/all_constraints_have_outgroups.csv") %>%
     mutate(max_subset_size_label = paste0("max subset size = ", max_subset_size),
         gauss_error_level_og = ordered(gauss_error_level, levels = c("low", "med", "high")),
         gauss_error_level = ordered(paste0("gauss = ", gauss_error_level), levels = c("gauss = low", "gauss = med", "gauss = high")))

@@ -17,8 +17,12 @@ distance matrix `D`.
 # Arguments
 - D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
 """
-function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; kwargs...)
-    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), namelist; kwargs...)
+function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; search::Bool=false, kwargs...)
+    if search
+        return netnj_retry_driver(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), deepcopy(namelist); kwargs...)
+    end
+
+    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), deepcopy(namelist); kwargs...)
 end
 
 
@@ -27,6 +31,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, requirerooted=false)
+    root_constraints!(constraints)
     n = size(D, 1)
 
     # If namelist is not provided
@@ -163,6 +168,31 @@ that all nodes have exactly 3 edges except for the root.
 function check_constraints(constraints::Vector{HybridNetwork}; kwargs...)
     for (i, constraint) in enumerate(constraints)
         check_constraint(i, constraint; kwargs...)
+    end
+end
+
+
+"""
+
+If any constraints are unrooted, picks a root node from any node directly
+under the root (somewhat randomly).
+"""
+function root_constraints!(constraints::Vector{HybridNetwork})
+    for c in constraints
+        root_children = getchildren(c.node[c.root])
+        if length(root_children) > 2
+            if any(child.leaf for child in root_children)
+                rootatnode!(c, root_children[findfirst(child.leaf for child in root_children)])
+            else
+                for root_child in root_children
+                    try
+                        rootatnode!(c, root_child)
+                        break
+                    catch
+                    end
+                end
+            end
+        end
     end
 end
 
@@ -948,6 +978,7 @@ function test_netnj_retry_driver(loadPerfectData, Normal, addnoise!)
 end
 
 
+mutable struct AtomicCounter{Int64}; @atomic count::Int64; end
 function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; max_retry_attempts::Real=1e5)
     # First, try it normally. if it fails, do some runs
     ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist))
@@ -958,16 +989,17 @@ function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwor
         any_runs_succeeded = Ref(false)
         succeeded_val = nothing
 
+        ac = AtomicCounter(0)
         Threads.@threads for i=1:length(starting_points)
             loop_ret_val = deepcopy(starting_points[i])
             tracking_arr = []
 
             while typeof(loop_ret_val) <: Tuple && !any_runs_succeeded[] && ac.count <= max_retry_attempts
                 loop_ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = loop_ret_val[1], pick_sequence_max_idxs = loop_ret_val[2])
-            end
-
-            if ac.count > max_retry_attempts
-                error("Exceeded maximum retry attempts.")
+                @atomic :sequentially_consistent ac.count += 1
+                if Threads.threadid() == 1
+                    print("\rSearching for valid solution, checked $(ac.count) combinations...")
+                end
             end
 
             if typeof(loop_ret_val) <: HybridNetwork
@@ -993,6 +1025,7 @@ function netnj_retry!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, na
     
     PhyloNetworks.check_distance_matrix(D)
     check_constraints(constraints, requirerooted=false)
+    root_constraints!(constraints)
     n = size(D, 1)
     iter_num = 1
 
