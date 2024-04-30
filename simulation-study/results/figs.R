@@ -16,7 +16,7 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 compare_outgroup_plot_succ_vs_binned_errors("n100r10")
 
 # No major completion success difference...
-net_df("n100r10") %>%
+net_df("n200r10") %>%
     add_error_bins() %>%
     group_by(netid, replicate_num, max_subset_size, gauss_error_level, all_have_outgroup, outgroup_removed_after_reroot) %>%
     summarise(prop = mean(estRFerror >= 0)) %>%
@@ -24,7 +24,7 @@ net_df("n100r10") %>%
     ggplot(aes(x = gauss_error_level, y = prop, color = xval, shape = xval)) +
         geom_jitter(size = 3, height = 0, width = 0.25, alpha = 0.85) +
         facet_grid(max_subset_size ~ netid) +
-        geom_abline(slope = 0, intercept = 0, linetype = "dashed") +
+        geom_abline(slope = 0, intercept = c(1, 0), linetype = "dashed") +
         labs(x = "Gaussian Noise Level",
             y = "(Proportion default runs succeeded) - (Proportion outgroup runs succeeded)",
             color = "Which succeeds more often?") +
@@ -42,13 +42,13 @@ net_df("n100r10") %>%
         geom_abline(slope = 0, intercept = 0, linetype = "dashed")
 
 # No major differences in mean (or median) HWCDs...
-mean(filter(net_df("n100r10"), !all_have_outgroup & estRFerror != -1)$estRFerror)
-mean(filter(net_df("n100r10"), all_have_outgroup & outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
-mean(filter(net_df("n100r10"), all_have_outgroup & !outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
+mean(filter(net_df("n200r10"), !all_have_outgroup & estRFerror != -1)$estRFerror)
+mean(filter(net_df("n200r10"), all_have_outgroup & outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
+mean(filter(net_df("n200r10"), all_have_outgroup & !outgroup_removed_after_reroot & estRFerror != -1)$estRFerror)
 
-mean(filter(net_df("n100r10"), !all_have_outgroup)$estRFerror == -1)
-mean(filter(net_df("n100r10"), all_have_outgroup & outgroup_removed_after_reroot)$estRFerror == -1)
-mean(filter(net_df("n100r10"), all_have_outgroup & !outgroup_removed_after_reroot)$estRFerror == -1)
+mean(filter(net_df("n200r10"), !all_have_outgroup)$estRFerror == -1)
+mean(filter(net_df("n200r10"), all_have_outgroup & outgroup_removed_after_reroot)$estRFerror == -1)
+mean(filter(net_df("n200r10"), all_have_outgroup & !outgroup_removed_after_reroot)$estRFerror == -1)
 
 ##########################################
 # FIGURES FOR SIMS W/ PERFECT INPUT DATA #
@@ -68,12 +68,32 @@ plot_success_rate_vs_binned_errors("n50r2")
 plot_success_rate_vs_binned_errors("n100r10")
 plot_success_rate_vs_binned_errors("n200r10")
 
+# grid plot - FULL FIG
+p1 <- plot_success_rate_vs_binned_errors("n50r2") & labs(title="", x="") & guides(fill="none")
+p2 <- plot_success_rate_vs_binned_errors("n100r5") & labs(title="", x="", y="")
+p3 <- plot_success_rate_vs_binned_errors("n100r10") & labs(title="") & guides(fill="none")
+p4 <- plot_success_rate_vs_binned_errors("n200r10") & labs(title="", y="") & guides(fill="none")
+((p1 + p2) / (p3 + p4)) +
+    plot_layout(tag_level = "new") +
+    plot_annotation(tag_levels = list(c("A (n50r2)", "B (n100r5)", "C (n100r10)", "D (n200r10)")))
+
+
+# line plot
 plot_success_rate_vs_binned_errors_lineplot("n50r2")
 plot_success_rate_vs_binned_errors_lineplot("n100r5")
 
-# another type of graph
+# bar chart
 plot_success_prop_stacked_bar("n50r2")
 plot_success_prop_stacked_bar("n200r10")
+
+# bar chart - FULL FIG
+p1 <- plot_success_prop_stacked_bar("n50r2") & labs(title="", x="") & guides(fill="none")
+p2 <- plot_success_prop_stacked_bar("n100r5") & labs(title="", x="", y="") & guides(fill="none")
+p3 <- plot_success_prop_stacked_bar("n100r10") & labs(title="") & guides(fill="none")
+p4 <- plot_success_prop_stacked_bar("n200r10") & labs(title="", y="")
+((p1 + p2) / (p3 + p4)) + 
+    plot_layout(tag_level = "new") +
+    plot_annotation(tag_levels = list(c("A (n50r2)", "B (n100r5)", "C (n100r10)", "D (n200r10)")))
 
 ###################################################################
 # HWCD & HWCD W/O MISSING RETIC FIGURES FOR DATA W/ PERTURBATIONS #
@@ -84,8 +104,18 @@ plot_hwcd_heatmap("n50r2", plot_factor = 2)
 plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE)
 plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
 plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
-plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE)
-# plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, mark_minimal = TRUE, subset_facet = TRUE)
+plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25)
+
+p1 <- plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25) & labs(title="", y="") & guides(fill="none")
+p2 <- plot_hwcd_heatmap("n100r5", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25) & labs(title="", y="") & guides(fill="none")
+p3 <- plot_hwcd_heatmap("n100r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25) & labs(title="", y="") & guides(fill="none")
+p4 <- plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25) & labs(title="", y="") & guides(fill="none")
+
+# ISSUE: the fill for each of these has a different scale
+((p1 + p2) / (p3 + p4)) +
+    plot_layout(tag_level = "new") +
+    plot_annotation(tag_levels = list(c("A (n50r2)", "B (n100r5)", "C (n100r10)", "D (n200r10)")))
+
 
 # Heatmap w/ std0 as x-axis
 plot_hwcd_heatmap_std0("n50r2", plot_factor = 10, without_extra_retics = TRUE)

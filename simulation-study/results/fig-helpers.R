@@ -199,12 +199,15 @@ plot_compare_hwcd_with_and_wo_identified_retics <- function(gg_df, sample_size =
 }
 
 
-plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, mark_minimal = FALSE, draw_failures = FALSE, ...) {
+plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, mark_minimal = FALSE, draw_failures = FALSE, only_subset_size = NA, ...) {
     minimal_error_cutoff <- 4
 
     gg_df <- net_df(netid)
     if(!draw_failures) {
         gg_df <- filter(gg_df, estRFerror != -1)
+    }
+    if(!is.na(only_subset_size)) {
+        gg_df <- filter(gg_df, max_subset_size == only_subset_size)
     }
     gg_df$estRFerror[gg_df$estRFerror < 0] <- NA
     gg_df$esterror_without_missing_retics[gg_df$esterror_without_missing_retics < 0] <- NA
@@ -360,7 +363,7 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
     ggplot(gg_df, aes(x = nni_error_level, y = stack_prob, fill = gauss_error_level, group = gauss_error_level)) +
         geom_bar(stat = "identity", color = "black") +
         geom_text(aes(label=paste0(prob, "%")), position = position_stack(vjust = 0.5), color = "white") +
-        labs(x = "Constraint Error Level", y = "Success Probability",
+        labs(x = "Constraint Error Level", y = "Success Probability (%)",
             fill = "Gaussian Noise Level")
 }
 
