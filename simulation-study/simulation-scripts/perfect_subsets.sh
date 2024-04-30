@@ -14,8 +14,8 @@ function run_sim {
 # Restricted params at first so that we can get results to look at
 Nparallel=10
 i=0
-for rep in $(seq 1 5); do
-    for maxsubsetsize in 10 20 25; do
+for rep in $(seq 1 25); do
+    for maxsubsetsize in 5 10 15 20 25 30; do
         for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20; do
             for all_use_outgroup in true false; do
                 if $all_use_outgroup; then
