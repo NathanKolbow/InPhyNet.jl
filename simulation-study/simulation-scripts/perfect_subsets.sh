@@ -12,22 +12,13 @@ function run_sim {
 }
 
 # Restricted params at first so that we can get results to look at
-Nparallel=10
+Nparallel=16
 i=0
 for rep in $(seq 1 25); do
     for maxsubsetsize in 5 10 15 20 25 30; do
-        for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20; do
-            for all_use_outgroup in true false; do
-                if $all_use_outgroup; then
-                    for remove_after_reroot in true false; do
-                        ((i=i%Nparallel)); ((i++==0)) && wait
-                        run_sim ${top} ${rep} ${maxsubsetsize} ${all_use_outgroup} ${remove_after_reroot} &
-                    done
-                else
-                    ((i=i%Nparallel)); ((i++==0)) && wait
-                    run_sim ${top} ${rep} ${maxsubsetsize} ${all_use_outgroup} ${remove_after_reroot} &
-                fi
-            done
+        for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20 n500r25 n1000r50; do
+            ((i=i%Nparallel)); ((i++==0)) && wait
+            run_sim ${top} ${rep} ${maxsubsetsize} false false &
         done
     done
 done
