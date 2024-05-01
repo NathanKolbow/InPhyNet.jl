@@ -125,6 +125,7 @@ end
 
 function find_problematic_constraints(D, constraints, namelist)
     prob_constraints = Vector{HybridNetwork}([])
+    
     for c in constraints
         try
             netnj(D, [c], namelist)

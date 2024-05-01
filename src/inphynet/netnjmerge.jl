@@ -461,11 +461,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # println("Before any operations:\n\t$(writeTopology(net))")
 
         # find shortest path from `nodei` to `nodej`
-        graph = Graph(net, includeminoredges=true)
+        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.01)
 
         idxnodei = findfirst(net.node .== [nodei])
         idxnodej = findfirst(net.node .== [nodej])
-        edgepath = a_star(graph, idxnodei, idxnodej)
+        edgepath = a_star(graph, idxnodei, idxnodej, W)
 
         nodesinpath = Array{Node}(undef, length(edgepath)+1)
         edgesinpath = Array{Edge}(undef, length(edgepath))
@@ -565,7 +565,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                         #                    and the minor edge is OUTSIDE the path, then we need to log
                         #                    the other half of it now
                         if length(net.leaf) == 2
-                            logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgej, subnetedgei), ifelse(fromorto == "from", "to", "from"))
+                            # We use trylogretic_single! b/c this retic may have already been logged previously in this iteration
+                            trylogretic_single!(reticmap, edge, ifelse(relevanttoi, subnetedgej, subnetedgei), ifelse(fromorto == "from", "to", "from"))
                         end
                     end
                 else
@@ -594,6 +595,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             elseif sum(isminorhyb) == 2
                 hyb_edges = node_edges[isminorhyb]
                 if hyb_edges[1] in edgesinpath && hyb_edges[2] in edgesinpath
+                    @info "($(nodei.name), $(nodej.name))"
+                    @info getchild(hyb_edges[1]).name
+                    @info getchild(hyb_edges[2]).name
+                    @info hyb_edges[1].number
+                    @info hyb_edges[2].number
                     error("Unaccounted for scenario.")
                 end
 
@@ -799,7 +805,7 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
     hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
     if (length(hybedges) == 0 || major_tree_only) hybedges = [nothing] end
     for hybedge in hybedges
-        graph = Graph(net, includeminoredges=false, alwaysinclude=hybedge)
+        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.01)
         InPhyNet.removeredundantedges!(graph, keeproot=net)
         
         for nodei_idx in 1:(net.numTaxa-1)
@@ -810,7 +816,7 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
 
                 idxnodei = findfirst(net.node .== [nodei])
                 idxnodej = findfirst(net.node .== [nodej])
-                edgepath = a_star(graph, idxnodei, idxnodej)
+                edgepath = a_star(graph, idxnodei, idxnodej, W)
 
                 nodesinpath = Array{Node}(undef, length(edgepath)+1)
                 for (i, gedge) in enumerate(edgepath)

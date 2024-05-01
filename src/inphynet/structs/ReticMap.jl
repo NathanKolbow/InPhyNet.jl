@@ -29,6 +29,13 @@ function trylogretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromo
     end
 end
 
+function trylogretic_single!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+    try
+        logretic!(r, constraintedge, subnetedge, fromorto)
+    catch e
+    end
+end
+
 function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
     # If we're double logging identical edges then return w/o error
     if haskey(r.map, constraintedge)
