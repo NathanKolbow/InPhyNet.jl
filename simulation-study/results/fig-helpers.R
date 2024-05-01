@@ -2,6 +2,7 @@ library(ggplot2)
 library(tidyverse)
 library(hash)
 library(patchwork)
+library(cowplot)
 options(dplyr.summarise.inform = FALSE)
 theme_set(theme_half_open())
 
@@ -41,7 +42,8 @@ read_df <- function() {
             constraint_sizes = NULL,    # not using these for now
             all_have_outgroup = as.logical(all_have_outgroup),
             outgroup_removed_after_reroot = as.logical(outgroup_removed_after_reroot)
-        )
+        ) %>%
+        filter()
     
     # Stitch the std0 values in
     # print("Stitching std0")

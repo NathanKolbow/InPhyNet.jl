@@ -1,6 +1,5 @@
 library(tidyverse)
 library(ggplot2)
-library(cowplot)
 source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/fig-helpers.R")
 
 
@@ -104,6 +103,7 @@ plot_hwcd_heatmap("n50r2", plot_factor = 2)
 plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE)
 plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
 plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = TRUE)
+plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE)
 plot_hwcd_heatmap("n200r10", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25)
 
 p1 <- plot_hwcd_heatmap("n50r2", plot_factor = 2, without_extra_retics = TRUE, subset_facet = FALSE, only_subset_size = 25) & labs(title="", y="") & guides(fill="none")
