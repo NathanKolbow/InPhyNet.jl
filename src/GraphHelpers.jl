@@ -23,7 +23,7 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         if haskey(nodemap, enode1) && haskey(nodemap, enode2)
             add_edge!(graph, nodemap[enode1], nodemap[enode2])
             if withweights
-                weight = edge.length
+                weight = 1
                 if edge.hybrid && !edge.isMajor
                     weight = minoredgeweight
                 elseif edge.length == -1.
@@ -31,7 +31,7 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
                 end
                 
                 weights[nodemap[enode1], nodemap[enode2]] =
-                    weights[nodemap[enode2], nodemap[enode1]] = ifelse(edge.length == -1., 1, edge.length)
+                    weights[nodemap[enode2], nodemap[enode1]] = weight
             end
         end
     end
