@@ -486,24 +486,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             newtip = getparent(newtip)
         end
         
-        # newtip = nothing
-        # for node in nodesinpath
-        #     if node.leaf continue end
-        #     isnewtip = true
-        #     for edge in node.edge
-        #         if edge.hybrid && !edge.isMajor
-        #             isnewtip = false
-        #             break
-        #         end
-        #     end
-        #     if isnewtip
-        #         newtip = node
-        #         break
-        #     end
-        # end
-        # @show newtip
-        # @show [n.name for n in nodesinpath]
-        
         ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
         hybedge = nothing
         hybedgelogged = false
@@ -559,7 +541,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         relevanttoi = true
         edgeinpath_logged = false
         for (node_idx, node) in enumerate(nodesinpath)
-            ######## NEW VERSION ########
             node_edges = node.edge
             isminorhyb = [e.hybrid && !e.isMajor for e in node_edges]
 
@@ -579,6 +560,13 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     
                         logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                         if edge == hybedge hybedgelogged = true end
+
+                        # Special edge case: constraint only has 2 leaves (i.e. this is its last merge)
+                        #                    and the minor edge is OUTSIDE the path, then we need to log
+                        #                    the other half of it now
+                        if length(net.leaf) == 2
+                            logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgej, subnetedgei), ifelse(fromorto == "from", "to", "from"))
+                        end
                     end
                 else
                     # Edge *IS* traversed in the path
@@ -602,6 +590,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                         edgeinpath_logged = true
                     end
                 end
+
             elseif sum(isminorhyb) == 2
                 hyb_edges = node_edges[isminorhyb]
                 if hyb_edges[1] in edgesinpath && hyb_edges[2] in edgesinpath
@@ -658,24 +647,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             if node == newtip
                 relevanttoi = false
             end
-            ######## NEW VERSION ########
-
-            ######## OLD VERSION ########
-            # for edge in node.edge
-            #     if edge.hybrid && !edge.isMajor
-            #         fromorto = ifelse(getChild(edge) == node, "to", "from")
-            #         if subnetedgei == subnetedgej
-            #             @error("equiv edges C")
-            #         end
-
-            #         if !hybedgelogged || edge != hybedge
-            #             println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-            #             logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
-            #             relevanttoi = false
-            #         end
-            #     end
-            # end
-            ######## OLD VERSION ########
         end
 
         # purge all the nodes we've passed through to this point from the network
