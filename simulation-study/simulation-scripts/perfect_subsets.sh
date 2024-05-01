@@ -15,8 +15,19 @@ function run_sim {
 Nparallel=16
 i=0
 for rep in $(seq 1 25); do
-    for maxsubsetsize in 5 10 15 20 25 30; do
-        for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20 n500r25 n1000r50; do
+    for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20; do
+        for maxsubsetsize in 5 10 15 20 25 30; do
+            ((i=i%Nparallel)); ((i++==0)) && wait
+            run_sim ${top} ${rep} ${maxsubsetsize} false false &
+        done
+    done
+done
+
+Nparallel=16
+i=0
+for rep in $(seq 1 25); do
+    for top in n500r25 n500r50 n1000r50 n1000r100; do
+        for maxsubsetsize in 5 10 15 20 25 30; do
             ((i=i%Nparallel)); ((i++==0)) && wait
             run_sim ${top} ${rep} ${maxsubsetsize} false false &
         done
