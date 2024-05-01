@@ -9,7 +9,6 @@ theme_set(theme_half_open())
 # Color palettes
 GRAD_N3_PALETTE <- c("#deebf7", "#9ecae1", "#51a0d8")
 GRAD_N7_PALETTE <- rainbow(7)
-#c('#b2182b','#ef8a62','#fddbc7','#f7f7f7','#d1e5f0','#67a9cf','#2166ac')
 
 ########################
 ##### Data loading #####
@@ -44,33 +43,37 @@ read_df <- function() {
             outgroup_removed_after_reroot = as.logical(outgroup_removed_after_reroot)
         ) %>%
         filter()
-    
-    # Stitch the std0 values in
-    # print("Stitching std0")
-    # time_start <- Sys.time()
-    # full_df$std0 <- -1
-    # std0_hash <- hash()
-    # for(i in 1:nrow(df_std0)) {
-    #     row <- df_std0[i,]
-    #     std0_hash[[paste0(row$net_id, "_", row$replicate_num)]] <- row$D_std
-    # }
-
-    # for(netid in unique(full_df$netid)) {
-    #     idx_filt <- full_df$netid == netid
-    #     for(repnum in 1:100) {
-    #         iter_filt <- idx_filt & full_df$replicate_num == repnum
-    #         if(any(iter_filt)) {
-    #             full_df[iter_filt, ]$std0 <- std0_hash[[paste0(netid, "_", repnum)]]
-    #         }
-    #     }
-    # }
-    # elaps <- difftime(Sys.time(), time_start, units="secs")
 
     print("Skipping stitch step")
     full_df
 }
 df <- read_df()
 no_noise_df <- filter(df, gauss_error == 0 & constraint_error_sum == 0)
+
+
+net_df_with_std0 <- function(netid_filter) {
+    temp_df <- net_df(netid_filter)
+
+    # Stitch the std0 values in
+    time_start <- Sys.time()
+    temp_df$std0 <- -1
+    std0_hash <- hash()
+    for(i in 1:nrow(df_std0)) {
+        row <- df_std0[i,]
+        std0_hash[[paste0(row$net_id, "_", row$replicate_num)]] <- row$D_std
+    }
+
+    for(netid in unique(temp_df$netid)) {
+        idx_filt <- temp_df$netid == netid
+        for(repnum in 1:100) {
+            iter_filt <- idx_filt & temp_df$replicate_num == repnum
+            if(any(iter_filt)) {
+                temp_df[iter_filt, ]$std0 <- std0_hash[[paste0(netid, "_", repnum)]]
+            }
+        }
+    }
+    temp_df
+}
 
 
 add_error_bins <- function(df) {
@@ -201,13 +204,10 @@ plot_compare_hwcd_with_and_wo_identified_retics <- function(gg_df, sample_size =
 }
 
 
-plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, mark_minimal = FALSE, draw_failures = FALSE, only_subset_size = NA, ...) {
-    minimal_error_cutoff <- 4
-
+plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, draw_alpha = TRUE, only_subset_size = NA, ...) {
     gg_df <- net_df(netid)
-    if(!draw_failures) {
-        gg_df <- filter(gg_df, estRFerror != -1)
-    }
+    if(use_std0) gg_df <- net_df_with_std0(netid)
+
     if(!is.na(only_subset_size)) {
         gg_df <- filter(gg_df, max_subset_size == only_subset_size)
     }
@@ -216,7 +216,7 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
     gg_df$estRFerror_compare <- gg_df$estRFerror
     gg_df$estRFerror_compare[gg_df$estRFerror_compare < 0] <- Inf
 
-    if(use_std0) gg_df$gauss_error <- gg_df$gauss_error / gg_df$std0
+    if(use_std0) gg_df$gauss_error <- gg_df$std0 / (gg_df$gauss_error + gg_df$std0)
     gg_df <- gg_df %>%
         mutate(gauss_error_rounded = round(plot_factor * gauss_error, digits = 1) / plot_factor)
     
@@ -232,44 +232,46 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
             summarise(
                 mean_estRFerror = mean(estRFerror, na.rm = TRUE),
                 mean_estRFerror_wo_retics = mean(esterror_without_missing_retics, na.rm = TRUE),
-                any_with_minimal_error = any(estRFerror_compare <= minimal_error_cutoff), 1, 0)
-            #      %>%
-            # mutate(minimal_error_alpha = ifelse(any_with_minimal_error, 1, 0))
+                tile_alpha = mean(!is.na(estRFerror))) %>%
+            filter(tile_alpha > 0)
+    if(!draw_alpha) {
+        gg_df$tile_alpha <- 1
+    }
 
     p <- NULL
     # Plot either HWCD w/ all retics or w/o unidentified retics
     if(without_extra_retics) {
-        p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror_wo_retics)) +
-            geom_tile(width = tile_width, height = tile_height, ...) +
-            scale_fill_gradientn(limits = c(0, max(gg_df$mean_estRFerror)),
-            colors = GRAD_N7_PALETTE, na.value = "lightgray")
+        p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror_wo_retics, alpha = tile_alpha))
     } else {
-        p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror)) +
-            geom_tile(width = tile_width, height = tile_height, ...) +
-            scale_fill_gradientn(limits = c(0, max(gg_df$mean_estRFerror)),
-            colors = GRAD_N7_PALETTE, na.value = "lightgray")
+        p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror, alpha = tile_alpha))
     }
-
-    if(mark_minimal) {
-        p <- p +
-            geom_point(aes(alpha = minimal_error_alpha), color = "black", shape = 4) +
-            guides(alpha = "none")
-    }
+    p <- p +
+        geom_tile(width = tile_width, height = tile_height, ...) +
+        scale_fill_gradientn(limits = c(0, max(gg_df$mean_estRFerror)),
+        colors = GRAD_N7_PALETTE, na.value = "transparent")
 
     # Facet if we want to facet
     if(subset_facet) {
         p <- p + facet_wrap(~ max_subset_size)
     }
 
+    if(draw_alpha) {
+        p <- p +
+            scale_alpha_continuous(range = c(0.1, 1)) & labs(alpha = "Success Probability")
+    } else {
+        p <- p & guides(alpha = NULL)
+    }
+
     # Add labels
-    p + labs(
-        x = ifelse(use_std0, "std0 Multiplier", "Gaussian Noise = N(x, x)"),
+    p <- p + labs(
+        x = ifelse(use_std0, "% Signal", "Gaussian Noise = N(x, x)"),
         y = "Sum of Constraint Errors (HWCD)",
         title = ifelse(without_extra_retics, "HWCD(true net w/o unidentified retics, est net)", "HWCD(true net, est net)"),
         fill = "HWCD"
     )
-}
 
+    p
+}
 
 plot_hwcd_heatmap_std0 <- function(netid, ...) {
     plot_hwcd_heatmap(netid, use_std0 = TRUE, ...)
@@ -370,19 +372,21 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
 }
 
 
-plot_no_noise_hwcd <- function(without_extra_retics = FALSE) {
+plot_no_noise_hwcd <- function() {
     gg_df <- no_noise_df %>%
         filter(estRFerror != -1) %>%
         group_by(max_subset_size, netid) %>%
-        summarise(mean_RF = mean(estRFerror))
+        summarise(mean_RF = mean(estRFerror),
+            sd_RF = sd(estRFerror))
     
     ggplot(gg_df, aes(x = max_subset_size, y = mean_RF, color = netid)) +
         geom_line() +
         geom_point() +
+        geom_errorbar(aes(x = max_subset_size, ymin = mean_RF - sd_RF, ymax = mean_RF + sd_RF), width=0.2, alpha=1) +
         scale_x_continuous(breaks=c(5, 10, 15, 20, 25, 30)) +
         geom_abline(slope=0, intercept=0, linetype="dashed", color="black", alpha=0.5)
 }
-
+plot_no_noise_hwcd()
 
 plot_no_noise_success_props <- function(netid) {
     gg_df <- no_noise_df %>%

@@ -122,3 +122,25 @@ function try_outgroup_root(net::HybridNetwork)
     catch
     end
 end
+
+
+
+
+
+
+function collect_retry_data(netfile_name::String)
+    data_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/data/"
+    netid, replicatenum, ngt, seq_len, ils_level, maxsubsetsize, dmethod = split(netfile_name, "_")[2:8]
+    netid = String(netid)
+    replicatenum = parse(Int64, replicatenum)
+    ngt = parse(Int64, ngt)
+    seq_len = parse(Int64, seq_len)
+    maxsubsetsize = parse(Int64, maxsubsetsize)
+    ils_level = String(ils_level)
+
+    est_constraints = readMultiTopology(joinpath(data_dir, netfile_name))
+    est_gts = readMultiTopology(joinpath(data_dir, "estgt_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).treefile"))
+    est_D, est_namelist = calculateAGIC(est_gts)
+
+    return est_constraints, est_D, est_namelist
+end
