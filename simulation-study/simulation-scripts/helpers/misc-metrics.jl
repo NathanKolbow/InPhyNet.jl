@@ -51,7 +51,7 @@ function get_error_without_missing_retics(true_net::HybridNetwork, mnet::HybridN
     true_hybs = true_net_copy.hybrid
     mnet_hybs = mnet.hybrid
     retics_to_remove = setdiff([h.name for h in true_hybs], [h.name for h in mnet_hybs])
-    retics_to_remove = intersect(retics_to_remove, true_hybs)
+    retics_to_remove = intersect(retics_to_remove, [h.name for h in true_hybs])
     
     for retic_name in retics_to_remove
         hybnode = true_hybs[findfirst([h.name for h in true_hybs] .== retic_name)]
