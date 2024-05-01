@@ -319,7 +319,6 @@ function getNetDistances(truenet, estnet)
             rootatnode!(estnet, "OUTGROUP")
             return hardwiredClusterDistance(truenet, estnet, true)
         catch e
-            # TODO: figure out why this line sometimes gives an error that __placeholder... isn't in the species list of the other network
             return hardwiredClusterDistance(truenet, estnet, true)
         end
     elseif truenet.numTaxa > 50
@@ -403,27 +402,32 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         return esterror, error_without_missing_retics, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
         trace = stacktrace()
-        if typeof(e) != InPhyNet.SolutionDNEError && typeof(e) != InPhyNet.ConstraintError
+        if !(typeof(e) <: InPhyNet.SolutionDNEError) && !(typeof(e) <: InPhyNet.ConstraintError)
             error_folder = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_logs/"
-            id = abs(rand(Int64))
-            logfile = joinpath(error_folder, "error_$(id).log")
 
-            open(logfile, "a") do f
-                write(f, "---- $(now()) ----\n")
-                write(f, "Constraints after NNI:\n")
-    
-                for c in tempcs write(f, "$(writeTopology(c))\n") end
-                write(f, "\nTrue net: \n")
-                write(f, "$(writeTopology(truenet))\n")
-                write(f, "gaussSd: $(gaussSd)\n")
-    
-                d_path = joinpath(error_folder, "dmat_$(id).csv")
-                write(f, "SAVING DISTANCE MATRIX TO \"$(d_path)\"")
-                CSV.write(d_path, DataFrame(copyD, :auto))
-    
-                write(f, "\nStack trace:\n")
-                for stk in trace write(f, "$(stk)\n") end
-                write(f, "\n--------------------------------\n")
+            # Only write the error if the error_logs folder has less than 10 records (10 .csv's + 10 .log's = 20)
+            if length(readdir(error_folder)) < 20
+                id = abs(rand(Int64))
+                logfile = joinpath(error_folder, "error_$(id).log")
+
+                open(logfile, "a") do f
+                    write(f, "---- $(now()) ----\n")
+                    write(f, "Constraints after NNI:\n")
+        
+                    for c in tempcs write(f, "$(writeTopology(c))\n") end
+                    write(f, "\nTrue net: \n")
+                    write(f, "$(writeTopology(truenet))\n")
+                    write(f, "gaussSd: $(gaussSd)\n")
+        
+                    d_path = joinpath(error_folder, "dmat_$(id).csv")
+                    write(f, "SAVING DISTANCE MATRIX TO \"$(d_path)\"")
+                    CSV.write(d_path, DataFrame(copyD, :auto))
+        
+                    write(f, "\n\nStack trace:\n")
+                    write(f, "$(typeof(e))")
+                    for stk in trace write(f, "$(stk)\n") end
+                    write(f, "\n--------------------------------\n")
+                end
             end
             return -2, -2, -2, constraintdiffs, "", -2  # -2's get wiped from the data before being saved to CSV
         elseif typeof(e) == InPhyNet.SolutionDNEError
