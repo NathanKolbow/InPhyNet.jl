@@ -67,7 +67,7 @@ end
 @info "Simulating sequences"
 seq_file_prefix = joinpath(data_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).phy")
 Random.seed!(seed)
-seq_files = simulate_sequence_data(gts, truegt_file, seq_file_prefix)
+seq_files = simulate_sequence_data(Vector{HybridNetwork}(gts), truegt_file, seq_file_prefix)
 
 # 4. infer gene trees w/ iqtree
 @info "Inferring gene trees"
