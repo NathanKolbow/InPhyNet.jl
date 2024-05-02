@@ -15,7 +15,7 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
     graph = SimpleGraph(net.numNodes)
     weights = Matrix{Float64}(undef, net.numNodes, net.numNodes)
     weights .= Inf
-    nodemap = Dict{Node, Int64}(n => i for (i, n) in enumerate(net.node))   # 10x faster for n100r5 than using `findfirst`
+    nodemap = Dict{Node, Int64}(node => idx for (idx, node) in enumerate(net.node))
     for edge in net.edge
         if !includeminoredges && edge.hybrid && !edge.isMajor && edge != alwaysinclude continue end
         enode1 = edge.node[1]
@@ -48,7 +48,7 @@ end
 Helper function that removes redundant edges in the graph that exist
 when some hybrids are pruned from the graph.
 """
-function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,HybridNetwork}=nothing)
+function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,HybridNetwork}=nothing, W::Union{Nothing,Matrix{Float64}}=nothing)
     rootidx = -1
     if keeproot !== nothing
         rootidx = keeproot.root
@@ -61,13 +61,19 @@ function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,Hybri
         end
     end
 
-    if length(redundantidxs) == 0 return end
+    if length(redundantidxs) == 0 return [] end
     for idx in redundantidxs
         from = graph.fadjlist[idx][1]
         to = graph.fadjlist[idx][2]
         
         vecreplace!(graph.fadjlist[from], idx, to)
         vecreplace!(graph.fadjlist[to], idx, from)
+
+        if W !== nothing
+            W[from, to] = W[to, from] = mean([W[from, idx], W[to, idx]])
+            W[from, idx] = W[idx, from] = W[to, idx] = W[idx, to] = 0.
+        end
+
         graph.fadjlist[idx] = []
     end
     return redundantidxs
