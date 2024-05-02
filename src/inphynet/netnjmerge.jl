@@ -98,7 +98,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
         
         # Find optimal (i, j) idx pair for matrix Q
-        i, j = findoptQidx(D, possible_siblings)
+        i, j = findoptQidx(D, possible_siblings, namelist=namelist)
         @debug "(i, j) = ($(i), $(j))"
 
         # connect subnets i and j
@@ -700,11 +700,14 @@ end
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
 TIEWARNING = false
-function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer})
+function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; namelist=nothing)
     global TIEWARNING
 
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
+        if namelist !== nothing
+            @show namelist
+        end
         throw(SolutionDNEError())
     end
 
@@ -802,11 +805,12 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
     pairs .= false
 
     # new, simpler method just using Graphs.jl
-    hybedges = [edge for edge in net.edge if (edge.hybrid && !edge.isMajor)]
-    if (length(hybedges) == 0 || major_tree_only) hybedges = [nothing] end
+    hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.isMajor)])
+    push!(hybedges, nothing)
+
     for hybedge in hybedges
-        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.01)
-        InPhyNet.removeredundantedges!(graph, keeproot=net)
+        graph, W = Graph(net, includeminoredges=false, alwaysinclude=hybedge, withweights=true, minoredgeweight=1.01)
+        InPhyNet.removeredundantedges!(graph, W=W, keeproot=net)
         
         for nodei_idx in 1:(net.numTaxa-1)
             nodei = net.leaf[nodei_idx]
@@ -826,8 +830,12 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
                     if i == 1 nodesinpath[1] = net.node[gedge.src] end
                     nodesinpath[i+1] = dstnode
                 end
+                nodeinpath_leads_to_hybrid = [any(edge.hybrid for edge in node.edge) for node in nodesinpath]
 
-                if length(edgepath) == 2 || length(edgepath) == 1 || (length(edgepath) == 3 && any([(hybedge in n.edge) for n in nodesinpath]))
+                if length(edgepath) <= 2 ||
+                    (length(edgepath) == 3 && any((hybedge in n.edge) for n in nodesinpath)) ||
+                    length(edgepath) - sum(nodeinpath_leads_to_hybrid) <= 2
+                
                     pairs[nodei_idx, nodej_idx] = true
                 end
             end
