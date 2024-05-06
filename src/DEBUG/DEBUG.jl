@@ -1,7 +1,7 @@
 using Revise
 using InPhyNet, PhyloNetworks, CSV, DataFrames
 
-include("debug-helpers.jl")
+include("/mnt/dv/wid/projects4/SolisLemus-network-merging/src/DEBUG/debug-helpers.jl")
 
 
 # Get rid of non-reproducible errors
@@ -13,7 +13,7 @@ while true
         remove_error_files(error_id)
     catch e
         if typeof(e) <: SolutionDNEError
-            println("SolutionDNEError in $(error_id), removing.")
+            @info "SolutionDNEError in $(error_id), removing."
             remove_error_files(error_id)
         else
             @info "Found case for netid n$(truenet.numTaxa-1)r$(truenet.numHybrids) ($(typeof(e)), $(error_id))"
