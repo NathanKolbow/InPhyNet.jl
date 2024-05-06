@@ -401,7 +401,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
         error_without_missing_retics = get_error_without_missing_retics(truenet, mnet)
         return esterror, error_without_missing_retics, majortreeRF, constraintdiffs, writeTopology(mnet), mnet.numHybrids
     catch e
-        trace = stacktrace()
+        trace = catch_backtrace()
         if !(typeof(e) <: InPhyNet.SolutionDNEError) && !(typeof(e) <: InPhyNet.ConstraintError)
             error_folder = "/mnt/dv/wid/projects4/SolisLemus-network-merging/error_logs/"
 
@@ -424,8 +424,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
                     CSV.write(d_path, DataFrame(copyD, :auto))
         
                     write(f, "\n\nStack trace:\n")
-                    write(f, "$(typeof(e))")
-                    for stk in trace write(f, "$(stk)\n") end
+                    Base.show_backtrace(f, trace)
                     write(f, "\n--------------------------------\n")
                 end
             end
