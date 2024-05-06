@@ -31,6 +31,7 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
+cs = [constraints[96]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
