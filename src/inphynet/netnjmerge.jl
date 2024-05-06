@@ -957,14 +957,13 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
         
         for nodei_idx in 1:(net.numTaxa-1)
             nodei = net.leaf[nodei_idx]
+            idxnodei = findfirst(net.node .== [nodei])
 
             for nodej_idx in (nodei_idx+1):net.numTaxa
                 nodej = net.leaf[nodej_idx]
-
-                idxnodei = findfirst(net.node .== [nodei])
                 idxnodej = findfirst(net.node .== [nodej])
-                edgepath = a_star(graph, idxnodei, idxnodej, W)
 
+                edgepath = a_star(graph, idxnodei, idxnodej, W)
                 nodesinpath = Array{Node}(undef, length(edgepath)+1)
                 for (i, gedge) in enumerate(edgepath)
                     srcnode = net.node[gedge.src]
