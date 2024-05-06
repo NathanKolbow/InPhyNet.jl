@@ -95,6 +95,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     while n > 1
         # DEBUG STATEMENT
         # @show n
+        
         possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
         
         # Find optimal (i, j) idx pair for matrix Q
@@ -775,15 +776,25 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
         end
 
-        # before deleting nodes, if any nodes are (1) a hybrid, (2) just above a leaf, (3) have a hybrid just above its minor edge parent,
-        # they are an edge case that we deal with here
+        ############################
+        ######## EDGE CASES ########
+        ############################
+
+        # if any nodes are (1) a hybrid, (2) just above a leaf, (3) have a hybrid just above its minor edge parent,
+        # they are an edge case
         relevanttoi = true
         for node in nodesinpath
             # Only interested in hybrid nodes
-            if !node.hybrid continue end
+            if !node.hybrid
+                if node == newtip relevantoi = false end
+                continue
+            end
 
             # Skip if it doesn't have a minor parent
-            try getparentedgeminor(node) catch e continue end
+            try getparentedgeminor(node) catch e
+                if node == newtip relevantoi = false end
+                continue
+            end
 
             buggy_ancestor = getparent(getparentedgeminor(node))
             if any(child.leaf for child in getchildren(node)) && any(parent.hybrid for parent in getparents(buggy_ancestor))
@@ -800,6 +811,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
             if node == newtip relevantoi = false end
         end
+
+        ############################
+        ############################
+        ############################
 
         # purge all the nodes we've passed through to this point from the network
         for node in nodesinpath
