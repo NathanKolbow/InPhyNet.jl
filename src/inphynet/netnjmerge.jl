@@ -417,11 +417,34 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         nodei.edge = []
     elseif length(net.leaf) == 2
         # Some retics may still exist in the net, but only 2 leaves are left, so clean up
-        
+        nodes_above_nodei = []
+        nodes_above_nodej = []
+        search_node = nodei
+        while search_node != net.node[net.root]
+            push!(nodes_above_nodei, search_node)
+            try
+                search_node = getparent(getparentedge(search_node))
+            catch
+                search_node = getparent(getparentedgeminor(search_node))
+            end
+        end
+        search_node = nodej
+        while search_node != net.node[net.root]
+            push!(nodes_above_nodej, search_node)
+            try
+                search_node = getparent(getparentedge(search_node))
+            catch
+                search_node = getparent(getparentedgeminor(search_node))
+            end
+        end
+        push!(nodes_above_nodei, net.node[net.root])
+        push!(nodes_above_nodej, net.node[net.root])
+        mrca = intersect(nodes_above_nodei, nodes_above_nodej)[1]
+
         # Find all retics that come from nodei
         search_node = nodei
         hybedges_i = []
-        while !(net.node[net.root] in getparents(search_node))
+        while !(mrca in getparents(search_node))
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
@@ -431,7 +454,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     search_node = getparent(getparentedgeminor(search_node))
                 end
             end
-            
+
             for edge in search_node.edge
                 if edge.hybrid && !edge.isMajor
                     if getchild(edge) == search_node
@@ -457,7 +480,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # Find all retics that come from nodej
         search_node = nodej
         hybedges_j = []
-        while !(net.node[net.root] in getparents(search_node))
+        while !(mrca in getparents(search_node))
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
@@ -492,8 +515,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         hybedges_i = unique(hybedges_i)
         hybedges_j = unique(hybedges_j)
-        @show hybedges_i
-        @show hybedges_j
 
         # Try to log the retics (some of them may already be logged, so use trylog)
         for (edge, direction) in hybedges_i
@@ -752,6 +773,32 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             if node == newtip
                 relevanttoi = false
             end
+        end
+
+        # before deleting nodes, if any nodes are (1) a hybrid, (2) just above a leaf, (3) have a hybrid just above its minor edge parent,
+        # they are an edge case that we deal with here
+        relevanttoi = true
+        for node in nodesinpath
+            # Only interested in hybrid nodes
+            if !node.hybrid continue end
+
+            # Skip if it doesn't have a minor parent
+            try getparentedgeminor(node) catch e continue end
+
+            buggy_ancestor = getparent(getparentedgeminor(node))
+            if any(child.leaf for child in getchildren(node)) && any(parent.hybrid for parent in getparents(buggy_ancestor))
+                parent_hybrid = getparents(buggy_ancestor)[findfirst(parent.hybrid for parent in getparents(buggy_ancestor))]
+                hyb_edge = nothing
+                try
+                    # If this fails, then the minor edge has already been removed (i.e. logged) and we can just move on
+                    hyb_edge = getparentedgeminor(parent_hybrid)
+                catch
+                    if node == newtip relevantoi = false end
+                    continue
+                end
+                logretic!(reticmap, hyb_edge, ifelse(relevanttoi, subnetedgei, subnetedgej), "to")
+            end
+            if node == newtip relevantoi = false end
         end
 
         # purge all the nodes we've passed through to this point from the network
