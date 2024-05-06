@@ -31,8 +31,9 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
-cs = constraints[3:4]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
+netnj(D_reduced, cs, namelist_reduced)
+
 
 #### DEBUG ####
 
@@ -52,43 +53,18 @@ InPhyNet.removeplaceholdernames!(mnet)
 
 
 # MWE
-net = readTopology("(((A)#H1,B),#H1);")
-r = InPhyNet.ReticMap([net])
+net = readTopology(writeTopology(cs[1]))
 
-nodei = net.leaf[1]
-nodej = net.leaf[2]
+D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed = step_inphynet_starter_vars(D_reduced, [net], namelist_reduced)
 
-graph = InPhyNet.Graph(net, includeminoredges=true)
-
-idxnodei = findfirst(net.node .== [nodei])
-idxnodej = findfirst(net.node .== [nodej])
-edgepath = a_star(graph, idxnodei, idxnodej)
-
-nodesinpath = Array{Node}(undef, length(edgepath)+1)
-edgesinpath = Array{Edge}(undef, length(edgepath))
-for (i, gedge) in enumerate(edgepath)
-    srcnode = net.node[gedge.src]
-    dstnode = net.node[gedge.dst]
-
-    if i == 1 nodesinpath[1] = net.node[gedge.src] end
-    nodesinpath[i+1] = dstnode
-
-    netedge = filter(e -> (srcnode in e.node) && (dstnode in e.node), dstnode.edge)[1]
-    edgesinpath[i] = netedge
+for i=1:11
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+    step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
 end
 
-# find the node that should be the new tip after merging
-newtip = nodesinpath[1]
-while length(getparents(newtip)) > 0 && getparent(newtip) in nodesinpath
-    newtip = getparent(newtip)
-end
-
-
-
-
-
-InPhyNet.updateconstraints!("A", "B", [net], r, Edge(-1), Edge(-1))
-sum(r.map[collect(keys(r.map))[1]] .!== nothing) > 1
+#
+D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
 ###############
 
 
