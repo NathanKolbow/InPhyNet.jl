@@ -388,10 +388,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
-    # println("merging ($(nodei.name), $(nodej.name))")
+    @debug "merging ($(nodei.name), $(nodej.name))"
 
     if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
-        # println("a: ($(nodei.name), $(nodej.name))")
+        @debug "a: ($(nodei.name), $(nodej.name))"
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
         for edge in net.edge
@@ -418,9 +418,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     elseif parentsi == parentsj && (parentsi == net.node[net.root] || length(getchildren(parentsi)) > 2)
         # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
         # e.g., this case would happen when joining a & b in (a, b, c, d)
+        @debug "b0: ($(nodei.name), $(nodej.name))"
         deleteleaf!(net, nodej) # yup, this is all we have to do.
     elseif parentsi == parentsj
-        # println("b: ($(nodei.name), $(nodej.name))")
+        @debug "b: ($(nodei.name), $(nodej.name))"
         # 04/25/2024:   (this note is written well after this code was first written)
         #               this code could likely be simplified almost entirely
         #               to just `deleteleaf!(nodei)`
@@ -457,7 +458,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
     else
-        # println("c: ($(nodei.name), $(nodej.name))")
+        @debug "c: ($(nodei.name), $(nodej.name))"
         # println("Before any operations:\n\t$(writeTopology(net))")
 
         # find shortest path from `nodei` to `nodej`
@@ -705,9 +706,6 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; 
 
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
-        if namelist !== nothing
-            @show namelist
-        end
         throw(SolutionDNEError())
     end
 
@@ -830,12 +828,10 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
                     if i == 1 nodesinpath[1] = net.node[gedge.src] end
                     nodesinpath[i+1] = dstnode
                 end
-                nodeinpath_leads_to_hybrid = [any(edge.hybrid for edge in node.edge) for node in nodesinpath]
 
                 if length(edgepath) <= 2 ||
-                    (length(edgepath) == 3 && any((hybedge in n.edge) for n in nodesinpath)) ||
-                    length(edgepath) - sum(nodeinpath_leads_to_hybrid) <= 2
-                
+                    (length(edgepath) == 3 && any((hybedge in n.edge) for n in nodesinpath))
+                    
                     pairs[nodei_idx, nodej_idx] = true
                 end
             end
