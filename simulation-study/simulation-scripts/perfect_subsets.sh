@@ -8,7 +8,7 @@ function run_sim {
     remove_after_reroot=$5
 
     echo "${netid} ${rep} ${m} ${dmethod} ${all_use_outgroup} ${remove_after_reroot} ${nsim}"
-    julia --project=../.. -t8 ./perfect_subsets.jl ${netid} ${rep} ${m} ${dmethod} ${all_use_outgroup} ${remove_after_reroot} ${nsim}
+    julia --project=../.. -t4 ./perfect_subsets.jl ${netid} ${rep} ${m} ${dmethod} ${all_use_outgroup} ${remove_after_reroot} ${nsim}
 }
 
 # n50 & n100 & n200
