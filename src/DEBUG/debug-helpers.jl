@@ -36,7 +36,7 @@ end
 
 function step_inphynet_starter_vars(D, constraints, namelist)
     D_iter = deepcopy(D)
-    cs_iter = deepcopy(cs)
+    cs_iter = deepcopy(constraints)
     namelist_iter = deepcopy(namelist)
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:length(namelist)])
     reticmap = reticmap = ReticMap(cs_iter)
@@ -82,6 +82,7 @@ function step_inphynet!(D, constraints, namelist, subnets, reticmap, rootretics,
     
     # Find optimal (i, j) idx pair for matrix Q
     i, j = InPhyNet.findoptQidx(D, possible_siblings)
+    @show (namelist[i], namelist[j])
 
     # connect subnets i and j
     subnets[i], edgei, edgej = InPhyNet.mergesubnets!(subnets[i], subnets[j])
