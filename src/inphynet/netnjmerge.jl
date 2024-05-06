@@ -415,6 +415,104 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         net.numEdges = 0
         net.root = 1
         nodei.edge = []
+    elseif length(net.leaf) == 2
+        # Some retics may still exist in the net, but only 2 leaves are left, so clean up
+        
+        # Find all retics that come from nodei
+        search_node = nodei
+        hybedges_i = []
+        while !(net.node[net.root] in getparents(search_node))
+            if length(getparents(search_node)) != 1
+                search_node = getparent(getparentedge(search_node))
+            else
+                try
+                    search_node = getparent(search_node)
+                catch
+                    search_node = getparent(getparentedgeminor(search_node))
+                end
+            end
+            
+            for edge in search_node.edge
+                if edge.hybrid && !edge.isMajor
+                    if getchild(edge) == search_node
+                        push!(hybedges_i, (edge, "to"))
+                    else
+                        push!(hybedges_i, (edge, "from"))
+                    end
+                end
+            end
+        end
+        search_queue = [search_node] # now search going downwards to find all children
+        while length(search_queue) > 0
+            search_node = pop!(search_queue)
+            for edge in search_node.edge
+                if edge.hybrid && !edge.isMajor && !any(entry[1] == edge for entry in hybedges_i)
+                    push!(hybedges_i, (edge, "from"))
+                end
+            end
+
+            for child in getchildren(search_node) push!(search_queue, child) end
+        end
+
+        # Find all retics that come from nodej
+        search_node = nodej
+        hybedges_j = []
+        while !(net.node[net.root] in getparents(search_node))
+            if length(getparents(search_node)) != 1
+                search_node = getparent(getparentedge(search_node))
+            else
+                try
+                    search_node = getparent(search_node)
+                catch
+                    search_node = getparent(getparentedgeminor(search_node))
+                end
+            end
+
+            for edge in search_node.edge
+                if edge.hybrid && !edge.isMajor
+                    if getchild(edge) == search_node
+                        push!(hybedges_j, (edge, "to"))
+                    else
+                        push!(hybedges_j, (edge, "from"))
+                    end
+                end
+            end
+        end
+        search_queue = [search_node] # now search going downwards to find all children
+        while length(search_queue) > 0
+            search_node = pop!(search_queue)
+            for edge in search_node.edge
+                if edge.hybrid && !edge.isMajor && !any(entry[1] == edge for entry in hybedges_j)
+                    push!(hybedges_j, (edge, "from"))
+                end
+            end
+
+            for child in getchildren(search_node) push!(search_queue, child) end
+        end
+
+        hybedges_i = unique(hybedges_i)
+        hybedges_j = unique(hybedges_j)
+        @show hybedges_i
+        @show hybedges_j
+
+        # Try to log the retics (some of them may already be logged, so use trylog)
+        for (edge, direction) in hybedges_i
+            trylogretic_single!(reticmap, edge, subnetedgei, direction)
+        end
+        for (edge, direction) in hybedges_j
+            trylogretic_single!(reticmap, edge, subnetedgej, direction)
+        end
+
+        #
+        for edge in net.edge deleteEdge!(net, edge) end
+        deleteNode!(net, nodej)
+        net.node = [nodei]
+        net.edge = []
+        net.numTaxa = 1
+        net.numNodes = 1
+        net.numEdges = 0
+        net.root = 1
+        nodei.edge = []
     elseif parentsi == parentsj && (parentsi == net.node[net.root] || length(getchildren(parentsi)) > 2)
         # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
         # e.g., this case would happen when joining a & b in (a, b, c, d)
