@@ -4,6 +4,7 @@ source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/result
 
 
 # Quick data checks
+plot_no_noise_success_props()
 plot_hwcd_heatmap("n100r5", plot_factor = 10, without_extra_retics = TRUE, subset_facet = FALSE, use_std0 = TRUE)
 plot_hwcd_heatmap("n200r10", plot_factor = 10, without_extra_retics = TRUE, subset_facet = FALSE, use_std0 = TRUE)
 

@@ -21,7 +21,7 @@ module InPhyNet
         majorinternodedistance, internodedistance, calculateAGID,
         majorinternodecount, internodecount, calculateAGIC,
         parsequartets, SubNet,
-        findvalidpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
+        findvalidpairs, findsiblingpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
         njHierarchDecomp, pruneTruthFromDecomp,
         sateIdecomp, sateIIdecomp,
         SolutionDNEError, ConstraintError
