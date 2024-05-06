@@ -54,7 +54,12 @@ function get_error_without_missing_retics(true_net::HybridNetwork, mnet::HybridN
     retics_to_remove = intersect(retics_to_remove, [h.name for h in true_hybs])
     
     for retic_name in retics_to_remove
-        hybnode = true_hybs[findfirst([h.name for h in true_hybs] .== retic_name)]
+        # Sometimes removing 1 hybrid will also result in another being removed,
+        # so we need to make sure the findfirst result is valid
+        retic_idx = findfirst([h.name for h in true_hybs] .== retic_name)
+        if retic_idx === nothing continue end
+    
+        hybnode = true_hybs[retic_idx]
         PhyloNetworks.deletehybridedge!(true_net_copy, getparentedgeminor(hybnode))
     end
 
