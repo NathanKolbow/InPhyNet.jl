@@ -31,10 +31,13 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
-cs = [constraints[96]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
+
+temp = [pruneTruthFromDecomp(cs[1], ["t6", "t12", "t11", "t10", "t4", "t2", "t1", "t3", "t5"])]
+D_reduced, namelist_reduced = reduce_D_namelist(D, temp, namelist)
+netnj(D_reduced, temp, namelist_reduced)
 
 #### DEBUG ####
 
@@ -54,11 +57,12 @@ InPhyNet.removeplaceholdernames!(mnet)
 
 
 # MWE
-net = readTopology(writeTopology(cs[1]))
+net = readTopology(writeTopology(temp[1]))
+# net = readTopology(writeTopology(cs[1]))
 
 D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed = step_inphynet_starter_vars(D_reduced, [net], namelist_reduced)
 
-for i=1:11
+for i=1:4
     D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
     step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
 end
