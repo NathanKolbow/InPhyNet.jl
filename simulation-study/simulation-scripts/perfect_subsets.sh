@@ -11,10 +11,10 @@ function run_sim {
     julia --project=../.. -t8 ./perfect_subsets.jl ${netid} ${rep} ${m} ${dmethod} ${all_use_outgroup} ${remove_after_reroot} ${nsim}
 }
 
-# Restricted params at first so that we can get results to look at
-Nparallel=16
+# n50 & n100 & n200
+Nparallel=4
 i=0
-for rep in $(seq 1 25); do
+for rep in $(seq 1 100); do
     for top in n50r2 n50r5 n100r5 n100r10 n200r10 n200r20; do
         for maxsubsetsize in 5 10 15 20 25 30; do
             ((i=i%Nparallel)); ((i++==0)) && wait
@@ -23,10 +23,23 @@ for rep in $(seq 1 25); do
     done
 done
 
-Nparallel=16
+# n500
+Nparallel=4
 i=0
-for rep in $(seq 1 25); do
-    for top in n500r25 n500r50 n1000r50 n1000r100; do
+for rep in $(seq 1 100); do
+    for top in n500r25 n500r50; do
+        for maxsubsetsize in 5 10 15 20 25 30; do
+            ((i=i%Nparallel)); ((i++==0)) && wait
+            run_sim ${top} ${rep} ${maxsubsetsize} false false &
+        done
+    done
+done
+
+# n1000
+Nparallel=4
+i=0
+for rep in $(seq 1 100); do
+    for top in n1000r50 n1000r100; do
         for maxsubsetsize in 5 10 15 20 25 30; do
             ((i=i%Nparallel)); ((i++==0)) && wait
             run_sim ${top} ${rep} ${maxsubsetsize} false false &
