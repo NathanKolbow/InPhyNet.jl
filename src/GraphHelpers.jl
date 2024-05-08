@@ -10,8 +10,10 @@ implemented pathfinding algorithms.
 - alwaysinclude (default=nothing): edges that should always be included in the graph,
       regardless of the value of `includeminoredges`
 - withweights (default=false): return a set of weights corresponding to branch lengths as well
+- removeredundantedgecost (default=false): if true, finds all the nodes that would be removed via
+      `removeredundantedges!` and sets their weights in `W` to 0
 """
-function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1.)
+function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1., removeredundantedgecost::Bool=false)
     graph = SimpleGraph(net.numNodes)
     weights = Matrix{Float64}(undef, net.numNodes, net.numNodes)
     weights .= Inf
@@ -36,6 +38,14 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         end
     end
 
+    if removeredundantedgecost && withweights
+        redundant_idxs = removeredundantedges!(deepcopy(graph), net)
+        for idx in redundant_idxs
+            non_inf_idxs = weights[idx, :] .!= Inf
+            weights[idx, non_inf_idxs] = weights[non_inf_idxs, idx] .= 0. 
+        end
+    end
+
     if withweights
         return graph, weights
     end
@@ -48,10 +58,10 @@ end
 Helper function that removes redundant edges in the graph that exist
 when some hybrids are pruned from the graph.
 """
-function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,HybridNetwork}=nothing, W::Union{Nothing,Matrix{Float64}}=nothing)
+function removeredundantedges!(graph::SimpleGraph, net::HybridNetwork; keeproot::Bool=true, W::Union{Nothing,Matrix{Float64}}=nothing)
     rootidx = -1
-    if keeproot !== nothing
-        rootidx = keeproot.root
+    if keeproot
+        rootidx = net.root
     end
 
     redundantidxs = []
@@ -61,20 +71,41 @@ function removeredundantedges!(graph::SimpleGraph; keeproot::Union{Nothing,Hybri
         end
     end
 
-    if length(redundantidxs) == 0 return [] end
-    for idx in redundantidxs
-        from = graph.fadjlist[idx][1]
-        to = graph.fadjlist[idx][2]
-        
-        vecreplace!(graph.fadjlist[from], idx, to)
-        vecreplace!(graph.fadjlist[to], idx, from)
+    if length(redundantidxs) != 0
+        for idx in redundantidxs
+            from = graph.fadjlist[idx][1]
+            to = graph.fadjlist[idx][2]
+            
+            vecreplace!(graph.fadjlist[from], idx, to)
+            vecreplace!(graph.fadjlist[to], idx, from)
 
-        if W !== nothing
-            W[from, to] = W[to, from] = mean([W[from, idx], W[to, idx]])
-            W[from, idx] = W[idx, from] = W[to, idx] = W[idx, to] = 0.
+            if W !== nothing
+                W[from, to] = W[to, from] = mean([W[from, idx], W[to, idx]])
+                W[from, idx] = W[idx, from] = W[to, idx] = W[idx, to] = 0.
+            end
+
+            graph.fadjlist[idx] = []
         end
+    end
 
-        graph.fadjlist[idx] = []
+    # Remove any nodes in the graph that (1) only have 1 connected node and (2) are not leaves
+    for (vert_idx, adj_list) in enumerate(graph.fadjlist)
+        if keeproot && vert_idx == net.root continue end
+        if length(adj_list) == 1 && !net.node[vert_idx].leaf
+            graph.fadjlist[vert_idx] = []
+            graph.fadjlist[adj_list[1]] = setdiff(graph.fadjlist[adj_list[1]], vert_idx)
+            push!(redundantidxs, vert_idx)
+        end
+    end
+    
+    if length(redundantidxs) == 0
+        return []
+    else
+        # If something was removed, recurse.
+        #
+        # We do this b/c this method removes redundant edges in 2 ways and either one
+        # could lead to the other needing to be run again.
+        return vcat(redundantidxs, removeredundantedges!(graph, net, keeproot=keeproot, W=W))
     end
     return redundantidxs
 end
