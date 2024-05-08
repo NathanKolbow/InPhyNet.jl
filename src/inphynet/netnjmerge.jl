@@ -598,7 +598,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # println("Before any operations:\n\t$(writeTopology(net))")
 
         # find shortest path from `nodei` to `nodej`
-        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.01)
+        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.51, removeredundantedgecost=true)
 
         idxnodei = findfirst(net.node .== [nodei])
         idxnodej = findfirst(net.node .== [nodej])
@@ -752,6 +752,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     @info getchild(hyb_edges[2]).name
                     @info hyb_edges[1].number
                     @info hyb_edges[2].number
+                    try
+                        @info "$(writeTopology(net))"
+                    catch
+                    end
                     error("Unaccounted for scenario.")
                 end
 
@@ -897,6 +901,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; 
 
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
+        @show size(D, 1)
         throw(SolutionDNEError())
     end
 
@@ -998,8 +1003,8 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false)
     push!(hybedges, nothing)
 
     for hybedge in hybedges
-        graph, W = Graph(net, includeminoredges=false, alwaysinclude=hybedge, withweights=true, minoredgeweight=1.01)
-        InPhyNet.removeredundantedges!(graph, W=W, keeproot=net)
+        graph, W = Graph(net, includeminoredges=false, alwaysinclude=hybedge, withweights=true, minoredgeweight=1.51)
+        InPhyNet.removeredundantedges!(graph, net, W=W)
         
         for nodei_idx in 1:(net.numTaxa-1)
             nodei = net.leaf[nodei_idx]
