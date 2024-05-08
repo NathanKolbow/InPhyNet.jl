@@ -1,7 +1,6 @@
 # MAKE SURE TO RUN WITH `julia --project -tX ...`
 # if running from a screen session: run from simulation-study/simulation-scripts/
-# - `julia --project=../.. -tX ./perfect_subsets.jl ...`
-# - example params: `julia ... ./perfect_subsets.jl n50r2 1 15 AGIC true true 100`
+# - example params: `julia --project=../.. -t4 ./perfect_subsets.jl n50r2 1 15 AGIC false false 100`
 
 if length(ARGS) != 6 && length(ARGS) != 7
     error("Usage: julia perfect_subsets.jl <true network abbreviation> <replicate number> <maximum subset size> <distance method> <true/false (all have outgroup)> <true/false (outgroup removed after re-root)> [number of sims]")
