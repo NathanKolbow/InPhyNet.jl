@@ -390,7 +390,7 @@ plot_no_noise_hwcd <- function() {
 
 plot_no_noise_success_props <- function(netid) {
     gg_df <- no_noise_df %>%
-        group_by(netid) %>%
+        group_by(netid, max_subset_size) %>%
         summarise(n_success = sum(estRFerror != -1),
                   prop_success = mean(estRFerror != -1),
                   label = paste0(n_success, "/", length(estRFerror), "=", round(prop_success, digits=2)))
@@ -399,5 +399,6 @@ plot_no_noise_success_props <- function(netid) {
         geom_bar(stat = "identity", color = "black", fill = "white") +
         scale_y_continuous(limits = c(0, 1.05)) +
         geom_text(aes(label = label, y = prop_success + 0.02)) +
-        labs(x = "Network ID", y = "Proportion of Replicates Succeeded")
+        labs(x = "Network ID", y = "Proportion of Replicates Succeeded") +
+        facet_wrap(~ max_subset_size)
 }
