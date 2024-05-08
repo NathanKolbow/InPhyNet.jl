@@ -62,7 +62,7 @@ function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVect
     end
 
     Ngraph = Graph(N)
-    removeredundantedges!(Ngraph)
+    removeredundantedges!(Ngraph, N)
     nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
 
     for i=1:(N.numTaxa-1)
