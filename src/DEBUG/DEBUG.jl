@@ -31,30 +31,41 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
+cs = [constraints[15]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
 
-temp = [pruneTruthFromDecomp(cs[1], ["t6", "t12", "t11", "t10", "t4", "t2", "t1", "t3", "t5"])]
+temp = [cs[1]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, temp, namelist)
 netnj(D_reduced, temp, namelist_reduced)
 
+
+# Each of these 3 cases has their own unique error...
+cs = [constraints[15]]
+netnj(D, cs, namelist)
+cs = [pruneTruthFromDecomp(constraints[15], ["t24", "t9", "t22", "t23", "t20", "t21", "t17"])]
+netnj(D, cs, namelist)
 #### DEBUG ####
 
 D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed = step_inphynet_starter_vars(D, cs, namelist)
-while size(D_iter, 1) > 1
+i = 1
+while i < 20
+    @show i
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+    i += 1
+end
+
+while length(cs_iter[1].leaf) >= 3
     D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
         step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
 end
 
-mnet = InPhyNet.HybridNetwork(subnets[1].nodes, subnets[1].edges)
-mnet.root = mnet.numNodes
-mnet.node[mnet.root].name = "root"
-mnet = InPhyNet.placeretics!(mnet, reticmap, copy_retic_names=false)
-InPhyNet.removeplaceholdernames!(mnet)
-
-
-
+for i=1:1
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+end
 
 # MWE
 net = readTopology(writeTopology(temp[1]))
