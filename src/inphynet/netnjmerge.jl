@@ -445,6 +445,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # Find all retics that come from nodei
         search_node = nodei
         hybedges_i = []
+        hybedges_j = []
         while !(mrca in getparents(search_node))
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
@@ -470,8 +471,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         while length(search_queue) > 0
             search_node = pop!(search_queue)
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor && !any(entry[1] == edge for entry in hybedges_i)
-                    push!(hybedges_i, (edge, "from"))
+                if edge.hybrid && !edge.isMajor
+                    if !((edge, "from") in hybedges_i)
+                        push!(hybedges_i, (edge, "from"))
+                    else
+                        push!(hybedges_j, (edge, "to"))
+                    end
                 end
             end
 
@@ -480,7 +485,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         # Find all retics that come from nodej
         search_node = nodej
-        hybedges_j = []
         while !(mrca in getparents(search_node))
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
@@ -506,24 +510,36 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         while length(search_queue) > 0
             search_node = pop!(search_queue)
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor && !any(entry[1] == edge for entry in hybedges_j)
-                    push!(hybedges_j, (edge, "from"))
+                if edge.hybrid && !edge.isMajor
+                    if !((edge, "from") in hybedges_j)
+                        push!(hybedges_j, (edge, "from"))
+                    else
+                        push!(hybedges_i, (edge, "to"))
+                    end
                 end
             end
 
             for child in getchildren(search_node) push!(search_queue, child) end
         end
-
+        
         hybedges_i = unique(hybedges_i)
         hybedges_j = unique(hybedges_j)
 
         # Try to log the retics (some of them may already be logged, so use trylog)
         for (edge, direction) in hybedges_i
+            if direction == "to " && (edge, "from") in hybedges_i   # if `from` and `to` are both present, do `from` first
+                trylogretic_single!(reticmap, edge, subnetedgei, "from")
+            end
             trylogretic_single!(reticmap, edge, subnetedgei, direction)
         end
         for (edge, direction) in hybedges_j
+            if direction == "to" && (edge, "from") in hybedges_j
+                trylogretic_single!(reticmap, edge, subnetedgej, "from")
+            end
             trylogretic_single!(reticmap, edge, subnetedgej, direction)
         end
+
+
 
         #
         for edge in net.edge deleteEdge!(net, edge) end
@@ -603,7 +619,22 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         # find the node that should be the new tip after merging
         newtip = nodesinpath[1]
-        while length(getparents(newtip)) > 0 && getparent(newtip) in nodesinpath
+        while length(getparents(newtip)) > 0
+            parents = getparents(newtip)
+            if length(parents) == 2
+                if parents[1] in nodesinpath
+                    newtip = parents[1]
+                    continue
+                elseif parents[2] in nodesinpath
+                    newtip = parents[2]
+                    continue
+                else
+                    break
+                end
+            elseif !(parents[1] in nodesinpath)    # length(parents) == 1
+                break
+            end
+
             newtip = getparent(newtip)
         end
         
@@ -807,7 +838,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     if node == newtip relevantoi = false end
                     continue
                 end
-                logretic!(reticmap, hyb_edge, ifelse(relevanttoi, subnetedgei, subnetedgej), "to")
+                trylogretic_single!(reticmap, hyb_edge, ifelse(relevanttoi, subnetedgei, subnetedgej), "to")
             end
             if node == newtip relevantoi = false end
         end
