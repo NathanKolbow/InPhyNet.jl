@@ -1,3 +1,4 @@
+ENV["JULIA_DEBUG"] = Main
 using Revise
 using InPhyNet, PhyloNetworks, CSV, DataFrames
 
@@ -31,26 +32,72 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
+cs = [constraints[36]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
-
 #### DEBUG ####
-
 D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
-    # step_inphynet_starter_vars(D_reduced, temp, namelist_reduced)
-    step_inphynet_starter_vars(D, cs, namelist)
+    step_inphynet_starter_vars(D_reduced, cs, namelist_reduced)
+    # step_inphynet_starter_vars(D, cs, namelist)
+
 i = 1
-while length(cs_iter[1].leaf) > 1
+
+while i < 2
     @show i
     D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
         step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
     i += 1
 end
 
-# (t36, t31)
-D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
-    step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+node = cs_iter[1].node[findfirst([node.number == -8 for node in cs_iter[1].node])]
+nodesinpath = [
+    cs_iter[1].node[findfirst([node.number == num for node in cs_iter[1].node])]
+        for num in [5, -8, -7, 4]
+]
+
+
+# (t305, t301)
+for i=1:1
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+end
+
+non_nothing_vals(rmap) = sum(sum(rmap.map[key] .!== nothing) for key in keys(rmap.map))
+while non_nothing_vals(reticmap) < 1
+    @show i
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+    i += 1
+end
+
+while i < 69
+    @show i
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+    i += 1
+end
+
+for node in cs_iter[1].node
+    if node.name == "" node.name = "__$(node.number)__" end
+end
+
+graph, W = InPhyNet.Graph(cs_iter[1], includeminoredges=true, withweights=true, minoredgeweight=1.51, removeredundantedgecost=true)
+nodei = cs_iter[1].node[findfirst([node.name == "t66" for node in cs_iter[1].node])]
+nodej = cs_iter[1].node[findfirst([node.name == "t63" for node in cs_iter[1].node])]
+idxnodei = findfirst(cs_iter[1].node .== [nodei])
+idxnodej = findfirst(cs_iter[1].node .== [nodej])
+edgepath = a_star(graph, idxnodei, idxnodej, W)
+
+# (t66, t63)
+for i=1:1
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+end
+
+
+
+
 
 # MWE
 net = readTopology(writeTopology(temp[1]))
