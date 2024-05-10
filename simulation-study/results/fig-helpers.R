@@ -93,6 +93,29 @@ add_error_bins <- function(df) {
 }
 
 
+add_error_bins_zero <- function(df) {
+    factor_lvls <- c("none", "low", "med", "high", "very high")
+    gauss_cuts <- quantile(df$gauss_error, c(0, 0.1, 0.4, 0.7))
+    nni_cuts <- quantile(df$constraint_error_sum, c(0, 0.1, 0.4, 0.7))
+    if(!("gauss_error_level" %in% colnames(df))) {
+        df <- df %>%
+            mutate(
+                gauss_error_level = ifelse(gauss_error <= gauss_cuts[1], "none",
+                                    ifelse(gauss_error < gauss_cuts[2], "low",
+                                    ifelse(gauss_error < gauss_cuts[3], "med",
+                                    ifelse(gauss_error < gauss_cuts[4], "high", "very high")))),
+                gauss_error_level = ordered(gauss_error_level, levels = factor_lvls),
+                nni_error_level = ifelse(constraint_error_sum <= nni_cuts[1], "none",
+                                  ifelse(constraint_error_sum < nni_cuts[2], "low",
+                                  ifelse(constraint_error_sum < nni_cuts[3], "med",
+                                  ifelse(constraint_error_sum < nni_cuts[4], "high", "very high")))),
+                nni_error_level = ordered(nni_error_level, levels = factor_lvls)
+            )
+    }
+    df
+}
+
+
 ###################
 ##### Figures #####
 ###################
@@ -264,8 +287,8 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
 
     # Add labels
     p <- p + labs(
-        x = ifelse(use_std0, "% Signal", "Gaussian Noise = N(x, x)"),
-        y = "Sum of Constraint Errors (HWCD)",
+        x = ifelse(use_std0, "Distance Matrix % Signal", "Gaussian Noise = N(x, x)"),
+        y = "Sum of Constraint Errors",
         title = ifelse(without_extra_retics, "HWCD(true net w/o unidentified retics, est net)", "HWCD(true net, est net)"),
         fill = "HWCD"
     )

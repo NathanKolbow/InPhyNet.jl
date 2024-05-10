@@ -254,9 +254,9 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
     counter = 0
     
     check_reticmap(reticmap)
-    for retic in keys(reticmap.map)
-        from = reticmap.map[retic][1]
-        to = reticmap.map[retic][2]
+    for hyb in keys(reticmap.map)
+        from = reticmap.map[hyb][1]
+        to = reticmap.map[hyb][2]
         
         if from.node[1].name == ""
             from.node[1].name = "___internal"*string(counter+=1)
@@ -279,7 +279,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
 
         if !(newpair in namepairs)
             push!(namepairs, newpair)
-            push!(retic_names, getchild(retic).name)
+            push!(retic_names, hyb.name)
         end
     end
     mnet = readTopology(writeTopology(net))
@@ -397,10 +397,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
         for edge in net.edge
             if edge.hybrid && !edge.isMajor
-                if reticmap.map[edge][1] === nothing
+                if reticmap.map[getchild(edge)][1] === nothing
                     logretic!(reticmap, edge, subnetedgei, "from")
                 end
-                if reticmap.map[edge][2] === nothing
+                if reticmap.map[getchild(edge)][2] === nothing
                     logretic!(reticmap, edge, subnetedgej, "to")
                 end
             end
@@ -525,21 +525,25 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         hybedges_i = unique(hybedges_i)
         hybedges_j = unique(hybedges_j)
 
-        # Try to log the retics (some of them may already be logged, so use trylog)
+        # Process `from` edges first
         for (edge, direction) in hybedges_i
-            if direction == "to " && (edge, "from") in hybedges_i   # if `from` and `to` are both present, do `from` first
-                trylogretic_single!(reticmap, edge, subnetedgei, "from")
-            end
-            trylogretic_single!(reticmap, edge, subnetedgei, direction)
+            if direction != "from" continue end
+            trylogretic_single!(reticmap, edge, subnetedgei, "from")
         end
         for (edge, direction) in hybedges_j
-            if direction == "to" && (edge, "from") in hybedges_j
-                trylogretic_single!(reticmap, edge, subnetedgej, "from")
-            end
-            trylogretic_single!(reticmap, edge, subnetedgej, direction)
+            if direction != "from" continue end
+            trylogretic_single!(reticmap, edge, subnetedgej, "from")
         end
-
-
+        
+        # Now process `to` edges
+        for (edge, direction) in hybedges_i
+            if direction != "to" continue end
+            trylogretic_single!(reticmap, edge, subnetedgei, "to")
+        end
+        for (edge, direction) in hybedges_j
+            if direction != "to" continue end
+            trylogretic_single!(reticmap, edge, subnetedgej, "to")
+        end
 
         #
         for edge in net.edge deleteEdge!(net, edge) end
@@ -791,19 +795,28 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     logretic!(reticmap, notinpath_edge, subnetedgej, notinpath_direction)
                 end
                 edgeinpath_logged = true
+            end
 
-                # println("path idxs: ($(edge_1_path_idx), $(edge_2_path_idx))")
-                # if edge_1_path_idx < edge_2_path_idx
-                #     edge_i = hyb_edges[1]
-                #     edge_j = hyb_edges[2]
-                # else
-                #     edge_i = hyb_edges[2]
-                #     edge_j = hyb_edges[1]
-                # end
 
-                # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                # logretic!(reticmap, edge_i, subnetedgei, "from")
-                # logretic!(reticmap, edge_j, subnetedgej, "from")
+            # Gather all of the descendant tips of the current node. If all of these nodes *except*
+            # those in `nodesinpath` are hybrids *that don't lead anywhere* (i.e. their "to" portion
+            # has been logged), then log the "from" portion of each of those retics and remove the edges
+
+            node_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath)
+            if length(node_descendants) > 0 && all(d.hybrid && length(getchildren(d)) == 0 for d in node_descendants)
+                relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
+                for hyb in node_descendants
+                    trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
+                    # -- this might need to be changed to `trylogretic!`, not sure --
+                end
+            end
+
+            hyb_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath, stopathyb=true)
+            if length(hyb_descendants) > 0 && all(d.hybrid for d in hyb_descendants)
+                relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
+                for hyb in hyb_descendants
+                    trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
+                end
             end
 
             if node == newtip
@@ -887,6 +900,39 @@ function fuseredundantedges!(net::HybridNetwork)
             fuseedgesat!(i, net)
         end
     end
+end
+
+
+"""
+
+Helper function used at one point in `mergeconstraintnodes!`. Gets all of the descendants of
+`node` that do not have any children and are not in `path`
+"""
+function gather_hyb_descendants_outside_of_path(node::Node, path::Array{Node}; stopathyb::Bool=false)
+    val = gather_hyb_descendants_outside_of_path_recur(node, path, stopathyb=stopathyb)
+    if val === nothing return Vector{Node}([]) end
+    return val
+end
+
+function gather_hyb_descendants_outside_of_path_recur(node::Node, path::Array{Node}; stopathyb::Bool=false)
+    children = getchildren(node)
+    if length(children) == 0 && !(node in path)
+        if !node.hybrid return nothing end  # nothing --> entire call will result in FALSE, so quit this loop quickly
+        return Vector{Node}([node])
+    end
+    if stopathyb && node.hybrid return Vector{Node}([node]) end
+
+    descendants = Vector{Node}([])
+    for child in children
+        if child in path continue end
+        
+        recur_descendants = gather_hyb_descendants_outside_of_path_recur(child, path, stopathyb=stopathyb)
+        if recur_descendants === nothing
+            return nothing
+        end
+        descendants = vcat(descendants, recur_descendants)
+    end
+    return descendants
 end
 
 
