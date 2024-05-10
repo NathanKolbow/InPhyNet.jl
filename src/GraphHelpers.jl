@@ -42,7 +42,11 @@ function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::
         redundant_idxs = removeredundantedges!(deepcopy(graph), net)
         for idx in redundant_idxs
             non_inf_idxs = weights[idx, :] .!= Inf
-            weights[idx, non_inf_idxs] = weights[non_inf_idxs, idx] .= 0. 
+
+            # Instead of setting to 0, reduce one of the idxs by 1. This way
+            # we don't accidentally reduce the cost of 2 edges to 0, but we
+            # get the desired result still.
+            weights[idx, [findfirst(non_inf_idxs)]] = weights[[findfirst(non_inf_idxs)], idx] .-= 1.
         end
     end
 
