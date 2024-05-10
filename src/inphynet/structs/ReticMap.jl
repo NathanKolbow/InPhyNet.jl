@@ -1,15 +1,15 @@
 const EdgeOrNA = Union{Edge, Nothing}
 struct ReticMap
-    map::Dict{Edge, Vector{EdgeOrNA}}
+    map::Dict{Node, Vector{EdgeOrNA}}
     function ReticMap(constraints::Vector{HybridNetwork})
         # map all existing reticulations in `constraints` to `(nothing, nothing)`
         d = Dict()
         for net in constraints
             for e in net.edge
                 if e.hybrid && !e.isMajor
-                    d[e] = Vector{EdgeOrNA}([nothing, nothing, nothing])    # first entry:  `from` edge,
-                                                                            # second entry: `to` edge,
-                                                                            # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)
+                    d[getchild(e)] = Vector{EdgeOrNA}([nothing, nothing, nothing])      # first entry:  `from` edge,
+                                                                                        # second entry: `to` edge,
+                                                                                        # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)
                 end
             end
         end
@@ -18,64 +18,68 @@ struct ReticMap
 end
 
 # Try logging a retic to "from" or "to", being lenient of errors (used exclusively for rootretic updating)
-function trylogretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+function trylogretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     try
-        logretic!(r, constraintedge, subnetedge, fromorto)
+        logretic!(r, hyb, subnetedge, fromorto)
     catch e
         try
-            logretic!(r, constraintedge, subnetedge, fromorto == "from" ? "to" : "from")
+            logretic!(r, hyb, subnetedge, fromorto == "from" ? "to" : "from")
         catch
         end
     end
 end
+trylogretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
+    trylogretic!(r, getchild(hyb_edge), subnetedge, fromorto)
 
-function trylogretic_single!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+function trylogretic_single!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     try
-        logretic!(r, constraintedge, subnetedge, fromorto)
+        logretic!(r, hyb, subnetedge, fromorto)
     catch e
     end
 end
+trylogretic_single!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
+    trylogretic_single!(r, getchild(hyb_edge), subnetedge, fromorto)
 
-function logretic!(r::ReticMap, constraintedge::Edge, subnetedge::Edge, fromorto::String)
+function logretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     # If we're double logging identical edges then return w/o error
-    if haskey(r.map, constraintedge)
-        if fromorto == "from" && r.map[constraintedge][1] == subnetedge return end
-        if fromorto == "to" && r.map[constraintedge][2] == subnetedge return end
+    if haskey(r.map, hyb)
+        if fromorto == "from" && r.map[hyb][1] == subnetedge return end
+        if fromorto == "to" && r.map[hyb][2] == subnetedge return end
     end
 
     # Log the reticulation
     if fromorto == "from"
-        if (r.map[constraintedge][1] !== nothing)
-            if r.map[constraintedge][1] != subnetedge
+        if (r.map[hyb][1] !== nothing)
+            if r.map[hyb][1] != subnetedge
                 throw(ErrorException("Overriding `from` edge"))
             end
         end
-        if r.map[constraintedge][2] == subnetedge
-            @show constraintedge
-            @show getchild(constraintedge)
+        if r.map[hyb][2] == subnetedge
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the `to` edge."))
-        elseif r.map[constraintedge][3] == subnetedge
+        elseif r.map[hyb][3] == subnetedge
             throw(ErrorException("Attempting to set `from` edge to a duplicate of the (second) `to` edge."))
         end
-        r.map[constraintedge][1] = subnetedge
+        r.map[hyb][1] = subnetedge
     else
-        if (r.map[constraintedge][2] !== nothing)
-            if (r.map[constraintedge][3] !== nothing)
+        if (r.map[hyb][2] !== nothing)
+            if (r.map[hyb][3] !== nothing)
                 throw(ErrorException("Both `to` edges already set to non-nothing values."))
             else
-                if r.map[constraintedge][1] == subnetedge
+                if r.map[hyb][1] == subnetedge
                     throw(ErrorException("Attempting to set (second) `to` edge to a duplicate of the `from` edge."))
                 end
-                r.map[constraintedge][3] = subnetedge
+                r.map[hyb][3] = subnetedge
             end
         else
-            if r.map[constraintedge][1] == subnetedge
+            if r.map[hyb][1] == subnetedge
                 throw(ErrorException("Attempting to set `to` edge to a duplicate of the `from` edge."))
             end
-            r.map[constraintedge][2] = subnetedge
+            r.map[hyb][2] = subnetedge
         end
     end
 end
+logretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
+    logretic!(r, getchild(hyb_edge), subnetedge, fromorto)
 
 function check_reticmap(r::ReticMap)
     for (i, key) in enumerate(keys(r.map))
@@ -87,6 +91,7 @@ function check_reticmap(r::ReticMap)
             println(key.number)
             throw(ErrorException("ReticMap key $i has $(sum(r.map[key] .!== nothing)) attached non-nothing edges."))
         elseif r.map[key][1] === nothing
+            @show key.name
             throw(ErrorException("ReitcMap key $i has no \"from\" edge."))
         end
     end
