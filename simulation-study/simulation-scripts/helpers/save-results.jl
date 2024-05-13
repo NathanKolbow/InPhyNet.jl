@@ -195,3 +195,16 @@ function n_perfect_sims_already_performed(netid::String, replicatenum::Int64, ma
     df = CSV.read(output_path, DataFrame)
     return nrow(filter(row -> row.replicate_num == replicatenum && row.max_subset_size == maxsubsetsize && row.all_have_outgroup == all_have_outgroup && row.outgroup_removed_after_reroot == outgroup_removed_after_reroot, df))
 end
+
+
+function no_noise_sim_already_performed(netid::String, replicatenum::Int64, maxsubsetsize::Int64, all_have_outgroup::Bool, outgroup_removed_after_reroot::Bool)
+
+    output_path = get_output_filepath(netid)
+    if !isfile(output_path) return false end
+    ntaxa = split(netid, "r")
+    nretic = parse(Int64, ntaxa[2])
+    ntaxa = parse(Int64, split(ntaxa[1], "n")[2])
+
+    df = CSV.read(output_path, DataFrame)
+    return nrow(filter(row -> row.replicate_num == replicatenum && row.max_subset_size == maxsubsetsize && row.all_have_outgroup == all_have_outgroup && row.outgroup_removed_after_reroot == outgroup_removed_after_reroot && row.gauss_error == 0 && row.constraint_error_sum == 0, df)) > 0
+end
