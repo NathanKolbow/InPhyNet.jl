@@ -32,29 +32,65 @@ netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
-cs = [constraints[36]]
+cs = [constraints[14]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
+
+for c in cs for node in c.node
+    if node.name == "" node.name = "__$(node.number)__" end
+end end
+
 #### DEBUG ####
 D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
-    step_inphynet_starter_vars(D_reduced, cs, namelist_reduced)
-    # step_inphynet_starter_vars(D, cs, namelist)
+    # step_inphynet_starter_vars(D_reduced, cs, namelist_reduced)
+    step_inphynet_starter_vars(D, cs, namelist)
+    # step_inphynet_starter_vars(D, constraints, namelist)
 
 i = 1
 
-while i < 2
+ff() = findfirst(node.name == "H39" for node in cs_iter[1].node)
+
+non_nothing_vals(rmap) = sum(sum(rmap.map[key] .!== nothing) for key in keys(rmap.map))
+while true
     @show i
     D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
         step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
     i += 1
 end
 
-node = cs_iter[1].node[findfirst([node.number == -8 for node in cs_iter[1].node])]
-nodesinpath = [
-    cs_iter[1].node[findfirst([node.number == num for node in cs_iter[1].node])]
-        for num in [5, -8, -7, 4]
-]
+# (391, 378)
+for i=1:1
+    D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
+        step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)
+end
+
+graph, W, nodesinpath, edgesinpath = InPhyNet.find_valid_node_path(cs_iter[1], "t383", "t377")
+
+
+# (t403, t422)
+idxnodei = findfirst(node.name == "t403" for node in cs_iter[1].node)
+idxnodej = findfirst(node.name == "t422" for node in cs_iter[1].node)
+nodei = cs_iter[1].node[idxnodei]
+nodej = cs_iter[1].node[idxnodej]
+
+graph, W = InPhyNet.Graph(cs_iter[1], includeminoredges=true, withweights=true, minoredgeweight=1.51, removeredundantedgecost=true)
+edgepath = a_star(graph, idxnodei, idxnodej, W)
+
+nodesinpath = Array{Node}(undef, length(edgepath)+1)
+edgesinpath = Array{Edge}(undef, length(edgepath))
+for (i, gedge) in enumerate(edgepath)
+    srcnode = cs_iter[1].node[gedge.src]
+    dstnode = cs_iter[1].node[gedge.dst]
+
+    if i == 1 nodesinpath[1] = cs_iter[1].node[gedge.src] end
+    nodesinpath[i+1] = dstnode
+
+    netedge = filter(e -> (srcnode in e.node) && (dstnode in e.node), dstnode.edge)[1]
+    edgesinpath[i] = netedge
+end
+
+
 
 
 # (t305, t301)

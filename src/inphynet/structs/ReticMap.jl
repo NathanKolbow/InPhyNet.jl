@@ -17,6 +17,12 @@ struct ReticMap
     end
 end
 
+
+function fully_logged(r::ReticMap, hyb::Node)
+    return r.map[hyb][1] !== nothing && (r.map[hyb][2] !== nothing || r.map[hyb][3] !== nothing)
+end
+
+
 # Try logging a retic to "from" or "to", being lenient of errors (used exclusively for rootretic updating)
 function trylogretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     try
