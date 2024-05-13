@@ -59,6 +59,61 @@ end
 
 """
 
+Helper function that finds a path in `net` from `nodei` to `nodej`. If that path has
+2 or more reticulations in it, the cost to include a hybrid in the path is incrementally
+increased until only 1 reticulation is in the path.
+"""
+function find_valid_node_path(net::HybridNetwork, nodei::Node, nodej::Node)
+    retics_in_path = 3
+    minor_edge_weight = 1.01
+    graph = W = nodesinpath = edgesinpath = nothing
+
+    while retics_in_path > 1
+        minor_edge_weight += 0.50
+
+        # find shortest path from `nodei` to `nodej`
+        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=minor_edge_weight, removeredundantedgecost=true)
+
+        idxnodei = findfirst(net.node .== [nodei])
+        idxnodej = findfirst(net.node .== [nodej])
+        edgepath = a_star(graph, idxnodei, idxnodej, W)
+
+        nodesinpath = Array{Node}(undef, length(edgepath)+1)
+        edgesinpath = Array{Edge}(undef, length(edgepath))
+        for (i, gedge) in enumerate(edgepath)
+            srcnode = net.node[gedge.src]
+            dstnode = net.node[gedge.dst]
+
+            if i == 1 nodesinpath[1] = net.node[gedge.src] end
+            nodesinpath[i+1] = dstnode
+
+            netedge = filter(e -> (srcnode in e.node) && (dstnode in e.node), dstnode.edge)[1]
+            edgesinpath[i] = netedge
+        end
+
+        retics_in_path = sum([e.hybrid && !e.isMajor for e in edgesinpath])
+    end
+
+    return graph, W, nodesinpath, edgesinpath
+end
+
+
+function find_valid_node_path(net::HybridNetwork, namei::String, namej::String)
+    nodei = net.node[findfirst(node.name == namei for node in net.node)]
+    nodej = net.node[findfirst(node.name == namej for node in net.node)]
+    return find_valid_node_path(net, nodei, nodej)
+end
+
+
+function tester_path(net, namei, namej)
+    nodei = net.node[findfirst(node.name == namei for node in net.node)]
+    nodej = net.node[findfirst(node.name == namej for node in net.node)]
+    return find_valid_node_path(net, nodei, nodej)
+end
+
+
+"""
+
 Helper function that removes redundant edges in the graph that exist
 when some hybrids are pruned from the graph.
 """
