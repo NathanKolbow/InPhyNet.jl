@@ -601,25 +601,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "c: ($(nodei.name), $(nodej.name))"
         # println("Before any operations:\n\t$(writeTopology(net))")
 
-        # find shortest path from `nodei` to `nodej`
-        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=1.51, removeredundantedgecost=true)
-
-        idxnodei = findfirst(net.node .== [nodei])
-        idxnodej = findfirst(net.node .== [nodej])
-        edgepath = a_star(graph, idxnodei, idxnodej, W)
-
-        nodesinpath = Array{Node}(undef, length(edgepath)+1)
-        edgesinpath = Array{Edge}(undef, length(edgepath))
-        for (i, gedge) in enumerate(edgepath)
-            srcnode = net.node[gedge.src]
-            dstnode = net.node[gedge.dst]
-
-            if i == 1 nodesinpath[1] = net.node[gedge.src] end
-            nodesinpath[i+1] = dstnode
-
-            netedge = filter(e -> (srcnode in e.node) && (dstnode in e.node), dstnode.edge)[1]
-            edgesinpath[i] = netedge
-        end
+        graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
         # find the node that should be the new tip after merging
         newtip = nodesinpath[1]
@@ -714,7 +696,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                         #     println(edge in edgesinpath)
                         # end
     
-                        logretic!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
+                        trylogretic_single!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                         if edge == hybedge hybedgelogged = true end
 
                         # Special edge case: constraint only has 2 leaves (i.e. this is its last merge)
@@ -776,7 +758,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 inpath_edge_parentnode = getparent(inpath_edge)
                 inpath_from_i_to_j = findfirst([inpath_edge_parentnode] .== nodesinpath) < findfirst([inpath_edge_childnode] .== nodesinpath)
 
-                notinpath_direction = ifelse(getchild(notinpath_edge) == node, "to", "from")
+                notinpath_direction, notinpath_subnet = find_not_in_path_edge_vector(notinpath_edge, subnetedgei, subnetedgej, nodesinpath, nodei, nodej)
 
                 # Now we know the direction of the retic, so let's place them.
                 if inpath_from_i_to_j
@@ -784,15 +766,15 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgej.number) --> $(subnetedgei.number)")
 
                     logretic!(reticmap, inpath_edge, subnetedgei, "from")
-                    logretic!(reticmap, inpath_edge, subnetedgej, "to")
-                    logretic!(reticmap, notinpath_edge, subnetedgei, notinpath_direction)
+                    trylogretic!(reticmap, inpath_edge, subnetedgej, "to")
+                    logretic!(reticmap, notinpath_edge, notinpath_subnet, notinpath_direction)
                 else
                     # println("F: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
                     # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgei.number) --> $(subnetedgej.number)")
-
+                    
                     logretic!(reticmap, inpath_edge, subnetedgej, "from")
-                    logretic!(reticmap, inpath_edge, subnetedgei, "to")
-                    logretic!(reticmap, notinpath_edge, subnetedgej, notinpath_direction)
+                    trylogretic!(reticmap, inpath_edge, subnetedgei, "to")
+                    logretic!(reticmap, notinpath_edge, notinpath_subnet, notinpath_direction)
                 end
                 edgeinpath_logged = true
             end
@@ -802,20 +784,22 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             # those in `nodesinpath` are hybrids *that don't lead anywhere* (i.e. their "to" portion
             # has been logged), then log the "from" portion of each of those retics and remove the edges
 
-            node_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath)
-            if length(node_descendants) > 0 && all(d.hybrid && length(getchildren(d)) == 0 for d in node_descendants)
-                relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
-                for hyb in node_descendants
-                    trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
-                    # -- this might need to be changed to `trylogretic!`, not sure --
+            if length(net.hybrid) > 0
+                node_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath)
+                if length(node_descendants) > 0 && all(d.hybrid && length(getchildren(d)) == 0 for d in node_descendants)
+                    relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
+                    for hyb in node_descendants
+                        trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
+                        # -- this might need to be changed to `trylogretic!`, not sure --
+                    end
                 end
-            end
 
-            hyb_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath, stopathyb=true)
-            if length(hyb_descendants) > 0 && all(d.hybrid for d in hyb_descendants)
-                relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
-                for hyb in hyb_descendants
-                    trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
+                hyb_descendants = gather_hyb_descendants_outside_of_path(node, nodesinpath, stopathyb=true)
+                if length(hyb_descendants) > 0 && all(d.hybrid for d in hyb_descendants)
+                    relevant_subnet_edge = relevanttoi ? subnetedgei : subnetedgej
+                    for hyb in hyb_descendants
+                        trylogretic_single!(reticmap, hyb, relevant_subnet_edge, "from")
+                    end
                 end
             end
 
@@ -867,6 +851,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # purge all the nodes we've passed through to this point from the network
         for node in nodesinpath
             if node == newtip continue end
+            if node.hybrid && !fully_logged(reticmap, node) continue end
             deleteNode!(net, node)
         end
         for edge in edgesinpath
@@ -877,12 +862,50 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
 
         newtip.leaf = true
+        newtip.hybrid = false
         push!(net.leaf, newtip)
         net.numTaxa += 1
         newtip.name = nodei.name
 
         fuseredundantedges!(net)
     end
+end
+
+
+"""
+
+Helper function for when an edge (`notinpath_edge`) appears on but not within a merge path.
+Finds and returns:
+    1. Whether the edge should be logged with direction "to" or "from"
+    2. Whether the edge should be associated with `subnetedgei` or `subnetedgej`
+"""
+function find_not_in_path_edge_vector(notinpath_edge::Edge, subnetedgei::Edge, subnetedgej::Edge, nodesinpath::Array{Node}, nodei::Node, nodej::Node)
+    
+    notinpath_direction = (getchild(notinpath_edge) in nodesinpath) ? "to" : "from"
+
+    # Find MRCA of nodei and nodej. The relevant subnet edge depends on which side of the MRCA the notinpath_edge is on.
+    relevant_edge = subnetedgej
+    mrca = nodei
+    while true
+        parents = getparents(mrca)
+        if !any(parent in nodesinpath for parent in parents)
+            break
+        end
+
+        # If we find `notinpath_edge`, we found it from `i` so set relevant subnet edge to `i`.
+        for edge in mrca.edge
+            if edge == notinpath_edge
+                relevant_edge = subnetedgei
+            end
+        end
+
+        # Go to next parent
+        for parent in parents
+            if parent in nodesinpath mrca = parent end
+        end
+    end
+
+    return notinpath_direction, relevant_edge
 end
 
 
