@@ -223,22 +223,25 @@ function check_constraint(idx::Int64, net::HybridNetwork; requirerooted::Bool=fa
         end
     end
 
+    # UPDATE: this type of topology is actually not an issue and could have biological meaning. Therefore,
+    # we don't want to ignore it.
+    #
     # Check #2
-    for hybnode in net.hybrid
-        child = getchild(hybnode)
-        if child.hybrid && getchildedge(hybnode).hybrid && !getchildedge(hybnode).isMajor
-            # TODO: make a post explaining this error w/ visuals
-            # Example network: ((#H128:0.563::0.397,(t35:0.828,(t62:0.647)#H172:0.181::0.719):0.744):0.295,((#H172:0.0::0.281)#H128:0.851::0.603,t48:0.747):2.38);
-            if autofix
-                error("Automatic fix for check #2 not implemented yet.")
-            else
-                # throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
-                #     "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
-                throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
-                "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
-            end
-        end
-    end
+    # for hybnode in net.hybrid
+    #     child = getchild(hybnode)
+    #     if child.hybrid && getchildedge(hybnode).hybrid && !getchildedge(hybnode).isMajor
+    #         # TODO: make a post explaining this error w/ visuals
+    #         # Example network: ((#H128:0.563::0.397,(t35:0.828,(t62:0.647)#H172:0.181::0.719):0.744):0.295,((#H172:0.0::0.281)#H128:0.851::0.603,t48:0.747):2.38);
+    #         if autofix
+    #             auto_fix_redundant_retics!(net, hybnode, child)
+    #         else
+    #             # throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
+    #             #     "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
+    #             throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
+    #             "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
+    #         end
+    #     end
+    # end
 end
 check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
 
