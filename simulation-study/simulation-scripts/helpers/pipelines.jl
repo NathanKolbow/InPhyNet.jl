@@ -23,7 +23,7 @@ copy_csv_template(output_path::String) = cp(joinpath(getDataDir(), "output", "fi
 copy_est_csv_template(output_path::String) = cp(joinpath(getDataDir(), "est_data_output", "fields.csv"), output_path)
 
 # DATA LOADING FUNCTIONS
-function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String; all_have_outgroup::Bool = false, outgroup_removed_after_reroot::Bool = false)
+function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dmethod::String; all_have_outgroup::Bool = false, outgroup_removed_after_reroot::Bool = false, verify_constraints::Bool = true)
     truenet = readMultiTopology(getNetworkFilepath(netid))[replicatenum]
     avg_bl = get_avg_bl(truenet)
     newick = writeTopology(truenet)
@@ -53,7 +53,9 @@ function loadPerfectData(netid::String, replicatenum::Int64, maxsize::Int64, dme
         end
     end
 
-    InPhyNet.check_constraints(constraints)
+    if verify_constraints
+        InPhyNet.check_constraints(constraints)
+    end
 
     D, namelist = (nothing, nothing)
     if dmethod == "internode_count" || dmethod == "AGIC"
