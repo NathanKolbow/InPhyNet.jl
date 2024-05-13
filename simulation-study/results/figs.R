@@ -59,10 +59,11 @@ mean(filter(net_df("n200r10"), all_have_outgroup & !outgroup_removed_after_reroo
 # FIGURES FOR SIMS W/ PERFECT INPUT DATA #
 ##########################################
 
-plot_no_noise_success_props("n50r2")
+plot_no_noise_success_props()
 
 # HWCD for all nets compared across subset sizes
 plot_no_noise_hwcd()
+plot_no_noise_hwcd(without_retics = TRUE)
 
 ##################################################
 # SUCCESS RATE FIGURES FOR DATA W/ PERTURBATIONS #
