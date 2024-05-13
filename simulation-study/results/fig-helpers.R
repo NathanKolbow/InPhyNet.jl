@@ -395,19 +395,26 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
 }
 
 
-plot_no_noise_hwcd <- function() {
+plot_no_noise_hwcd <- function(without_retics = FALSE) {
     gg_df <- no_noise_df %>%
         filter(estRFerror != -1) %>%
-        group_by(max_subset_size, netid) %>%
-        summarise(mean_RF = mean(estRFerror),
+        group_by(max_subset_size, netid)
+    
+    if(without_retics) {
+        gg_df <- gg_df %>% summarise(mean_RF = mean(esterror_without_missing_retics),
             sd_RF = sd(estRFerror))
+    } else {
+        gg_df <- gg_df %>% summarise(mean_RF = mean(estRFerror),
+            sd_RF = sd(estRFerror))
+    }
     
     ggplot(gg_df, aes(x = max_subset_size, y = mean_RF, color = netid)) +
         geom_line() +
         geom_point() +
         geom_errorbar(aes(x = max_subset_size, ymin = mean_RF - sd_RF, ymax = mean_RF + sd_RF), width=0.2, alpha=1) +
         scale_x_continuous(breaks=c(5, 10, 15, 20, 25, 30)) +
-        geom_abline(slope=0, intercept=0, linetype="dashed", color="black", alpha=0.5)
+        geom_abline(slope=0, intercept=0, linetype="dashed", color="black", alpha=0.5) +
+        scale_y_continuous(limits=c(0, 600))
 }
 
 
