@@ -2,10 +2,13 @@
 # Uses software in directory `network-merging/software/`
 using PhyloCoalSimulations, StaticArraysCore, StaticArrays
 
-function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String, output_file_prefix::String)
+function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String, output_file_prefix::String, estgt_file::String="", data_dir::String="")
     seq_file_paths = ["$(output_file_prefix)_$(i)" for i=1:length(gts)]
     if all(isfile(f) for f in seq_file_paths)
         @debug "Sequence data files already exist"
+        return seq_file_paths
+    elseif isfile(estgt_file)
+        @debug "Estimated gene trees already exist, skipping sequence generation."
         return seq_file_paths
     end
 
@@ -15,7 +18,7 @@ function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String,
     
 
     # simulate sequences w/ seq-gen
-    seq_file_paths = run_seqgen_multi(s, gts, output_file_prefix)
+    seq_file_paths = run_seqgen_multi(s, gts, output_file_prefix, data_dir = data_dir)
     return seq_file_paths
 end
 
@@ -42,6 +45,15 @@ function estimate_gene_trees(seq_files::Vector{String}, estgt_output_file::Strin
     open(estgt_output_file, "w+") do f
         for newick in estgt_newicks
             write(f, "$(newick)\n")
+        end
+    end
+end
+
+
+function silently(f)
+    redirect_stdout(Base.DevNull()) do
+        redirect_stderr(Base.DevNull()) do 
+            return f()
         end
     end
 end
@@ -157,7 +169,6 @@ function load_true_net_ils_adjusted(netid::String, replicatenum::Int64, ils::Str
     
     # 4. extend leaves to desired length
     extend_leaves!(truenet, leaf_depths)
-    minimum(e.length for e in majorTree(truenet).edge) >= 0. || error("Negative branch lengths") # sanity check
 
     return truenet
 end
@@ -180,7 +191,7 @@ end
 # Finds the root to tip distance for each tip in net's major tree.
 function get_leaf_depths(net::HybridNetwork)
     tre = majorTree(net)
-    depths = Array{Float64}(undef, net.numTaxa)
+    depths = zeros(net.numTaxa)
 
     for (i, leaf) in enumerate(net.leaf)
         curr = leaf
