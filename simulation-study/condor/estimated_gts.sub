@@ -1,0 +1,24 @@
+universe = vanilla
+
+log = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/logs/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).log
+error = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/errors/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).err
+output = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/outputs/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).out
+
+###################################################################
+executable = scripts/estimated_gts.sh
+arguments = $(NETID) $(REPLICATENUM) $(NLOCI) $(SEQLEN) $(ILSLEVEL) $(M)
+###################################################################
+
+should_transfer_files = YES
+transfer_input_files = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/julia-1.9.3-linux-x86_64.tar.gz,  \
+    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/inphynet-proj.tar.gz,  \
+    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.jl,   \
+    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.sh
+
+priority = 100
+request_cpus = 14
+request_memory = 64GB
+request_disk = 20GB
+
+# Queue one job for each unique newick
+queue NETID,REPLICATENUM,NLOCI,SEQLEN,ILSLEVEL,M from tables/estimated_gts.tab
