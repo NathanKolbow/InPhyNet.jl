@@ -75,6 +75,52 @@ end
 
 
 """
+    calculate_pairwise_metric_across_networks(nets::AbstractVector{HybridNetwork}, net_metric::Function, summary_metric::Function)
+
+Used as the base of `calculateAGIC`, `calculateAGID`, and `calculateMGIC`.
+
+# Arguments
+- `nets`: vector of `HybridNetwork` objects
+- `net_metric`: metric calculated across each network - `net_metric(net::HybridNetwork, namelist::Vector{String}=namelist)`
+                must be valid and return Float64
+- `summary_metric`: metric that summarized values from `net_metric`. e.g. `mean` or `median`
+"""
+# function calculate_pairwise_metric_across_networks(nets::AbstractVector{HybridNetwork}, net_metric::Function, summary_metric::Function)
+#     all_names = Set()
+#     for net in Ns
+#         union!(all_names, [leaf.name for leaf in net.leaf])
+#     end
+#     n = length(all_names)
+#     namelist = sort(collect(all_names))
+
+#     D = Matrix{Vector{Float64}}(undef, n, n)
+#     D .= []
+
+#     for net in nets
+#         iter_names = sort([leaf.name for leaf in net.leaf])
+#         idx_filter = findall(x -> x in iter_names, namelist)
+#         iter_D = view(D, idx_filter, idx_filter)
+
+#         pairwise_vals = net_metric(net, namelist=iter_names)
+#         for i = 1:size(pairwise_vals, 1)
+#             for j = 1:size(pairwise_vals, 2)
+#                 push!(iter_D[i, j], pairwise_vals[i, j])
+#             end
+#         end
+#     end
+    
+#     summary_matrix = Matrix{Float64}(undef, n, n)
+#     for i = 1:size(D, 1)
+#         for j = 1:size(D, 2)
+#             summary_matrix[i, j] = summary_metric(D[i, j])
+#         end
+#     end
+
+#     return summary_matrix, namelist
+# end
+
+
+"""
     calculateAGID(Ns::AbstractVector{HybridNetwork})
 
 Calculates the **A**verage **G**ene tree **I**nternode **D**istance for all pairs of taxa
@@ -106,11 +152,26 @@ across all networks in `Ns`.
 2. names of taxa corresponding to rows/columns in the AGID matrix
 """
 function calculateAGIC(Ns::AbstractVector{HybridNetwork})
-    D, namelist = internodecount(Ns[1])
-    for j=2:length(Ns)
-        D .+= internodecount(Ns[j], namelist=namelist)[1]
+    all_names = Set()
+    for net in Ns
+        union!(all_names, [leaf.name for leaf in net.leaf])
     end
-    return D ./ length(Ns), namelist
+    n = length(all_names)
+    namelist = sort(collect(all_names))
+
+    pair_appearance_count = zeros(UInt64, n, n)
+    D = zeros(Float64, n, n)
+
+    for j=1:length(Ns)
+        iter_names = sort([leaf.name for leaf in Ns[j].leaf])
+        idx_filter = findall(x -> x in iter_names, namelist)
+        iter_D = view(D, idx_filter, idx_filter)
+        iter_count = view(pair_appearance_count, idx_filter, idx_filter)
+
+        iter_D .+= internodecount(Ns[j], namelist=iter_names)[1]
+        iter_count .+= 1
+    end
+    return D ./ pair_appearance_count, namelist
 end
 
 
