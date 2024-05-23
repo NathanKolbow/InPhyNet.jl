@@ -1,7 +1,7 @@
 # Author: Nathan Kolbow
 # Hosted at https://github.com/NathanKolbow/network-merging
 #
-# Source code for main components of the network merging algorithm.
+# Source code for main components of the InPhyNet algorithm.
 
 function netnj(estgts::Vector{HybridNetwork})
     error("not implemented yet")
@@ -973,7 +973,6 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; 
 
     idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
     if length(idxpairs) == 0
-        @show size(D, 1)
         throw(SolutionDNEError())
     end
 
@@ -1227,11 +1226,11 @@ end
 
 
 mutable struct AtomicCounter{Int64}; @atomic count::Int64; end
-function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; max_retry_attempts::Real=1e5)
+function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; max_retry_attempts::Real=1e5, verbose::Bool=true)
     # First, try it normally. if it fails, do some runs
     ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist))
 
-    if typeof(ret_val) <: Tuple
+    if typeof(ret_val) <: Tuple || ret_val === nothing
         first_seq, first_maxes = ret_val
         starting_points = [([i], [first_maxes[1]]) for i in first_seq[1:max(length(first_seq), Threads.nthreads())]]
         any_runs_succeeded = Ref(false)
