@@ -198,7 +198,6 @@ end
 
 
 function no_noise_sim_already_performed(netid::String, replicatenum::Int64, maxsubsetsize::Int64, all_have_outgroup::Bool, outgroup_removed_after_reroot::Bool)
-
     output_path = get_output_filepath(netid)
     if !isfile(output_path) return false end
     ntaxa = split(netid, "r")
