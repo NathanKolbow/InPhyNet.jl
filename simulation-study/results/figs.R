@@ -3,16 +3,19 @@ library(ggplot2)
 source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/fig-helpers.R")
 
 
+prev_count <- no_noise_df %>% count(netid)
+prev_count
+
+source("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/fig-helpers.R")
+chg <- no_noise_df %>% count(netid)
+chg$n <- chg$n - prev_count$n
+chg
+
 # Quick data checks
 plot_no_noise_success_props()
 plot_hwcd_heatmap("n100r5", plot_factor = 10, without_extra_retics = TRUE, subset_facet = FALSE, use_std0 = TRUE)
 plot_hwcd_heatmap("n200r10", plot_factor = 10, without_extra_retics = TRUE, subset_facet = FALSE, use_std0 = TRUE)
 
-
-# `df` and `df_std0` are loaded in `fig-helpers.R` and
-# are used automatically instead of needing to be passed into each function
-#
-# df <- read_df()
 
 ####################
 # ALWAYS OUTGROUP? #
@@ -62,8 +65,18 @@ mean(filter(net_df("n200r10"), all_have_outgroup & !outgroup_removed_after_reroo
 plot_no_noise_success_props()
 
 # HWCD for all nets compared across subset sizes
-plot_no_noise_hwcd()
-plot_no_noise_hwcd(without_retics = TRUE)
+pdf(file = "no_noise_hwcd.pdf", width=12, height=8)
+plot_no_noise_hwcd() +
+    labs(
+        x="Maximum Subset Size",
+        y="Estimation Error (HWCD)",
+        color="Net ID"
+    )
+dev.off()
+
+plot_no_noise_hwcd(majortree = TRUE) +
+    scale_y_continuous(limits=c(0, 50))
+
 
 ##################################################
 # SUCCESS RATE FIGURES FOR DATA W/ PERTURBATIONS #

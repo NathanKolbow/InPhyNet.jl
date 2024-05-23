@@ -1,6 +1,17 @@
 simulation-study/data/output/*.csv
 simulation-study/data/est_data_output/*.csv
+empirical-study/data/
 .vscode/
+
+# Condor files
+simulation-study/condor/errors/
+simulation-study/condor/logs/
+simulation-study/condor/outputs/
+simulation-study/condor/inphynet-proj/
+simulation-study/condor/tables/estimated_gts.tab
+simulation-study/condor/transfer-files/
+simulation-study/condor/test_run.sub
+simulation-study/condor/test_run2.sub
 
 # MacOS files
 *.DS_store

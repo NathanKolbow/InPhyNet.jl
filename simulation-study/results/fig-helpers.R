@@ -43,8 +43,7 @@ read_df <- function() {
             outgroup_removed_after_reroot = as.logical(outgroup_removed_after_reroot)
         ) %>%
         filter()
-
-    print("Skipping stitch step")
+    
     full_df
 }
 df <- read_df()
@@ -60,13 +59,13 @@ net_df_with_std0 <- function(netid_filter) {
     std0_hash <- hash()
     for(i in 1:nrow(df_std0)) {
         row <- df_std0[i,]
-        std0_hash[[paste0(row$net_id, "_", row$replicate_num)]] <- row$D_std
+        std0_hash[[paste0(row$net_id, "_", row$rep)]] <- row$std0
     }
 
     for(netid in unique(temp_df$netid)) {
         idx_filt <- temp_df$netid == netid
         for(repnum in 1:100) {
-            iter_filt <- idx_filt & temp_df$replicate_num == repnum
+            iter_filt <- idx_filt & temp_df$rep == repnum
             if(any(iter_filt)) {
                 temp_df[iter_filt, ]$std0 <- std0_hash[[paste0(netid, "_", repnum)]]
             }
@@ -280,15 +279,13 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
 
     if(draw_alpha) {
         p <- p +
-            scale_alpha_continuous(range = c(0.1, 1)) & labs(alpha = "Success Probability")
-    } else {
-        p <- p & guides(alpha = NULL)
+            scale_alpha_continuous(range = c(0.1, 1), guide = 'none')
     }
 
     # Add labels
     p <- p + labs(
-        x = ifelse(use_std0, "Distance Matrix % Signal", "Gaussian Noise = N(x, x)"),
-        y = "Sum of Constraint Errors",
+        x = ifelse(use_std0, "Dissimilarity Matrix Signal", "Gaussian Noise = N(x, x)"),
+        y = "Total Constraint Error",
         title = ifelse(without_extra_retics, "HWCD(true net w/o unidentified retics, est net)", "HWCD(true net, est net)"),
         fill = "HWCD"
     )
@@ -390,17 +387,20 @@ plot_success_prop_stacked_bar <- function(netid, no_noise = FALSE) {
     ggplot(gg_df, aes(x = nni_error_level, y = stack_prob, fill = gauss_error_level, group = gauss_error_level)) +
         geom_bar(stat = "identity", color = "black") +
         geom_text(aes(label=paste0(prob, "%")), position = position_stack(vjust = 0.5), color = "white") +
-        labs(x = "Constraint Error Level", y = "Success Probability (%)",
+        labs(x = "Constraint Error Level", y = "Completion Rate (%)",
             fill = "Gaussian Noise Level")
 }
 
 
-plot_no_noise_hwcd <- function(without_retics = FALSE) {
+plot_no_noise_hwcd <- function(without_retics = FALSE, majortree = FALSE) {
     gg_df <- no_noise_df %>%
         filter(estRFerror != -1) %>%
         group_by(max_subset_size, netid)
     
-    if(without_retics) {
+    if(majortree) {
+        gg_df <- gg_df %>% summarise(mean_RF = mean(majortreeRF),
+            sd_RF = sd(majortreeRF))
+    } else if(without_retics) {
         gg_df <- gg_df %>% summarise(mean_RF = mean(esterror_without_missing_retics),
             sd_RF = sd(estRFerror))
     } else {
