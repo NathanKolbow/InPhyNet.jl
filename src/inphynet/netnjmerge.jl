@@ -1242,9 +1242,9 @@ function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwor
             tracking_arr = []
 
             while typeof(loop_ret_val) <: Tuple && !any_runs_succeeded[] && ac.count <= max_retry_attempts
-                loop_ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = loop_ret_val[1], pick_sequence_max_idxs = loop_ret_val[2])
+                loop_ret_val = netnj_retry!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), pick_sequence = loop_ret_val[1], pick_sequence_max_idxs = loop_ret_val[2], supressunsampledwarning=true)
                 @atomic :sequentially_consistent ac.count += 1
-                if Threads.threadid() == 1
+                if Threads.threadid() == 1 && verbose
                     print("\rSearching for valid solution, checked $(ac.count) combinations...")
                 end
             end
@@ -1253,13 +1253,17 @@ function netnj_retry_driver(D::Matrix{Float64}, constraints::Vector{HybridNetwor
                 any_runs_succeeded[] = true
                 succeeded_val = loop_ret_val
                 return loop_ret_val
+            else
+                # Failed to find a solution within `max_retry_attempts` attempts
+                if verbose @info "Failed after $(ac.count) iterations." end
+                return nothing
             end
         end
 
-        @info "Succeeded after $(ac.count) iterations."
+        if verbose @info "Succeeded after $(ac.count) iterations." end
         return succeeded_val
     else
-        @info "No retries needed"
+        if verbose @info "No retries needed" end
         return ret_val
     end
 end
