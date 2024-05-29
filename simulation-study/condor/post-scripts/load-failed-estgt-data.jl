@@ -1,3 +1,9 @@
+# Include this file:
+# include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/post-scripts/load-failed-estgt-data.jl")
+
+using Pkg
+Pkg.activate("/mnt/dv/wid/projects4/SolisLemus-network-merging/")
+
 include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/helpers.jl")
 filepath = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/outputs/snaq1_3478_n200r10_2_m15_100_1000_med.out"
 
