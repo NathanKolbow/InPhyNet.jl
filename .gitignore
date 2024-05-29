@@ -1,8 +1,10 @@
+.vscode/
+
 simulation-study/data/output/*.csv
 simulation-study/data/est_data_output/*.csv
 simulation-study/data/D_std0.csv
 empirical-study/data/
-.vscode/
+software/
 
 # Condor files
 simulation-study/condor/errors/
