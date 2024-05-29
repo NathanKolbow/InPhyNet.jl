@@ -17,13 +17,15 @@ end
 
 
 # --------------------------------------------------------------------- #
-m = 10
+h_max = 6
+m = 20
 log("Using m=$(m)", :red)
 # --------------------------------------------------------------------- #
 
 
 log("Loading scripts", :cyan)
 include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/helpers.jl")
+include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/est_constraints-helpers.jl")
 base_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/empirical-study/"
 snaq_dir = joinpath(base_dir, "data", "snaq_data")
 est_constraint_dir = joinpath(base_dir, "data", "est_constraint_data")
@@ -45,7 +47,7 @@ subsets = sateIdecomp(nj_tre, m)
 # For each subset, infer networks with 0, 1, 2 reticulations
 # Number of retics can be increased later for nets w/ continually increasing PSL
 snaq_filename_prefix(subset_idx, nhyb) = joinpath(snaq_dir, "snaq_m$(m)_subset$(subset_idx)_h$(nhyb)")
-log("Entering SNaQ loop - $(length(subsets) * 3) total networks to infer")
+log("Entering SNaQ loop")
 for (s_idx, subset) in enumerate(subsets)
     log("Subset $(s_idx):")
     log("\tlength(subset) = $(length(subset))")
@@ -81,21 +83,13 @@ for (s_idx, subset) in enumerate(subsets)
     end
 
     log("\tinferring constraints:", :cyan)
-    for nhybrids=0:2
-        log("\t\thmax = $(nhybrids) (network $((s_idx-1)*3+nhybrids+1)/$(length(subsets)*3))", :cyan)
-        filename_prefix = snaq_filename_prefix(s_idx, nhybrids)
-        runtime_file = "$(filename_prefix).runtimes"
-        if isfile(runtime_file)
-            log("\t\t\tconstraint already inferred", :green)
-            continue
-        end
+    neg_Plogliks = Vector{Float64}([])
+    nhybrids::Int64 = -1
+    while !should_stop_AIC(neg_Plogliks) && nhybrids < h_max
+        nhybrids += 1
+        log("\t\thmax = $(nhybrids)", :cyan)
 
-        snaq_runtime = @elapsed silently() do
-            snaq!(start_tree, snaq_df, filename=filename_prefix, hmax=nhybrids, seed=42)
-        end
-        open(runtime_file, "w+") do f
-            write(f, "$(snaq_runtime)")
-        end
-        log("\t\t\ttook $(round(snaq_runtime / 60 / 60, digits=2)) hours ($(round(snaq_runtime / 60 / 60 / 24, digits=2)) days)", :green)
+        neg_Pll = empirical_snaq(s_idx, nhybrids, start_tree, snaq_df)
+        push!(neg_Plogliks, neg_Pll)
     end
 end
