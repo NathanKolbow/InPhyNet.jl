@@ -2,7 +2,7 @@
 # Uses software in directory `network-merging/software/`
 using PhyloCoalSimulations, StaticArraysCore, StaticArrays
 
-function simulate_sequence_data(gts::Vector{HybridNetwork}, truegt_file::String, output_file_prefix::String, estgt_file::String="", data_dir::String="")
+function simulate_sequence_data(gts::Vector{HybridNetwork}, output_file_prefix::String, estgt_file::String="", data_dir::String="")
     seq_file_paths = ["$(output_file_prefix)_$(i)" for i=1:length(gts)]
     if all(isfile(f) for f in seq_file_paths)
         @debug "Sequence data files already exist"
@@ -285,7 +285,7 @@ function run_seqgen_multi(seqgen_s::AbstractFloat, gts::Vector{HybridNetwork}, o
 
         temp_seq_file = joinpath(data_dir, "tempseq_out_$(i).phy")
 
-        run_seqgen(seqgen_s, temp_gt_file, temp_seq_file)
+        run_seqgen(seqgen_s, temp_gt_file, temp_seq_file, seq_length = seq_length)
         mv(temp_seq_file, "$(output_file_prefix)_$(i)")
 
         seq_file_paths[i] = "$(output_file_prefix)_$(i)"
@@ -325,6 +325,17 @@ function calc_gtee(true_newick::AbstractString, est_newick::AbstractString)
     run(pipeline(`python3 $scriptpath -t1 $true_newick -t2 $est_newick`, stdout=gtee_nrf))
     close(gtee_nrf.in)
     return String(read(gtee_nrf))
+end
+
+
+function clean_iqtree_files(input_seqfile::AbstractString)
+    rm_suppress(input_seqfile*".bionj")
+    rm_suppress(input_seqfile*".ckp.gz")
+    rm_suppress(input_seqfile*".iqtree")
+    rm_suppress(input_seqfile*".log")
+    rm_suppress(input_seqfile*".mldist")
+    rm_suppress(input_seqfile*".model.gz")
+    rm_suppress(input_seqfile*".treefile")
 end
 
 
