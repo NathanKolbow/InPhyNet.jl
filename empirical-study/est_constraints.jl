@@ -49,13 +49,19 @@ log("Entering SNaQ loop - $(length(subsets) * 3) total networks to infer")
 for (s_idx, subset) in enumerate(subsets)
     log("Subset $(s_idx):")
     log("\tlength(subset) = $(length(subset))")
+    
+    if length(subset) < 5
+        log("\tERROR: only $(length(subset)) taxa in subset", :red)
+        continue
+    end
+    
     iter_gts = Vector{HybridNetwork}([])
     for (i, gt) in enumerate(est_gts)
         # Gene tree must have at least 4 of the taxa in `subset` to be included here
         taxa_in_gt = [leaf.name for leaf in gt.leaf]
         taxa_in_gt_and_subset = intersect(taxa_in_gt, subset)
         
-        if length(taxa_in_gt_and_subset) >= 4
+        if length(taxa_in_gt_and_subset) >= 5
             push!(iter_gts, readTopology(writeTopology(pruneTruthFromDecomp(gt, subset))))
         end
     end
