@@ -1,5 +1,8 @@
 # Include this file:
 # include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/post-scripts/load-failed-estgt-data.jl")
+#
+# Save all possible as a script:
+# julia /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/post-scripts/load-failed-estgt-data.jl
 
 using Pkg
 Pkg.activate("/mnt/dv/wid/projects4/SolisLemus-network-merging/")
@@ -24,7 +27,19 @@ function save_data(file_path::String)
         return
     end
 
-    mnet_time = @elapsed mnet = netnj(est_D, est_constraints, est_namelist)
+    mnet_time = Inf
+    mnet = nothing
+    try
+        mnet_time = @elapsed mnet = netnj(est_D, est_constraints, est_namelist)
+    catch e
+        if typeof(e) <: SolutionDNEError
+            printstyled("[Solution DNE] ", color=:red)
+            printstyled("$(net_id) #$(rep_num), m=$(m), nloci=$(ngt) seq_len=$(seq_len), ils=$(ils_level)\n", color=:black)
+            return
+        end
+    end
+    
+    
     if mnet !== nothing && typeof(mnet) <: HybridNetwork
         save_estimated_gts_results(
             net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len,
@@ -36,7 +51,7 @@ function save_data(file_path::String)
         printstyled("[FAILED] ", color=:red)
         printstyled("$(net_id) #$(rep_num), m=$(m), nloci=$(ngt) seq_len=$(seq_len), ils=$(ils_level)\n", color=:black)
         printstyled("\tnet_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist=" *
-                    "get_data(\"$(file_path)\")")
+                    "get_data(\"$(file_path)\")\n")
     end
 end
 
@@ -96,9 +111,6 @@ function get_valid_file_list()
 end
 
 
-
-
-
 function big_try(netA, netB)
     best_edge = nothing
     best_hwcd = hardwiredClusterDistance(netA, netB, true)
@@ -124,3 +136,7 @@ function big_try(netA, netB)
     return best_edge, best_hwcd
 end
 
+
+if !isinteractive()
+    save_all()
+end
