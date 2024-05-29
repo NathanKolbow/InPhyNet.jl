@@ -15,6 +15,27 @@ transfer_input_files = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulati
     /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.jl,   \
     /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.sh
 
+transfer_checkpoint_files = checkpoint_files/
+
+Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
+                (machine == "roy-exec-2.discovery.wisc.edu") || \
+                (machine == "roy-exec-3.discovery.wisc.edu") || \
+                (machine == "roy-exec-4.discovery.wisc.edu") || \
+                (machine == "roy-exec-5.discovery.wisc.edu") || \
+                (machine == "roy-exec-6.discovery.wisc.edu") || \
+                (machine == "roy-exec-7.discovery.wisc.edu") || \
+                (machine == "roy-exec-8.discovery.wisc.edu") || \
+                (machine == "roy-exec-9.discovery.wisc.edu") || \
+                (machine == "roy-exec-10.discovery.wisc.edu") || \
+                (machine == "roy-exec-11.discovery.wisc.edu") || \
+                (machine == "opt-a001.discovery.wisc.edu") || \
+                (machine == "opt-a002.discovery.wisc.edu") || \
+                (machine == "opt-a003.discovery.wisc.edu") || \
+                (machine == "opt-a004.discovery.wisc.edu") || \
+                (machine == "opt-a005.discovery.wisc.edu") || \
+                (machine == "opt-a006.discovery.wisc.edu") || \
+                (machine == "jolab-01.discovery.wisc.edu")
+
 priority = 100
 request_cpus = 14
 request_memory = 64GB
