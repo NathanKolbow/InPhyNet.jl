@@ -12,15 +12,18 @@ dmethod = "AGIC"
 ###########################
 nhybrids = parse(Int64, split(netid, "r")[2])
 data_dir = joinpath(pwd(), "data")
-mkdir(data_dir)
-mkdir(joinpath(data_dir, "temp_data"))
+if !isdir(data_dir) mkdir(data_dir) end
+if !isdir(joinpath(data_dir, "temp_data")) mkdir(joinpath(data_dir, "temp_data")) end
 ###########################
 
+using Distributed
 println("Loading helpers.jl")
 # IMPORTANT: run `include` once on the main worker so that all the precompilation is done, then run `include`
 #            with @everywhere so that each worker has access to necessary fxns
 include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/helpers.jl")
+include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/estimated_gts-helpers.jl")
 @everywhere include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/helpers.jl")
+@everywhere include("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/helpers/estimated_gts-helpers.jl")
 
 # 0. check if we've already run these sims. if so, don't bother running again
 if estimated_sims_already_performed(netid, replicatenum, ngt, seq_len, ils_level, maxsubsetsize)
@@ -30,85 +33,68 @@ else
     println("Parameter set: ($(netid), rep=$(replicatenum), ngt=$(ngt), len=$(seq_len), ils=$(ils_level), m=$(maxsubsetsize), d=$(dmethod))")
 end
 
+# 1/2. print some basic info
+print_basic_info()
+
 # 1. gather ground truth network, constraint, distance matrix, and namelist
-println("Loading data")
+log("DATA", "Loading ground truth data.")
 true_net = load_true_net_ils_adjusted(netid, replicatenum, ils_level)
-seed = parse(Int64, "$(true_net.numTaxa)42$(true_net.numHybrids)42$(replicatenum)")
 for e in true_net.edge
     if e.length == -1. e.length = 0.473 end
 end
 
-# 2. simulate gene trees
-println("Simulating gene trees")
-using PhyloCoalSimulations
-truegt_file = joinpath(data_dir, "truegt_$(netid)_$(replicatenum)_$(ngt)_$(ils_level).treefile")
-gts = nothing
+##############
+# FILE PATHS #
+##############
+checkpoint_dir = joinpath(pwd(), "checkpoint_files")
+if !isdir(checkpoint_dir) mkdir(checkpoint_dir) end
 
-if isfile(truegt_file)
-    gts = readMultiTopology(truegt_file)
-else
-    Random.seed!(seed)
-    gts = simulatecoalescent(true_net, ngt, 1)
-    writeMultiTopology(gts, truegt_file)
-end
+truegt_file = joinpath(checkpoint_dir, "truegt_$(netid)_$(replicatenum)_$(ngt)_$(ils_level).treefile")
+seq_file_prefix = joinpath(checkpoint_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).phy")
+estgt_file = joinpath(checkpoint_dir, "estgt_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).treefile")
+net_file = joinpath(checkpoint_dir, "estnets_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level)_$(maxsubsetsize)_$(dmethod).netfile")
 
-# 3. simulate sequences w/ seq-gen
-println("Simulating sequences")
-seq_file_prefix = joinpath(data_dir, "seqfile_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).phy")
-estgt_file = joinpath(data_dir, "estgt_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level).treefile")
-Random.seed!(seed)
-seq_files = simulate_sequence_data(Vector{HybridNetwork}(gts), truegt_file, seq_file_prefix, estgt_file, data_dir)
+if !isfile(estgt_file) touch(estgt_file) end
+##############
+seed = parse(Int64, "$(true_net.numTaxa)42$(true_net.numHybrids)42$(replicatenum)")
 
-# 4. infer gene trees w/ iqtree
-println("Inferring gene trees")
-Random.seed!(seed)
-estimate_gene_trees(seq_files, estgt_file)
 
-# 4.1 delete the simulated sequence data, that way we can save some space...
-for seq_file in seq_files
-    if isfile(seq_file)
-        rm(seq_file)
-    end
-end
 
-# 5. estimate an NJ tree for subset decomposition
-println("Estimating NJ tree")
-est_gts = readMultiTopology(estgt_file)
-est_D, est_namelist = calculateAGIC(est_gts)
-nj_df = DataFrame(est_D, est_namelist)
-nj_tre = nj(nj_df)
+# 2. simulate gene trees (fast, do all at once)
+true_gts::Vector{HybridNetwork} = simulate_gene_trees(truegt_file, ngt, seed)
 
-# 6. decompose into disjoint subsets
-println("Decomposing taxa into disjoint subsets")
-subsets = sateIdecomp(nj_tre, maxsubsetsize)
-if minimum([length(s) for s in subsets]) < 4
-    error("Smallest subset must have at least 4 taxa for SNaQ.")
-end
+# 3. true gt --> seq --> est gt (slow, do one at a time and use checkpointing)
+pmap(
+    (i, gt) -> est_gt_from_true_gt(gt, "$(seq_file_prefix)_$(i)", "$(estgt_file)_$(i)", data_dir, i),
+    1:length(true_gts), true_gts
+)
+flush(stdout)
+est_gts = [readTopology("$(estgt_file)_$(i)") for i=1:length(true_gts)]
 
-# 7. infer constraints w/ SNaQ
-println("Inferring networks")
-net_file = joinpath(data_dir, "estnets_$(netid)_$(replicatenum)_$(ngt)_$(seq_len)_$(ils_level)_$(maxsubsetsize)_$(dmethod).netfile")
-Random.seed!(seed)
-est_constraints, est_constraint_runtimes = infer_constraints(estgt_file, net_file, subsets, true_net)
+# 4. estimate an NJ tree
+est_D, est_namelist, nj_tre = estimate_nj_tree(est_gts)
 
-# 8. InPhyNet inference
-println("Merging networks")
-mnet = nothing
+# 5. decompose into disjoint subsets
+subsets = subset_decomp(nj_tre, maxsubsetsize)
+
+# 6. infer constraints w/ SNaQ
+est_constraints, est_constraint_runtimes = snaq_constraints(est_gts, net_file, subsets, true_net, nj_tre, seed)
+
+# 7. InPhyNet inference
+log("InPhyNet", "Merging networks.")
 try
-    global mnet
     inphynet_time = @elapsed mnet = netnj(est_D, est_constraints, est_namelist)
-    println("Network merge step succeeded")
+    log("InPhyNet", "Merge successful.", :green)
 
-    # 9. Save results
-    println("Saving results")
+    log("InPhyNet", "Saving results.")
     save_estimated_gts_results(netid, true_net, replicatenum, ngt,
-        ils_level, maxsubsetsize, dmethod, seq_len,
-        mnet, est_constraints, est_gts, est_constraint_runtimes, inphynet_time)
+        ils_level, maxsubsetsize, dmethod, seq_len, mnet, est_constraints,
+        est_gts, est_constraint_runtimes, inphynet_time)
 catch e
-    println("Network merge step failed: $(typeof(e))")
+    log("InPhyNet", "Failed ($(typeof(e))).", :red)
 end
 
-# 10. print all the necessary info into the output file in case it doesn't get saved properly
+# 8. print all the necessary info into the output file in case it doesn't get saved properly
 println(netid)
 println(writeTopology(true_net))
 println(replicatenum)
@@ -128,3 +114,4 @@ end
 for r in est_constraint_runtimes
     println(r)
 end
+
