@@ -274,7 +274,10 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
 
     # Facet if we want to facet
     if(subset_facet) {
-        p <- p + facet_wrap(~ max_subset_size)
+        label_func <- function(value) {
+            return(paste0("m = ", value))
+        }
+        p <- p + facet_wrap(~ max_subset_size, labeller=labeller(max_subset_size = label_func))
     }
 
     if(draw_alpha) {
