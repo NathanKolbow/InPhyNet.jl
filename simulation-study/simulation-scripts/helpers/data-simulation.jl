@@ -205,6 +205,23 @@ function get_leaf_depths(net::HybridNetwork)
 end
 
 
+function get_descendant_leaves(node::PhyloNetworks.Node)
+    q = Vector{PhyloNetworks.Node}([node])
+    leaves = Vector{PhyloNetworks.Node}([])
+    while length(q) > 0
+        curr = pop!(q)
+        if curr.leaf
+            push!(leaves, curr)
+        else
+            for child in getchildren(curr)
+                push!(q, child)
+            end
+        end
+    end
+    return leaves
+end
+
+
 # Finds the `-s` parameter for seq-gen such that gene
 # tree estimation error is in a reasonable range
 #
