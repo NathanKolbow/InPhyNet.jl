@@ -149,8 +149,8 @@ function removeredundantedges!(graph::SimpleGraph, net::HybridNetwork; keeproot:
 
     # Remove any nodes in the graph that (1) only have 1 connected node and (2) are not leaves
     for (vert_idx, adj_list) in enumerate(graph.fadjlist)
-        if keeproot && vert_idx == net.root continue end
-        if length(adj_list) == 1 && !net.node[vert_idx].leaf
+        if keeproot && vert_idx == net.root continue
+        elseif vert_idx == net.root || (length(adj_list) == 1 && !net.node[vert_idx].leaf)
             graph.fadjlist[vert_idx] = []
             graph.fadjlist[adj_list[1]] = setdiff(graph.fadjlist[adj_list[1]], vert_idx)
             push!(redundantidxs, vert_idx)
