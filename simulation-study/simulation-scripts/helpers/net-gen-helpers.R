@@ -53,8 +53,8 @@ rename_subnet_tips <- function(subnet_list, subnet_size, nretic) {
     name_idx <- 1
 
     for(subnet_idx in 1:length(subnet_list)) {
-        subnet_list[[subnet_idx]]$tip.label <- namelist[name_idx:(name_idx+24)]
-        name_idx <- name_idx + 25
+        subnet_list[[subnet_idx]]$tip.label <- namelist[name_idx:(name_idx+(subnet_size-1))]
+        name_idx <- name_idx + subnet_size
     }
 
     return(subnet_list)
