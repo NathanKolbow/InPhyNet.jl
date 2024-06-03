@@ -99,7 +99,15 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
         
         # Find optimal (i, j) idx pair for matrix Q
-        i, j = findoptQidx(D, possible_siblings, namelist=namelist)
+        i = j = nothing
+        try
+            i, j = findoptQidx(D, possible_siblings, namelist=namelist) 
+        catch e
+            for c in constraints
+                println(writeTopology(c))
+            end
+            rethrow(e)
+        end
         @debug "(i, j) = ($(i), $(j))"
 
         # connect subnets i and j
