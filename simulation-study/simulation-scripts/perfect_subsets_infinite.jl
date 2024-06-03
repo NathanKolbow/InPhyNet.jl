@@ -12,8 +12,9 @@ function run_n_sims(netid::String, maxsubsetsize::Int64, replicatenum::Int64, al
     Random.seed!(seed)
 
     # 2. run robustness testing
-    esterrors, esterrors_without_missing_retics, majortreeRFs, gausserrors, constraintdiffs, nretics_est =
+    esterrors, esterrors_without_missing_retics, majortreeRFs, gausserrors, constraintdiffs, nretics_est = silently() do
         monophyleticRobustness(truenet, constraints, D, namelist, nsim=nsim, displayprogress=false, do_no_noise_sim=false)
+    end
     constraintdiffs = sum(constraintdiffs, dims=1)[1,:]
 
     # 3. filter out the results that had constraint errors
