@@ -47,6 +47,24 @@ function save_data(file_path::String)
             return
         end
     end
+
+    if mnet === nothing
+        try
+            cs = deepcopy(est_constraints)
+            for c in cs
+                if length(c.node[c.root].edge) > 2
+                    rootonedge!(c, c.node[c.root].edge[1])
+                end
+            end
+            mnet_time = @elapsed mnet = netnj(est_D, cs, est_namelist, skip_constraint_check=false, force_unrooted=true)
+        catch e
+            if typeof(e) <: SolutionDNEError
+                printstyled("[Solution DNE] ", color=:red)
+                printstyled("$(net_id) #$(rep_num), m=$(m), nloci=$(ngt) seq_len=$(seq_len), ils=$(ils_level)\n", color=:black)
+                return
+            end
+        end
+    end
     
     
     if mnet !== nothing && typeof(mnet) <: HybridNetwork
