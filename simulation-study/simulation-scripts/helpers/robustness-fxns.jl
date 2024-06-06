@@ -77,7 +77,7 @@ end
 mutable struct AtomicCounter{Int64}; @atomic iterspassed::Int64; end
 
 # Main driver function for manuscript sims 1(i)-(iv)
-function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false, do_no_noise_sim::Bool=true)
+function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String}; nsim::Int64=1000, displayprogress::Bool=false, do_no_noise_sim::Bool=true, major_tree_only::Bool=false, force_unrooted::Bool=false)
     totalnnigen = Uniform(0, length(constraints) * 4)
 
     # Recorded values
@@ -116,7 +116,7 @@ function monophyleticRobustness(truenet::HybridNetwork, constraints::Vector{Hybr
         end
 
         esterrors[iter], esterrors_without_missing_retics[iter], majortreeRFs[iter], constraintdiffs[:,iter], _, nretics_est[iter] =
-            runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves)
+            runRobustSim(truenet, constraints, D, namelist, gaussMean, gaussSd, nnimoves, major_tree_only=major_tree_only, force_unrooted=force_unrooted)
 
         # Display progress
         @atomic :sequentially_consistent ac.iterspassed += 1
@@ -369,7 +369,7 @@ end
 
 
 function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}, D::Matrix{<:Real}, namelist::Vector{String},
-    gaussMean::Real, gaussSd::Real, NNImoves::Vector{<:Real}; copyD::Bool=true, copyconstraints::Bool=true)
+    gaussMean::Real, gaussSd::Real, NNImoves::Vector{<:Real}; copyD::Bool=true, copyconstraints::Bool=true, major_tree_only::Bool=false, force_unrooted::Bool=false)
 
     if copyD D = deepcopy(D) end
     origconstraints = constraints
@@ -395,7 +395,7 @@ function runRobustSim(truenet::HybridNetwork, constraints::Vector{HybridNetwork}
 
     # Merge the nets
     try
-        mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true)
+        mnet = netnj!(D, constraints, namelist, supressunsampledwarning=true, major_tree_only=major_tree_only, force_unrooted=force_unrooted)
         esterror = getNetDistances(truenet, mnet)
         majortreeRF = hardwiredClusterDistance(majorTree(truenet), majorTree(mnet), false)
         error_without_missing_retics = get_error_without_missing_retics(truenet, mnet)
