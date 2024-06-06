@@ -403,8 +403,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = getnodes(nodei)
     parentsj = getnodes(nodej)
 
-    length(parentsi) == 1 || length(net.node) == 1 || error("Found $(length(parentsi)) nodes above a leaf?")    # sanity check, remove when finalized
-    length(parentsj) == 1 || length(net.node) == 1 || error("Found $(length(parentsj)) nodes above a leaf?")    # sanity check; remove when finalized
+    length(parentsi) == 1 || length(net.node) == 1 || error("Found $(length(parentsi)) nodes above leaf $(nodei.name)?")    # sanity check, remove when finalized
+    length(parentsj) == 1 || length(net.node) == 1 || error("Found $(length(parentsj)) nodes above leaf $(nodej.name)?")    # sanity check; remove when finalized
     
     parentsi = parentsi[1]
     parentsj = parentsj[1]
@@ -617,15 +617,15 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
-    elseif parentsi == net.node[net.root] || parentsj == net.node[net.root]
+    elseif major_mrca(nodei, nodej) == net.node[net.root]
         # Merging unrooted constraint across the "root"
         if length(net.node) == 3
-            @debug "cross-root A: ($(nodei.name), $(nodej.name))"
+            @debug "cross-root B: ($(nodei.name), $(nodej.name))"
             # tricky case b/c ((a, b), c) all pairs of taxa are valid siblings
             # so keep retics straight is tough
             throw(ErrorException("Case not implemented yet."))
         else
-            @debug "cross-root B: ($(nodei.name), $(nodej.name))"
+            @debug "cross-root A: ($(nodei.name), $(nodej.name))"
             graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
             if any(i -> !isassigned(nodesinpath, i), 1:length(nodesinpath))
@@ -647,9 +647,33 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
 
             # Arbitrarily delete one of the nodes (nodej) and keep the other (nodei) without changing the root
+            curr = getparent(nodej)
             getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
             deleteNode!(net, nodej)
             deleteEdge!(net, getparentedge(nodej))
+
+            # If there are a series of nodes above `nodej` that are not the node (nodes leading to retics): remove those nodes
+            while curr != net.node[net.root] && length(getparents(curr)) > 0
+                n_child = length(getchildren(curr))
+                if !(n_child == 0 || (any(edge.hybrid for edge in curr.edge) && n_child == 1))
+                    @show !any([edge.hybrid for edge in curr.edge])
+                    @show length(getchildren(curr))
+                    break
+                end
+                @debug "Removing leftover nodes"
+
+                next_curr = getparents(curr)
+                if length(next_curr) == 1
+                    next_curr = next_curr[1]
+                elseif length(next_curr) == 2
+                    next_curr = getparent(getparentedge(curr))
+                end
+                
+                getparent(curr).edge = filter(e -> e != getparentedge(curr), getparent(curr).edge)
+                deleteNode!(net, curr)
+                deleteEdge!(net, getparentedge(curr))
+                curr = next_curr
+            end
 
             # Disconnect any hybrid edges that were logged
             for node in nodesinpath
@@ -672,17 +696,17 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     end
                 end
             end
+        end
 
-            # If the root node is redundant, move the root node down
-            while length(net.node[net.root].edge) == 1 && !getchild(net.node[net.root]).leaf
-                @debug "Moving root node down"
-                old_root = net.node[net.root]
-                net.root = findfirst(node -> node == getchild(net.node[net.root]), net.node)
-                
-                deleteNode!(net, old_root)
-                for node in getnodes(old_root)
-                    node.edge = filter(e -> old_root != e.node[1] && old_root != e.node[2], node.edge)
-                end
+        # If the root node is redundant, move the root node down
+        while length(net.node[net.root].edge) == 1 && !getchild(net.node[net.root]).leaf
+            @debug "Moving root node down"
+            old_root = net.node[net.root]
+            net.root = findfirst(node -> node == getchild(net.node[net.root]), net.node)
+            
+            deleteNode!(net, old_root)
+            for node in getnodes(old_root)
+                node.edge = filter(e -> old_root != e.node[1] && old_root != e.node[2], node.edge)
             end
         end
     else
@@ -838,6 +862,39 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newtip.name = nodei.name
 
         fuseredundantedges!(net)
+    end
+end
+
+
+"""
+
+Gets the MRCA of `nodei` and `nodej` along their major tree.
+"""
+function major_mrca(nodei::Node, nodej::Node)
+    obs_nodes = Set()
+    while true
+        if nodei in obs_nodes
+            return nodei
+        elseif nodej in obs_nodes
+            return nodej
+        end
+
+        push!(obs_nodes, nodei)
+        push!(obs_nodes, nodej)
+
+        parentsi = getparents(nodei)
+        if length(parentsi) == 1
+            nodei = parentsi[1]
+        elseif length(parentsi) == 2
+            nodei = getparent(getparentedge(nodei))
+        end
+
+        parentsj = getparents(nodej)
+        if length(parentsj) == 1
+            nodej = parentsj[1]
+        elseif length(parentsj) == 2
+            nodej = getparent(getparentedge(nodej))
+        end
     end
 end
 
