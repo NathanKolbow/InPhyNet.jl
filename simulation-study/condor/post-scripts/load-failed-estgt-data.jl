@@ -19,13 +19,22 @@ end
 
 
 function save_data(file_path::String)
-    net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist = get_data(file_path)
+    split_path = split(file_path, "_")
+    net_id = String(split_path[3])
+    rep_num = parse(Int64, split_path[4])
+    m = split_path[5]
+    m = parse(Int64, m[2:length(m)])
+    ngt = parse(Int64, split_path[6])
+    seq_len = parse(Int64, split_path[7])
+    ils_level = String(split(split_path[8], ".")[1])
 
     if estimated_sims_already_performed(net_id, rep_num, ngt, seq_len, ils_level, m)
         printstyled("[ALREADY LOGGED] ", color=:cyan)
         printstyled("$(net_id) #$(rep_num), m=$(m), nloci=$(ngt) seq_len=$(seq_len), ils=$(ils_level)\n", color=:black)
         return
     end
+
+    net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist = get_data(file_path)
 
     mnet_time = Inf
     mnet = nothing
