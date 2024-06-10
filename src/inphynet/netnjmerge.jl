@@ -656,8 +656,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             while curr != net.node[net.root] && length(getparents(curr)) > 0
                 n_child = length(getchildren(curr))
                 if !(n_child == 0 || (any(edge.hybrid for edge in curr.edge) && n_child == 1))
-                    @show !any([edge.hybrid for edge in curr.edge])
-                    @show length(getchildren(curr))
                     break
                 end
                 @debug "Removing leftover nodes"
