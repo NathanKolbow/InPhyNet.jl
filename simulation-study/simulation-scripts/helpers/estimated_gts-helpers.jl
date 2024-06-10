@@ -114,8 +114,7 @@ function snaq_constraints(est_gts::AbstractVector{HybridNetwork}, output_file_pr
         log("SNaQ #$(i)", "Inferring constraint.")
         snaq_runtime = @elapsed snaq_net = silently() do
             # snaq!(init_tree, df, filename=output_file, hmax=nhybrids, seed=seed+i)
-            snaq!(init_tree, df, filename=output_file, hmax=nhybrids, seed=seed+i,
-                ftolRel=Inf, ftolAbs=Inf, xtolRel=Inf, xtolAbs=Inf, Nfail=3, liktolAbs=1., runs=10)
+            snaq!(init_tree, df, filename=output_file, hmax=nhybrids, seed=seed+i, runs=10)
         end
 
         # 3. save runtime and network (checkpointed)
