@@ -34,7 +34,13 @@ function save_data(file_path::String)
         return
     end
 
-    net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist = get_data(file_path)
+    val = get_data(file_path)
+    if val === nothing
+        printstyled("[READ ERROR] ", color=:red)
+        printstyled("$(file_path)\n", color=:black)
+        return
+    end
+    net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist = val
 
     mnet_time = Inf
     mnet = nothing
@@ -84,45 +90,50 @@ end
 
 
 function get_data(file_path::String)
-    lines = readlines(file_path)
-    idx = 1
-    while lines[idx] != "n200r10" && idx <= length(lines)
-        idx += 1
-    end
+    try
+        lines = readlines(file_path)
+        idx = 1
+        while lines[idx] != "n200r10" && idx <= length(lines)
+            idx += 1
+        end
 
-    if idx > length(lines)
+        if idx > length(lines)
+            return nothing
+        end
+
+        net_id = lines[idx]
+        true_net = readTopology(lines[idx+1])
+        rep_num = parse(Int64, lines[idx+2])
+        ngt = parse(Int64, lines[idx+3])
+        ils_level = lines[idx+4]
+        m = parse(Int64, lines[idx+5])
+        dmethod = lines[idx+6]
+        seq_len = parse(Int64, lines[idx+7])
+
+        nconstraints = parse(Int64, lines[idx+8])
+        est_constraints = Vector{HybridNetwork}([])
+        for i=1:nconstraints
+            push!(est_constraints, readTopology(lines[idx+8+i]))
+        end
+
+        ngts = parse(Int64, lines[idx+8+nconstraints+1])
+        est_gts = Vector{HybridNetwork}([])
+        for i=1:ngts
+            push!(est_gts, readTopology(lines[idx+8+nconstraints+1+i]))
+        end
+
+        est_constraint_runtimes = Vector{Float64}([])
+        for i=1:nconstraints
+            push!(est_constraint_runtimes, parse(Float64, lines[idx+8+nconstraints+1+ngts+i]))
+        end
+        est_D, est_namelist = calculateAGIC(est_gts)
+        est_namelist = Vector{String}(est_namelist)
+
+        return net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist
+    catch e
         return nothing
     end
-
-    net_id = lines[idx]
-    true_net = readTopology(lines[idx+1])
-    rep_num = parse(Int64, lines[idx+2])
-    ngt = parse(Int64, lines[idx+3])
-    ils_level = lines[idx+4]
-    m = parse(Int64, lines[idx+5])
-    dmethod = lines[idx+6]
-    seq_len = parse(Int64, lines[idx+7])
-
-    nconstraints = parse(Int64, lines[idx+8])
-    est_constraints = Vector{HybridNetwork}([])
-    for i=1:nconstraints
-        push!(est_constraints, readTopology(lines[idx+8+i]))
-    end
-
-    ngts = parse(Int64, lines[idx+8+nconstraints+1])
-    est_gts = Vector{HybridNetwork}([])
-    for i=1:ngts
-        push!(est_gts, readTopology(lines[idx+8+nconstraints+1+i]))
-    end
-
-    est_constraint_runtimes = Vector{Float64}([])
-    for i=1:nconstraints
-        push!(est_constraint_runtimes, parse(Float64, lines[idx+8+nconstraints+1+ngts+i]))
-    end
-    est_D, est_namelist = calculateAGIC(est_gts)
-    est_namelist = Vector{String}(est_namelist)
-
-    return net_id, true_net, rep_num, ngt, ils_level, m, dmethod, seq_len, est_constraints, est_gts, est_constraint_runtimes, est_D, est_namelist
+    
 end
 
 
@@ -130,8 +141,11 @@ function get_valid_file_list()
     base_dir = "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/outputs/"
     file_list = Vector{String}([])
     for file in readdir(base_dir, join=true)
-        if length(readlines(file)) > 100
-            push!(file_list, file)
+        for line in readlines(file)
+            if occursin("[InPhyNet]", line)
+                push!(file_list, file)
+                break
+            end
         end
     end
     return file_list
