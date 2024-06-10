@@ -9,7 +9,7 @@ open(output_table, "w+") do f
     lines_written = 0
     for net_id in ["n200r10", "n500r25"]
         for rep in 1:10
-            for ngt in [100, 5000]
+            for ngt in [100, 1000, 5000]
                 for seq_len in [500, 1000]
                     for ils_level in ["low", "high"]
                         for m in [25]
