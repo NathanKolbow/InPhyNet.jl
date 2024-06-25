@@ -85,7 +85,7 @@ function subset_decomp(nj_tre::HybridNetwork, m::Int64)
 end
 
 
-function snaq_constraints(est_gts::AbstractVector{HybridNetwork}, output_file_prefix::String, subsets, true_net::HybridNetwork, nj_tre::HybridNetwork, seed::Int64)
+function snaq_constraints(est_gts::AbstractVector{HybridNetwork}, output_file_prefix::String, subsets, true_net::HybridNetwork, nj_tre::HybridNetwork, nruns::Int64, seed::Int64)
     Random.seed!(seed)
 
     q, t = silently() do
@@ -93,36 +93,43 @@ function snaq_constraints(est_gts::AbstractVector{HybridNetwork}, output_file_pr
     end
 
     for (i, subset_taxa) in enumerate(subsets)
-        output_file = "$(output_file_prefix)_$(i)"
-        runtime_file = "$(output_file).runtime"
-        output_net_file = "$(output_file).netfile"
-        if isfile(output_net_file) && isfile(runtime_file)
-            log("SNaQ #$(i)", "Already inferred.")
-            continue
-        end
+        for run_idx = 1:nruns
+            output_file = "$(output_file_prefix)_$(i)_$(run_idx)"
+            runtime_file = "$(output_file).runtime"
+            output_net_file = "$(output_file).netfile"
 
-        # 1. trim quartets
-        subset_q = trim_qt(q, t, subset_taxa)
-        df = silently() do
-            readTableCF(writeTableCF(subset_q, subset_taxa))
-        end
+            if isfile(output_net_file) && isfile(runtime_file)
+                log("SNaQ $(i)-$(run_idx)", "Already inferred.")
+                continue
+            end
 
-        # 2. infer network (checkpointed)
-        nhybrids = retics_in_subnet(true_net, subset_taxa)
-        init_tree = pruneTruthFromDecomp(nj_tre, subset_taxa)
+            # 1. trim quartets
+            subset_q = trim_qt(q, t, subset_taxa)
+            df = silently() do
+                readTableCF(writeTableCF(subset_q, subset_taxa))
+            end
 
-        log("SNaQ #$(i)", "Inferring constraint.")
-        snaq_runtime = @elapsed snaq_net = silently() do
-            # snaq!(init_tree, df, filename=output_file, hmax=nhybrids, seed=seed+i)
-            snaq!(init_tree, df, filename=output_file, hmax=nhybrids, seed=seed+i, runs=10)
-        end
+            # 2. infer network (checkpointed)
+            nhybrids = retics_in_subnet(true_net, subset_taxa)
+            init_tree = pruneTruthFromDecomp(nj_tre, subset_taxa)
 
-        # 3. save runtime and network (checkpointed)
-        open(runtime_file, "w+") do f
-            write(f, "$(snaq_runtime)")
-        end
-        open(output_net_file, "w+") do f
-            write(f, writeTopology(snaq_net))
+            log("SNaQ $(i)-$(run_idx)", "Inferring constraint.")
+            snaq_runtime = @elapsed snaq_net = silently() do
+                try_snaq!(est_gts, init_tree, df, output_file, nhybrids, seed+i)
+            end
+
+            # 3. save runtime and network (checkpointed)
+            snaq_newick = "();"
+            if snaq_net !== nothing
+                snaq_newick = writeTopology(snaq_net)
+            end
+
+            open(runtime_file, "w+") do f
+                write(f, "$(snaq_runtime)")
+            end
+            open(output_net_file, "w+") do f
+                write(f, snaq_newick)
+            end
         end
     end
 
@@ -130,15 +137,51 @@ function snaq_constraints(est_gts::AbstractVector{HybridNetwork}, output_file_pr
     est_constraints::Vector{HybridNetwork} = []
     est_constraint_runtimes::Vector{Float64} = []
     for i=1:length(subsets)
-        output_file = "$(output_file_prefix)_$(i)"
-        runtime_file = "$(output_file).runtime"
-        output_net_file = "$(output_file).netfile"
+        best_net = nothing
+        best_negloglik = Inf
+        best_runtime = Inf
 
-        push!(est_constraints, readTopology(output_net_file))
-        push!(est_constraint_runtimes, parse(Float64, readlines(runtime_file)[1]))
+        for run_idx=1:nruns
+            output_file = "$(output_file_prefix)_$(i)_$(run_idx)"
+            runtime_file = "$(output_file).runtime"
+            output_net_file = "$(output_file).netfile"
+
+            if !isfile("$(output_file).out") continue end
+
+            out_lines = readlines("$(output_file).out")
+            neg_loglik = split(out_lines[length(out_lines)-1], "-loglik ")[2]
+            neg_loglik = parse(Float64, neg_loglik)
+            
+            if neg_loglik < best_negloglik
+                best_negloglik = neg_loglik
+                best_net = readTopology(output_net_file)
+                best_runtime = parse(Float64(readlines(runtime_file)[1]))
+            end
+        end
+
+        if best_net === nothing throw(ErrorException("All runs failed.")) end
+
+        push!(est_constraints, best_net)
+        push!(est_constraint_runtimes, best_runtime)
     end
 
     return est_constraints, est_constraint_runtimes
+end
+
+
+function try_snaq!(est_gts, init_tree, df, output_file, nhybrids, seed)
+    for i=0:min(length(est_gts), 25)
+        tre = init_tree
+        if i != 0 tre = est_gts[i] end
+        try
+            snaq_net = silently() do
+                snaq!(tre, df, filename=output_file, hmax=nhybrids, seed=seed+i, runs=1)
+            end
+            return snaq_net
+        catch e
+        end
+    end
+    return nothing
 end
 
 

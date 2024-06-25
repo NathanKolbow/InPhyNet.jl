@@ -102,6 +102,52 @@ generate_subnets <- function(n_subnets, n_taxa, n_retics_total, nu) {
     }
 }
 
+# Generates subnets to be fitted into the tree generated
+# w/ generate_tree. `n_subnets` is the number of networks
+# to be generated, `n_taxa` is the number of taxa in
+# *each subnet*.
+#
+# `n_retics_total` is the number of total reticulations
+# *across all subnets*.
+generate_subnets_level1 <- function(n_subnets, n_taxa, nu) {
+    subnets <- list()
+    for(subnet_idx in 1:n_subnets) {
+        total_runs <- 0
+        while(TRUE) {
+            if(total_runs > 1e5) {
+                cat("1e5 runs w/o success, quitting.\n")
+                return(-1)
+            }
+
+            nets <- sim.bdh.taxa.ssa(
+                n = n_taxa, numbsim = 25, nu = nu, hybprops = c(0.5, 0, 0.5),
+                mu = 0, hyb.inher.fxn = make.beta.draw(10, 10), lambda = 1
+            )
+            total_runs <- total_runs + 25
+            
+            nhybs <- getnhybs(nets)
+            min_lvl <- 100
+            min_net <- -1
+            for(i in 1:25) {
+                if(length(nets[[i]]) == 0) { next }
+                iter_lvl <- getNetworkLevel(nets[[i]])
+                if(iter_lvl < min_lvl) {
+                    min_lvl <- iter_lvl
+                    min_net <- nets[[i]]
+                }
+            }
+
+            if(min_lvl <= 1) {
+                subnets[[subnet_idx]] <- min_net
+                break
+            } else {
+                nu <- nu * 5 / 6
+            }
+        }
+    }
+    return(list(subnets=subnets, nu=nu))
+}
+
 # Did any of the network simulations fail?
 any_failures <- function(net_list) {
     any(unlist(lapply(

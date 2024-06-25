@@ -226,7 +226,7 @@ plot_compare_hwcd_with_and_wo_identified_retics <- function(gg_df, sample_size =
 }
 
 
-plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, draw_alpha = TRUE, only_subset_size = NA, ...) {
+plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_factor * 10), tile_height = 2, without_extra_retics = FALSE, subset_facet = FALSE, use_std0 = FALSE, draw_alpha = TRUE, only_subset_size = NA, col_lims = FALSE, ...) {
     gg_df <- net_df(netid)
     if(use_std0) gg_df <- net_df_with_std0(netid)
 
@@ -240,7 +240,8 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
 
     if(use_std0) gg_df$gauss_error <- gg_df$std0 / (gg_df$gauss_error + gg_df$std0)
     gg_df <- gg_df %>%
-        mutate(gauss_error_rounded = round(plot_factor * gauss_error, digits = 1) / plot_factor)
+        mutate(gauss_error_rounded = round(plot_factor * gauss_error, digits = 1) / plot_factor,
+               constraint_error_sum = (round(constraint_error_sum / tile_height + 1e-9, digits=0)) * tile_height)
     
     # Group by max subset size as well if we want to facet it
     if(subset_facet) {
@@ -267,10 +268,17 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
     } else {
         p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror, alpha = tile_alpha))
     }
-    p <- p +
-        geom_tile(width = tile_width, height = tile_height, ...) +
-        scale_fill_gradientn(limits = c(0, max(gg_df$mean_estRFerror)),
-        colors = GRAD_N7_PALETTE, na.value = "transparent")
+    if(is.logical(col_lims)) {
+        p <- p +
+            geom_tile(width = tile_width, height = tile_height, ...) +
+            scale_fill_gradientn(limits = c(0, max(gg_df$mean_estRFerror)),
+            colors = GRAD_N7_PALETTE, na.value = "transparent")
+    } else {
+        p <- p +
+            geom_tile(width = tile_width, height = tile_height, ...) +
+            scale_fill_gradientn(limits = col_lims,
+            colors = GRAD_N7_PALETTE, na.value = "transparent")
+    }
 
     # Facet if we want to facet
     if(subset_facet) {
@@ -283,6 +291,10 @@ plot_hwcd_heatmap <- function(netid, plot_factor = 2, tile_width = 1 / (plot_fac
     if(draw_alpha) {
         p <- p +
             scale_alpha_continuous(range = c(0.1, 1), guide = 'none')
+    }
+    if(use_std0) {
+        p <- p +
+            scale_x_continuous(limits = c(0.5, 1))
     }
 
     # Add labels
