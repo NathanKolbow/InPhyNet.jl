@@ -20,6 +20,6 @@ export PATH=$PWD/julia-1.9.3/bin:$PATH
 export JULIA_DEPOT_PATH=$PWD/inphynet-proj/
 
 # Run the pipeline
-echo "./julia-1.9.3/bin/julia -t4 -p7 --project=$PWD/inphynet-proj/ ./estimated_gts.jl ${net_id} ${replicate} ${nloci} ${seq_len} ${ils_level} ${m}"
-./julia-1.9.3/bin/julia --project=$PWD/inphynet-proj/ --pkgimages=no --optimize=3 -t4 -p7 ./estimated_gts.jl ${net_id} ${replicate} ${nloci} ${seq_len} ${ils_level} ${m}
+echo "./julia-1.9.3/bin/julia -t2 -p4 --project=$PWD/inphynet-proj/ ./estimated_gts.jl ${net_id} ${replicate} ${nloci} ${seq_len} ${ils_level} ${m}"
+./julia-1.9.3/bin/julia --project=$PWD/inphynet-proj/ --pkgimages=no --optimize=3 -t2 -p4 ./estimated_gts.jl ${net_id} ${replicate} ${nloci} ${seq_len} ${ils_level} ${m}
 
