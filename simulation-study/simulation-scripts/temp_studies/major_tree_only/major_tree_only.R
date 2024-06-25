@@ -20,12 +20,16 @@ add_error_bins <- function(df) {
     df
 }
 df <- read.csv("/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/simulation-scripts/temp_studies/major_tree_only/major_tree_only.csv") %>%
-    mutate(major_tree_only = as.logical(major_tree_only))
+    mutate(major_tree_only = as.logical(major_tree_only),
+           force_unrooted = as.logical(force_unrooted))
 
 # Prop success
-mean(filter(df, major_tree_only == TRUE)$hwcd == -1)    # 0.548
-mean(filter(df, major_tree_only == FALSE)$hwcd == -1)   # 0.542
+mean(filter(df, major_tree_only == TRUE & force_unrooted == FALSE)$hwcd == -1)    # 0.548
+mean(filter(df, major_tree_only == FALSE & force_unrooted == FALSE)$hwcd == -1)   # 0.542
 # after all unrooted --> 0.467, 0.474
+mean(filter(df, major_tree_only == TRUE & force_unrooted == TRUE)$hwcd == -1)
+mean(filter(df, major_tree_only == FALSE & force_unrooted == TRUE)$hwcd == -1)
+
 
 # HWCD
 n50_df <- df %>%
@@ -41,7 +45,7 @@ n200_df <- df %>%
     filter(net_id == "n200r10") %>%
     add_error_bins()
 
-ggplot(n50_df, aes(x = gauss_error_level, y = hwcd, color = major_tree_only)) +
+ggplot(n50_df, aes(x = gauss_error_level, y = hwcd, color = force_unrooted)) +
     geom_boxplot() +
     facet_grid(m~nni_error_level)
 ggplot(n100_df, aes(x = gauss_error_level, y = hwcd, color = major_tree_only)) +
@@ -61,17 +65,17 @@ fit_df <- df %>%
     mutate(major_tree_only = as.numeric(major_tree_only),
            hwcd_diff = hwcd - sum_constraint_hwcd)
 
-fit.n50 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only, data=filter(fit_df, net_id == "n50r2"))
+fit.n50 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only + force_unrooted, data=filter(fit_df, net_id == "n50r2"))
 summary(fit.n50)
 
-fit.n100 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only, data=filter(fit_df, net_id == "n100r10"))
+fit.n100 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only + force_unrooted, data=filter(fit_df, net_id == "n100r10"))
 summary(fit.n100)
 
-fit.n200 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only, data=filter(fit_df, net_id == "n200r10"))
+fit.n200 <- lm(hwcd_diff ~ gauss_sd + m + major_tree_only + force_unrooted, data=filter(fit_df, net_id == "n200r10"))
 summary(fit.n200)
 
 summary(
-    lm(hwcd ~ net_id * gauss_sd * sum_constraint_hwcd * m + major_tree_only, data=fit_df)
+    lm(hwcd ~ net_id * gauss_sd * sum_constraint_hwcd * m + major_tree_only + force_unrooted, data=fit_df)
 )
 
 # Major tree does [not] improve completion rate
