@@ -15,7 +15,7 @@ transfer_input_files = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulati
     /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.jl,   \
     /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.sh
 
-transfer_checkpoint_files = checkpoint_files/
+transfer_checkpoint_files = checkpoint_files/, checkpoint_files/*
 
 Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
                 (machine == "roy-exec-2.discovery.wisc.edu") || \
@@ -37,9 +37,9 @@ Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
                 (machine == "jolab-01.discovery.wisc.edu")
 
 priority = 100
-request_cpus = 14
-request_memory = 64GB
-request_disk = 20GB
+request_cpus = 6
+request_memory = 48GB
+request_disk = 10GB
 
 # Queue one job for each unique newick
 queue NETID,REPLICATENUM,NLOCI,SEQLEN,ILSLEVEL,M from tables/estimated_gts.tab
