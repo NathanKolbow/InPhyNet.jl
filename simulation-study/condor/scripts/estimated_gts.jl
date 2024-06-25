@@ -7,6 +7,7 @@ ngt = parse(Int64, ARGS[3])
 seq_len = parse(Int64, ARGS[4])
 ils_level = ARGS[5]
 maxsubsetsize = parse(Int64, ARGS[6])
+nruns = 10
 
 dmethod = "AGIC"
 ###########################
@@ -78,7 +79,7 @@ est_D, est_namelist, nj_tre = estimate_nj_tree(est_gts)
 subsets = subset_decomp(nj_tre, maxsubsetsize)
 
 # 6. infer constraints w/ SNaQ
-est_constraints, est_constraint_runtimes = snaq_constraints(est_gts, net_file, subsets, true_net, nj_tre, seed)
+est_constraints, est_constraint_runtimes = snaq_constraints(est_gts, net_file, subsets, true_net, nj_tre, nruns, seed)
 
 # 7. InPhyNet inference
 log("InPhyNet", "Merging networks.")
