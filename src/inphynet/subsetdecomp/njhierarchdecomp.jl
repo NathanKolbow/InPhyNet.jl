@@ -102,7 +102,7 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
             end
         end
 
-        nets[i] = tempnet
+        nets[i] = readTopology(writeTopology(tempnet))
     end
     return nets
 end
