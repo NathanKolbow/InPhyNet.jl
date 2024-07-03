@@ -27,7 +27,7 @@ end
 
 
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; 
-    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false, force_unrooted::Bool=false, skip_constraint_check::Bool=false)
+    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false, force_unrooted::Bool=false, skip_constraint_check::Bool=false, kwargs...)
     
     PhyloNetworks.check_distance_matrix(D)
     if skip_constraint_check
@@ -96,6 +96,8 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         end
     end
     rootreticprocessed = [false for _ in 1:length(constraints)]
+    constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in constraints]
+    # constraint_sibling_pairs = []
 
     # Main algorithm loop
     @debug "----- ENTERING MAIN ALGO LOOP -----"
@@ -103,7 +105,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         # DEBUG STATEMENT
         # @debug n
         
-        possible_siblings = findvalidpairs(constraints, namelist, major_tree_only = major_tree_only, force_unrooted = force_unrooted)
+        possible_siblings = findvalidpairs(constraints, constraint_sibling_pairs, namelist, major_tree_only = major_tree_only, force_unrooted = force_unrooted)
         
         # Find optimal (i, j) idx pair for matrix Q
         i = j = nothing
@@ -120,7 +122,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
 
         # connect subnets i and j
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
-        updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
+        updateconstraints!(namelist[i], namelist[j], constraints, constraint_sibling_pairs, reticmap, edgei, edgej; kwargs...)
 
         # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
         for (cidx, c) in enumerate(constraints)
@@ -365,7 +367,8 @@ in this process.
 By convention we keep `nodenamei` and replace node names with `nodenamej`
 """
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
-    constraints::Vector{HybridNetwork}, reticmap::ReticMap, subnetedgei::Edge, subnetedgej::Edge)
+    constraints::Vector{HybridNetwork}, constraint_sibling_pairs, reticmap::ReticMap,
+    subnetedgei::Edge, subnetedgej::Edge; kwargs...)
 
     # print("(\"$(nodenamei)\",\"$(nodenamej)\"), ")
     # println("merging ($(nodenamei), $(nodenamej))")
@@ -379,6 +382,7 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
         for (nodeidx, node) in enumerate(net.node)
             if node.name == nodenamei idxi = nodeidx
             elseif node.name == nodenamej idxj = nodeidx
+            elseif idxi != -1 && idxj != -1 break
             end
         end
 
@@ -388,12 +392,18 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
         # if !hasi && !hasj: do nothing
         if hasj && !hasi
             net.node[idxj].name = nodenamei
+            # constraint_sibling_pairs[netidx] = findsiblingpairs(net; kwargs...)
+            
+            # Don't need to update sibling pairs here b/c changing the name does that for us
         elseif hasi && hasj
             nodei = net.node[idxi]
             nodej = net.node[idxj]
 
             @debug "Merging in net #$(netidx)"
             mergeconstraintnodes!(net, nodei, nodej, reticmap, subnetedgei, subnetedgej)
+
+            # Update sibling pairs
+            constraint_sibling_pairs[netidx] = findsiblingpairs(net; kwargs...)
         end
     end
 end
@@ -579,6 +589,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
         # e.g., this case would happen when joining a & b in (a, b, c, d)
         @debug "b0: ($(nodei.name), $(nodej.name))"
+        @debug "p(j): $(getparent(nodej))"
+        @debug "p(p(j)): $(getparents(getparent(nodej)))"
+        @debug "c(p(j)): $(getchildren(getparent(nodej)))"
         deleteleaf!(net, nodej) # yup, this is all we have to do.
     elseif parentsi == parentsj
         @debug "b: ($(nodei.name), $(nodej.name))"
@@ -875,6 +888,8 @@ function major_mrca(nodei::Node, nodej::Node)
             return nodei
         elseif nodej in obs_nodes
             return nodej
+        elseif nodei == nodej
+            return nodei
         end
 
         push!(obs_nodes, nodei)
@@ -990,13 +1005,8 @@ end
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
 TIEWARNING = false
-function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; namelist=nothing)
+function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray; namelist=nothing)
     global TIEWARNING
-
-    idxpairs = reduce(vcat, [[(i, j) for j in (i+1):size(D,1) if validpairs[i,j] == 1] for i in 1:size(D, 1)])
-    if length(idxpairs) == 0
-        throw(SolutionDNEError())
-    end
 
     n = size(D)[1]
     sums = sum(D, dims=1)
@@ -1004,15 +1014,24 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::Matrix{<:Integer}; 
     bestcount = 0
     minidx = (-1, -1)
 
-    for (i, j) in idxpairs
-        qij = (n-2) * D[i,j] - sums[i] - sums[j]
-        if qij < best
-            best = qij
-            bestcount = 1
-            minidx = (i, j)
-        elseif qij == best
-            bestcount += 1
+    # New, faster
+    for i = 1:n
+        for j = (i+1):n
+            if !validpairs[i, j] continue end
+
+            qij = (n-2) * D[i,j] - sums[i] - sums[j]
+            if qij < best
+                best = qij
+                bestcount = 1
+                minidx = (i, j)
+            elseif qij == best
+                bestcount += 1
+            end
         end
+    end
+
+    if best == Inf
+        throw(SolutionDNEError())
     end
 
     if bestcount > 1 && !TIEWARNING
@@ -1029,7 +1048,7 @@ end
 
 Finds all valid sibling pairs among the constraint networks.
 """
-function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; major_tree_only::Bool=false, force_unrooted::Bool=false)
+function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_pairs, namelist::AbstractVector{<:AbstractString}; major_tree_only::Bool=false, force_unrooted::Bool=false)
     n = length(namelist)
 
     # Shorthand functions for name lookups (we'll be doing a lot of these if there are many constraints)
@@ -1037,44 +1056,36 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVe
     idx(name::AbstractString) = namedict[name]
 
     # initialize matrix
-    validpairs = Matrix{Int64}(undef, n, n)     # -1: pair not seen together yet
-                                                #  0: pair invalid
-                                                #  1: pair valid
-    validpairs .= -1
+    validpairs = falses(n, n, 2)    # [i, j, 1]: false if pair not seen together yet
+                                    # [i, j, 2]: false = invalid pair, true = valid pair
 
     # go through the constraint networks and validate/invalidate pairs
     for (net_idx, net) in enumerate(constraints)
         if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
-
-        # For each pair, override 1 => -1 so that we can invalidate pairs that are not seen together in this net
-        netpairs = view(validpairs, leafidxs, leafidxs)
-        netpairs[netpairs .== 1] .= -1
+        validpairs[leafidxs, leafidxs, 2] .= false
 
         # Find valid sibling pairs
-        nodepairs = findsiblingpairs(net, major_tree_only = major_tree_only, force_unrooted = force_unrooted)   # returned as a BitArray w/ indices mirroring net.leaf, need to convert to idxs
+        nodepairs = constraint_sibling_pairs[net_idx]
+        # returned as a BitArray w/ indices mirroring net.leaf, need to convert to idxs
         nodestoidx(nodepair) = CartesianIndex(idx(nodepair[1].name), idx(nodepair[2].name))
         pairidxs = map(nodestoidx, nodepairs)
 
         # Set valid pair idxs to 1 only if they are either 1 or -1
         # if a pair idx is 0 then it was invalid elsewhere and needs to stay 0
-        cartflip(cartidx::CartesianIndex) = CartesianIndex(cartidx[2], cartidx[1])
         for idx in pairidxs
-            if validpairs[idx] != 0
-                # Enter twice, once in the upper triangle and once in the lower
-                validpairs[idx] = 1
-                validpairs[cartflip(idx)] = 1
+            if !validpairs[idx[1], idx[2], 1]
+                # Enter twice, once in the upper triangle and once in the lower+
+                validpairs[idx[1], idx[2], 2] = validpairs[idx[2], idx[1], 2] = true
             end
         end
 
-        # 0 out anything that has not been seen yet and was not among the valid pairs
-        netpairs[netpairs .== -1] .= 0
+        # Mark all these indices as seen together now
+        validpairs[leafidxs, leafidxs, 1] = fill!(validpairs[leafidxs, leafidxs, 1], true)
     end
 
     # Any pairs that still have not been seen are valid
-    validpairs[validpairs .== -1] .= 1
-
-    return validpairs
+    return validpairs[:, :, 2] .|| .!validpairs[:, :, 1]
 end
 findvalidpairs(net::HybridNetwork, namelist::AbstractVector{<:AbstractString}; kwargs...) = findvalidpairs([net], namelist; kwargs...)
 
@@ -1092,12 +1103,13 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false, force
     pairs .= false
 
     # new, simpler method just using Graphs.jl
-    hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.isMajor)])
-    push!(hybedges, nothing)
+    # hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.isMajor)])
+    # push!(hybedges, nothing)
     
-    if major_tree_only
-        hybedges = [nothing]
-    end
+    # if major_tree_only
+    #     hybedges = [nothing]
+    # end
+    hybedges = [nothing]
 
     for hybedge in hybedges
         graph, W = Graph(net, includeminoredges = false, alwaysinclude = hybedge, withweights = true, minoredgeweight = 1.51)
