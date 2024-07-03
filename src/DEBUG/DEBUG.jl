@@ -27,12 +27,13 @@ end
 truenet, constraints, D, true_D, namelist, error_id = load_next_debug_data()
 @info "Error ID: $(error_id)"
 
+
 # Confirm that an error occurs
 netnj(D, constraints, namelist)
 
 # Narrow down which constraint(s) cause the error
 cs = find_problematic_constraints(D, constraints, namelist)
-cs = [constraints[14]]
+cs = [constraints[54]]
 D_reduced, namelist_reduced = reduce_D_namelist(D, cs, namelist)    # sometimes the problem will still occur when D & namelist are reduced, sometimes not
 netnj(D_reduced, cs, namelist_reduced)
 
@@ -49,10 +50,9 @@ D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocesse
 
 i = 1
 
-ff() = findfirst(node.name == "H39" for node in cs_iter[1].node)
 
 non_nothing_vals(rmap) = sum(sum(rmap.map[key] .!== nothing) for key in keys(rmap.map))
-while true
+while i < 257
     @show i
     D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed =
         step_inphynet!(D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed)

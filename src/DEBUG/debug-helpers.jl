@@ -78,7 +78,8 @@ function step_inphynet!(D, constraints, namelist, subnets, reticmap, rootretics,
     n = size(D, 1)
 
     ## SINGLE ALGO STEP ##
-    possible_siblings = InPhyNet.findvalidpairs(constraints, namelist, major_tree_only = major_tree_only)
+    pairings = [findsiblingpairs(c, force_unrooted=true, major_tree_only = false) for c in constraints]
+    possible_siblings = InPhyNet.findvalidpairs(constraints, pairings, namelist, major_tree_only = major_tree_only, force_unrooted=true)
     
     # Find optimal (i, j) idx pair for matrix Q
     i, j = InPhyNet.findoptQidx(D, possible_siblings)
@@ -86,7 +87,7 @@ function step_inphynet!(D, constraints, namelist, subnets, reticmap, rootretics,
 
     # connect subnets i and j
     subnets[i], edgei, edgej = InPhyNet.mergesubnets!(subnets[i], subnets[j])
-    InPhyNet.updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej)
+    InPhyNet.updateconstraints!(namelist[i], namelist[j], constraints, pairings, reticmap, edgei, edgej)
 
     # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
     for (cidx, c) in enumerate(constraints)

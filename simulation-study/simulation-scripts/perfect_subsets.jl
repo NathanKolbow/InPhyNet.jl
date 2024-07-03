@@ -8,6 +8,7 @@ end
 
 # distance method options:
 # - "internode_count"
+# - "AGIC"
 
 ###### Input parsing ######
 netid = ARGS[1]
