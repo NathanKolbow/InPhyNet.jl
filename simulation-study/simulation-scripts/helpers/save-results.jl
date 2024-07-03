@@ -7,7 +7,8 @@ const AV = AbstractVector
 function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwork}, esterrors::AV{<:Real},
     esterrors_without_missing_retics::AV{<:Real}, majortreeRFs::AV{<:Real},
     gausserrors::AV{<:Real}, constraintdiffs::AV{<:Real}, nretics_est::AV{<:Real}, replicate_num::Int64,
-    max_subset_size::Real, all_have_outgroups::Bool, outgroup_removed_after_reroot::Bool)
+    max_subset_size::Real, all_have_outgroups::Bool, outgroup_removed_after_reroot::Bool;
+    level1::Bool=false)
 
     # Quick checks for bad input
     a = length(gausserrors)
@@ -18,7 +19,7 @@ function savePerfectResults(truenet::HybridNetwork, constraints::AV{HybridNetwor
 
     # Relevant variables
     nrows = length(gausserrors)
-    output_path = getOutputFilepath(truenet)
+    output_path = level1 ? getOutputFilepathLevel1(truenet) : getOutputFilepath(truenet)
     if !isfile(output_path) copy_csv_template(output_path) end
     
     # Calculate some relevant data points
