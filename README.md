@@ -1,7 +1,7 @@
 [![Stable-Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathankolbow.github.io/network-merging/stable)
 [![Dev-Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathankolbow.github.io/network-merging/dev)
 
-### Table of contents <!-- omit in toc -->
+# Table of contents <!-- omit in toc -->
 - [Installation](#installation)
 - [Using InPhyNet](#using-inphynet)
   - [Inferring constraint networks](#inferring-constraint-networks)
