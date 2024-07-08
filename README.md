@@ -6,7 +6,7 @@
 - [Using InPhyNet](#using-inphynet)
   - [Inferring constraint networks](#inferring-constraint-networks)
   - [Calculating the dissimilarity matrix](#calculating-the-dissimilarity-matrix)
-  - [Running InPhyNet](#running-inphynet)
+  - [Merging networks](#merging-networks)
 
 &nbsp;
 
@@ -37,7 +37,7 @@ gts = readMultiTopology("est_gts.treefile")
 D, namelist = calculateAGID(gts)
 ```
 
-## Running InPhyNet
+## Merging networks
 
 After inferring your constraint networks and calculating your pairwise dissimilarity matrix `D` along with a `namelist` coinciding with each index of `D`, you can run InPhyNet.
 
