@@ -76,7 +76,7 @@ plot_hwcd_heatmap_quad_l1 <- function(ntaxa, retic_maxes, m, width = 5, height =
                 geom_tile(width = tile_width, height = height) +
                 scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymax)) +
                 scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
-                labs(x = "Distance Matrix Signal", y = "Total Constraint Error", title = gg_ttl, fill = "HWCD")
+                labs(x = "Distance Matrix Signal", y = "Total Constraint Error (HWCD)", title = gg_ttl, fill = "HWCD")
     }
     
     # top <- ggarrange(plots[[1]], plots[[2]], nrow=1, ncol=2, common.legend = TRUE, legend = 'right')
@@ -90,7 +90,7 @@ plot_hwcd_heatmap_single_l1 <- function(ntaxa, m, r = FALSE, width = 5, height =
     gg_df <- df_level1 %>%
         filter(numtaxa == ntaxa & max_subset_size == m)
     
-    if(is.vector(r)) gg_df <- filter(gg_df, nretics_true %in% r)
+    if(!is.logical(r) && is.vector(r)) gg_df <- filter(gg_df, nretics_true %in% r)
 
     gg_df <- gg_df %>%
         mutate(
@@ -111,20 +111,24 @@ plot_hwcd_heatmap_single_l1 <- function(ntaxa, m, r = FALSE, width = 5, height =
     gg_df %>%
         ggplot(aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror, alpha = tile_alpha)) +
             geom_tile(width = tile_width, height = height) +
-            scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymax), guide = 'none') +
+            scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymax)) +
             scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
-            labs(x = "Distance Matrix Signal", y = "Total Constraint Error", title = paste0("All r values"))
+            labs(
+                x = "Distance Matrix Signal",
+                y = "Total Constraint Error (HWCD)",
+                fill = "HWCD",
+                title = paste0("Inferred Network Error, n = ", ntaxa)
+            )
 }
 
 
-plot_hwcd_heatmap_m_l1 <- function(ntaxa, width = 5, height = 4) {
+plot_hwcd_heatmap_m_l1 <- function(ntaxa, width = 5, height = 4, ms = c(5, 10, 15, 20, 25, 30)) {
     temp_df <- df_level1 %>%
         filter(numtaxa == ntaxa)
     ymax <- quantile((temp_df %>% filter(estRFerror >= 0))$estRFerror, 0.999)
     xmin <- quantile((temp_df %>% filter(estRFerror >= 0))$gauss_error, 0.0001)
 
     plots <- list()
-    ms <- sort(unique(df_level1$max_subset_size))
     for(i in 1:length(ms)) {
         gg_df <- temp_df %>%
             filter(max_subset_size == ms[i]) %>%
@@ -147,7 +151,7 @@ plot_hwcd_heatmap_m_l1 <- function(ntaxa, width = 5, height = 4) {
                 scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
                 labs(
                     x = "Distance Matrix Signal",
-                    y = "Total Constraint Error",
+                    y = "Total Constraint Error (HWCD)",
                     title = paste0(LETTERS[i], " (m = ", ms[i], ")"),
                     fill = "HWCD") +
                 scale_y_continuous(limits = c(0, ymax)) +
@@ -157,14 +161,22 @@ plot_hwcd_heatmap_m_l1 <- function(ntaxa, width = 5, height = 4) {
             p <- p & guides(fill = 'none')
         if(i == 2 || i == 3 || i == 5 || i == 6)
             p <- p & labs(y = NULL)
-        if(i <= 3)
-            p <- p & labs(x = NULL)
+        
+        if(length(ms) == 6) {
+            if(i <= 3)
+                p <- p & labs(x = NULL)
+        }
         
         plots[[i]] <- p
     }
-    (plots[[1]] + plots[[2]] + plots[[3]]) / (plots[[4]] + plots[[5]] + plots[[6]])
-    arr <- ggarrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], nrow=2, ncol=3, common.legend = TRUE, legend = 'right')
-    arr
+    
+    if(length(ms) == 6) {
+        return(ggarrange(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], plots[[6]], nrow=2, ncol=3, common.legend = TRUE, legend = 'right'))
+    } else if(length(ms) == 3) {
+        return(ggarrange(plots[[1]], plots[[2]], plots[[3]], nrow=1, ncol=3, common.legend = TRUE, legend = 'right'))
+    } else {
+        return(plots)
+    }
 }
 
 
@@ -217,7 +229,7 @@ plot_hwcd_4nets_l1 <- function(ntaxas, m, ymaxes) {
                 geom_tile(width = 1 / (10 * widths[i]), height = heights[i]) +
                 scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymaxes[i])) +
                 scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
-                labs(x = "Distance Matrix Signal", y = "Total Constraint Error", title = ttl, fill = "HWCD") +
+                labs(x = "Distance Matrix Signal", y = "Total Constraint Error (HWCD)", title = ttl, fill = "HWCD") +
                 scale_y_continuous(limits = c(0, ymaxes[i])) +
                 scale_x_continuous(limits = c(0.5, 1.0))
         
@@ -232,3 +244,4 @@ plot_hwcd_4nets_l1 <- function(ntaxas, m, ymaxes) {
     bot <- ggarrange(ps[[3]], ps[[4]], nrow=1, ncol=2, common.legend = TRUE, legend = 'right')
     ggarrange(top, bot, nrow=2, ncol=1, common.legend = FALSE)
 }
+
