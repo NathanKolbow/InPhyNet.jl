@@ -1,21 +1,19 @@
 universe = vanilla
 
-log = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/logs/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).log
-error = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/errors/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).err
-output = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/outputs/snaq1_$(Cluster)_$(NETID)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL).out
+log = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/logs/snaq1_$(Cluster)_$(NTAXA)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL)_$(SUBSET_I).log
+error = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/errors/snaq1_$(Cluster)_$(NTAXA)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL)_$(SUBSET_I).err
+output = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/outputs/snaq1_$(Cluster)_$(NTAXA)_$(REPLICATENUM)_m$(M)_$(NLOCI)_$(SEQLEN)_$(ILSLEVEL)_$(SUBSET_I).out
 
 ###################################################################
-executable = scripts/estimated_gts.sh
-arguments = $(NETID) $(REPLICATENUM) $(NLOCI) $(SEQLEN) $(ILSLEVEL) $(M)
+executable = ./transfer-files/script.sh
+arguments = $(NTAXA) $(REPLICATENUM) $(NGT) $(SEQLEN) $(ILSLEVEL) $(M) $(SUBSET_I)
 ###################################################################
 
 should_transfer_files = YES
 transfer_input_files = /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/julia-1.9.3-linux-x86_64.tar.gz,  \
     /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/inphynet-proj.tar.gz,  \
-    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.jl,   \
-    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/scripts/estimated_gts.sh
-
-transfer_checkpoint_files = checkpoint_files/, checkpoint_files/*
+    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/script.jl,   \
+    /mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/condor/transfer-files/script.sh
 
 Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
                 (machine == "roy-exec-2.discovery.wisc.edu") || \
@@ -36,10 +34,10 @@ Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
                 (machine == "opt-a006.discovery.wisc.edu") || \
                 (machine == "jolab-01.discovery.wisc.edu")
 
-priority = 100
-request_cpus = 6
-request_memory = 48GB
+priority = 101
+request_cpus = 12
+request_memory = 128GB
 request_disk = 10GB
 
 # Queue one job for each unique newick
-queue NETID,REPLICATENUM,NLOCI,SEQLEN,ILSLEVEL,M from tables/estimated_gts.tab
+queue NTAXA,REPLICATENUM,NGT,SEQLEN,ILSLEVEL,M,SUBSET_I from inputs.tab
