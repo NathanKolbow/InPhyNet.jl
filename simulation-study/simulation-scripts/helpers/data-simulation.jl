@@ -174,6 +174,44 @@ function load_true_net_ils_adjusted(netid::String, replicatenum::Int64, ils::Str
 end
 
 
+function load_true_net_ils_adjusted_level1(ntaxa::Int64, replicatenum::Int64, ils::String)
+    truenet = readMultiTopology(getNetworkFilepathLevel1(ntaxa))[replicatenum]
+    newick = writeTopology(truenet)
+    avg_bl = get_avg_bl(truenet)
+    newick = "($(newick[1:(length(newick)-1)]):$(avg_bl),OUTGROUP:1.0);"
+    truenet = readTopology(newick)
+
+    # ils level : desired average branch length
+    # - low       : 2.0
+    # - med       : 1.0
+    # - high      : 0.5
+    # - very high : 0.1
+
+    # 1. make the network have low ILS branch lengths. after adjusting for ILS, we extend branch
+    #    lengths such that root to tip distance is unchanged, so this needs to be our baseline
+    desired_avg = 2.
+    avg_bl = get_avg_bl(truenet)
+    for e in truenet.edge
+        e.length *= desired_avg / avg_bl
+    end
+
+    # 2. record desired final depths
+    leaf_depths = get_leaf_depths(truenet)
+
+    # 3. adjust network to desired branch length avg for desired level of ILS
+    desired_avg = ils == "low" ? 2. : (ils == "med" ? 1. : (ils == "high" ? 0.5 : 0.1))
+    avg_bl = get_avg_bl(truenet)
+    for e in truenet.edge
+        e.length *= desired_avg / avg_bl
+    end
+    
+    # 4. extend leaves to desired length
+    extend_leaves!(truenet, leaf_depths)
+
+    return truenet
+end
+
+
 
 ### Helper functions for the main functions above ###
 
