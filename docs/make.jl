@@ -13,7 +13,10 @@ makedocs(
     draft=true,
     doctest=false,
     pages=[
-        "Introduction" => "index.md",
+        "Introduction" => [
+            "index.md",
+            "Installation" => "guide/installation.md"
+        ],
         "Computational Assessments" => [
             "Runtime evaluations" => "intro/runtimes.md",
             "Accuracy evaluations" => "intro/accuracies.md"
