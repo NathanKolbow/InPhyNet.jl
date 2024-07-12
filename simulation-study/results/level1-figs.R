@@ -3,6 +3,16 @@ library(ggplot2)
 # source("simulation-study/results/fig-helpers.R")
 source("simulation-study/results/level1-helpers.R")
 
+width <- 10
+height <- 10
+df_level1 %>%
+    filter(numtaxa == 1000 & max_subset_size == 25) %>%
+    mutate(
+        gauss_error_rounded = round(width * gauss_error, digits = 1) / width,
+            constraint_error_sum = (round(constraint_error_sum / height + 1e-9, digits=0)) * height
+    ) %>%
+    filter(estRFerror == -1 & gauss_error_rounded >= 0.801) %>%
+    select(gauss_error_rounded, constraint_error_sum)
 # plot_hwcd_heatmap("n200r10", only_subset_size = 25)
 
 (df_level1 %>% filter(numtaxa == 2500) %>% select(nretics_true))[,1] %>% unique() %>% sort()
