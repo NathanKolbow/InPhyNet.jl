@@ -157,7 +157,7 @@ function calculateAGIC(Ns::AbstractVector{HybridNetwork})
         union!(all_names, [leaf.name for leaf in net.leaf])
     end
     n = length(all_names)
-    namelist = sort(collect(all_names))
+    namelist = Vector{String}(sort(collect(all_names)))
 
     pair_appearance_count = zeros(UInt64, n, n)
     D = zeros(Float64, n, n)
