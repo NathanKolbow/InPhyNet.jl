@@ -29,6 +29,6 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/NathanKolbow/network-merging.git",
+    repo="github.com/NathanKolbow/InPhyNet.jl",
     devbranch="main"
 )
