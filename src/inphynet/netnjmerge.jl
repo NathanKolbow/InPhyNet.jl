@@ -3,6 +3,14 @@
 #
 # Source code for main components of the InPhyNet algorithm.
 
+"""
+Deep search for `netnj`
+"""
+function inphynet_deep_search()
+    error("not implemented yet")
+end
+
+
 function netnj(estgts::Vector{HybridNetwork})
     error("not implemented yet")
 end
