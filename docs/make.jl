@@ -29,6 +29,5 @@ makedocs(
 )
 
 deploydocs(
-    repo="github.com/NathanKolbow/InPhyNet.jl",
-    devbranch="main"
+    repo="github.com/NathanKolbow/InPhyNet.jl"
 )
