@@ -67,7 +67,7 @@ plot_est_retics_l1(500)
 fig_dir <- "/mnt/dv/wid/projects4/SolisLemus-network-merging/simulation-study/results/level1-pdfs/"
 
 svg(paste0(fig_dir, "hwcd_m_n500.svg"), width=16, height=6)
-plot_hwcd_heatmap_m_l1(500, width = 6, height = 8, ms = c(5, 15, 25))
+plot_hwcd_heatmap_m_l1(500, width = 6, height = 8)
 dev.off()
 
 svg(paste0(fig_dir, "retics_est_n500.svg"), width=12, height=8)
