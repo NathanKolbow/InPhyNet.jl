@@ -112,13 +112,12 @@ plot_hwcd_heatmap_single_l1 <- function(ntaxa, m, r = FALSE, width = 5, height =
         ggplot(aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror, alpha = tile_alpha)) +
             geom_tile(width = tile_width, height = height) +
             scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymax)) +
-            scale_alpha_continuous(range = c(0.1, 1)) +
+            scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
             labs(
                 x = "Distance Matrix Signal",
                 y = "Total Constraint Error (HWCD)",
                 fill = "HWCD",
-                title = paste0("Inferred Network Error, n = ", ntaxa),
-                alpha = "Success Rate"
+                title = paste0("Inferred Network Error, n = ", ntaxa)
             )
 }
 
@@ -149,13 +148,12 @@ plot_hwcd_heatmap_m_l1 <- function(ntaxa, width = 5, height = 4, ms = c(5, 10, 1
         p <- ggplot(gg_df, aes(x = gauss_error_rounded, y = constraint_error_sum, fill = mean_estRFerror, alpha = tile_alpha)) +
                 geom_tile(width = tile_width, height = height) +
                 scale_fill_gradientn(colors = GRAD_N7_PALETTE, na.value="transparent", limits = c(0, ymax)) +
-                scale_alpha_continuous(range = c(0.1, 1)) +
+                scale_alpha_continuous(range = c(0.1, 1), guide = 'none') +
                 labs(
                     x = "Distance Matrix Signal",
                     y = "Total Constraint Error (HWCD)",
                     title = paste0(LETTERS[i], " (m = ", ms[i], ")"),
-                    fill = "HWCD",
-                    alpha = "Success Rate"
+                    fill = "HWCD"
                 ) +
                 scale_y_continuous(limits = c(0, ymax)) +
                 scale_x_continuous(limits = c(xmin, 1))
