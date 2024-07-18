@@ -187,8 +187,26 @@ function load_true_net_ils_adjusted_level1(ntaxa::Int64, replicatenum::Int64, il
     # - high      : 0.5
     # - very high : 0.1
 
+    # minimum branch length in low ILS case BEFORE overall adjustment: 0.5
+    # maximum branch length in low ILS case BEFORE overall adjustment: 5.0
+
     # 1. make the network have low ILS branch lengths. after adjusting for ILS, we extend branch
     #    lengths such that root to tip distance is unchanged, so this needs to be our baseline
+    desired_avg = 2.
+    avg_bl = get_avg_bl(truenet)
+    for e in truenet.edge
+        e.length *= desired_avg / avg_bl
+    end
+
+    # 1b. increase branch length min to 0.5 and decrease max to 5.0
+    for e in truenet.edge
+        if !e.hybrid || !e.isMajor
+            e.length = max(e.length, 0.5)
+            e.length = min(e.length, 5.0)
+        end
+    end
+
+    # 1c. reset to desired average again, now with increased minimum lengths
     desired_avg = 2.
     avg_bl = get_avg_bl(truenet)
     for e in truenet.edge
@@ -207,6 +225,15 @@ function load_true_net_ils_adjusted_level1(ntaxa::Int64, replicatenum::Int64, il
     
     # 4. extend leaves to desired length
     extend_leaves!(truenet, leaf_depths)
+
+    # 5. adjust gammas to be randomly drawn from exp(1 / 7)
+    for hyb in truenet.hybrid
+        g = rand(Exponential(1. / 7.))
+        g = 1 - min(g, 0.5) # this is major parent gamma, so it is at least 0.5
+        
+        getparentedge(hyb).gamma = g
+        getparentedgeminor(hyb).gamma = 1 - g
+    end
 
     return truenet
 end
