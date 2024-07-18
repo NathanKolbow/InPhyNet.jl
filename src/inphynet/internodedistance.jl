@@ -55,15 +55,16 @@ end
 
 Calculates internode counts between all pairs of taxa in network `N`.
 """
-function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}}=nothing)
+function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}} = nothing)
     D = zeros(N.numTaxa, N.numTaxa)
     if namelist == nothing
-        namelist = [l.name for l in N.leaf]
+        namelist = sort([l.name for l in N.leaf])
     end
 
-    Ngraph = Graph(N)
-    removeredundantedges!(Ngraph, N)
-    nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
+    Ngraph = Graph(N, includeminoredges = false)
+    removeredundantedges!(Ngraph, N, keeproot = false)
+    # nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
+    nodelistidx = [findfirst(n -> n.name == name, N.node) for name in namelist]
 
     for i=1:(N.numTaxa-1)
         paths = bellman_ford_shortest_paths(Ngraph, nodelistidx[i])
@@ -164,7 +165,7 @@ function calculateAGIC(Ns::AbstractVector{HybridNetwork})
 
     for j=1:length(Ns)
         iter_names = sort([leaf.name for leaf in Ns[j].leaf])
-        idx_filter = findall(x -> x in iter_names, namelist)
+        idx_filter = findall(i -> namelist[i] in iter_names, 1:length(namelist))
         iter_D = view(D, idx_filter, idx_filter)
         iter_count = view(pair_appearance_count, idx_filter, idx_filter)
 
