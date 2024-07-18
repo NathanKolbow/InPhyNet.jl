@@ -36,7 +36,7 @@ Requirements =  (machine == "roy-exec-1.discovery.wisc.edu") || \
 
 priority = 101
 request_cpus = 16
-request_memory = 196GB
+request_memory = 256GB
 request_disk = 10GB
 
 # Queue one job for each unique newick
