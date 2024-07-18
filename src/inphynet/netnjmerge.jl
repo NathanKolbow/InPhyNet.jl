@@ -111,7 +111,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
     @debug "----- ENTERING MAIN ALGO LOOP -----"
     while n > 1
         # DEBUG STATEMENT
-        # @debug n
+        @debug n
         
         possible_siblings = findvalidpairs(constraints, constraint_sibling_pairs, namelist, major_tree_only = major_tree_only, force_unrooted = force_unrooted)
         
@@ -242,7 +242,7 @@ function check_constraint(idx::Int64, net::HybridNetwork; autofix::Bool=false)
             end
         elseif node == net.node[net.root]
             if length(node.edge) != 2
-                throw(ConstraintError(idx, "Root node must have at least 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
+                throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
         elseif length(node.edge) != 3
             throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
@@ -1131,6 +1131,8 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false, force
                 nodej = net.leaf[nodej_idx]
                 idxnodej = findfirst(net.node .== [nodej])
 
+                # TODO: make this not A*, A* is so slow...
+                # A* b/c the graph structure gets weird as the algo goes, so simple checks won't do...
                 edgepath = a_star(graph, idxnodei, idxnodej, W)
                 nodesinpath = Array{Node}(undef, length(edgepath)+1)
                 for (i, gedge) in enumerate(edgepath)
