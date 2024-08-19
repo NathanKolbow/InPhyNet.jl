@@ -1,4 +1,4 @@
-[![Stable-Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathankolbow.github.io/InPhyNet.jl/stable)
+<!-- [![Stable-Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathankolbow.github.io/InPhyNet.jl/stable) -->
 <!-- [![Dev-Docs](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathankolbow.github.io/inphynet.jl/dev) -->
 
 # Table of Contents <!-- omit in toc -->
