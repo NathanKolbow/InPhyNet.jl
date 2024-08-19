@@ -246,3 +246,168 @@ plot_hwcd_4nets_l1 <- function(ntaxas, m, ymaxes) {
     ggarrange(top, bot, nrow=2, ncol=1, common.legend = FALSE)
 }
 
+
+
+
+
+
+
+
+add_error_bins <- function(df) {
+    df$gauss_error <- 1 - df$gauss_error
+        
+    df$gauss_error_level <- "Very High"
+    df$constraint_error_level <- "Very High"
+
+    for(m in unique(df$max_subset_size)) {
+        temp_idx <- which(df$max_subset_size == m)
+        if(length(temp_idx) == 0) next
+
+        d_qs <- quantile(df[temp_idx,]$gauss_error, c(0.05, 0.25, 0.7, 1))
+        c_qs <- quantile(df[temp_idx,]$constraint_error_sum, c(0.05, 0.25, 0.7, 1))
+
+        df[temp_idx,]$gauss_error_level[df[temp_idx,]$gauss_error < d_qs[3]] <- "High"
+        df[temp_idx,]$gauss_error_level[df[temp_idx,]$gauss_error < d_qs[2]] <- "Medium"
+        df[temp_idx,]$gauss_error_level[df[temp_idx,]$gauss_error < d_qs[1]] <- "Low"
+
+        df[temp_idx,]$constraint_error_level[df[temp_idx,]$constraint_error_sum < c_qs[3]] <- "High"
+        df[temp_idx,]$constraint_error_level[df[temp_idx,]$constraint_error_sum < c_qs[2]] <- "Medium"
+        df[temp_idx,]$constraint_error_level[df[temp_idx,]$constraint_error_sum < c_qs[1]] <- "Low"
+    }
+    df$gauss_error_level <- ordered(df$gauss_error_level, levels = c("Low", "Medium", "High", "Very High"))
+    df$constraint_error_level <- ordered(df$constraint_error_level, levels = c("Low", "Medium", "High", "Very High"))
+
+    df$gauss_error <- 1 - df$gauss_error
+    return(df)
+}
+
+
+plot_mean_error_bars <- function(ntaxa, m, error=FALSE) {
+    gg_df <- df_level1 %>%
+        filter(numtaxa == ntaxa & max_subset_size == m & estRFerror != -1) %>%
+        add_error_bins() %>%
+        group_by(gauss_error_level, constraint_error_level) %>%
+        summarise(
+            mean_estRFerror = mean(estRFerror),
+            sd_estRFerror = sd(estRFerror)
+        )
+
+    p <- gg_df %>%
+        ggplot(aes(x = constraint_error_level, y = mean_estRFerror, fill = gauss_error_level)) +
+        geom_col(position = "dodge", alpha = 0.7, color = "black")
+        
+    if(error) p <- p + geom_errorbar(aes(ymin = mean_estRFerror - sd_estRFerror, ymax = mean_estRFerror + sd_estRFerror), position = "dodge")
+    
+    p <- p + labs(
+        x = "Constraint Network Error",
+        y = "Inference Error (HWCD)",
+        fill = "Distance Matrix Error"
+    ) + scale_fill_manual(
+        values = c("#0571b0", "#abd9e9", "#f4a582", "#ca0020")
+    )
+    p
+}
+
+
+plot_mean_error_bars_m <- function(ntaxa) {
+    gg_df <- df_level1 %>%
+        filter(numtaxa == ntaxa & estRFerror != -1) %>%
+        add_error_bins() %>%
+        group_by(gauss_error_level, constraint_error_level, max_subset_size) %>%
+        filter(constraint_error_level == "Low") %>%
+        summarise(
+            mean_estRFerror = mean(estRFerror),
+            sd_estRFerror = sd(estRFerror)
+        )
+    
+    p <- gg_df %>%
+        ggplot(aes(x = as.factor(max_subset_size), y = mean_estRFerror, fill = gauss_error_level)) +
+        geom_col(position = "dodge", alpha = 0.7, color = "black")+
+        labs(
+            x = "Maximum Subset Size",
+            y = "Inference Error (HWCD)",
+            fill = "Distance Matrix Error"
+        ) +
+        scale_fill_manual(
+            values = c("#0571b0", "#abd9e9", "#f4a582", "#ca0020")
+        ) + scale_x_discrete(limits = rev)
+    p
+}
+
+
+plot_mean_error_bars_4nets <- function(ntaxas, m) {
+    plots <- list()
+    for(i in 1:4) {
+        plots[[i]] <- plot_mean_error_bars(ntaxas[i], m) +
+            ggtitle(paste0(LETTERS[i], " (n = ", ntaxas[i], ")"))
+    }
+    ggarrange(
+        plots[[1]], plots[[2]], plots[[3]], plots[[4]],
+        nrow = 2, ncol = 2, common.legend = TRUE, legend = 'right'
+    )
+}
+
+
+plot_mean_error_bars_m_4nets <- function(ntaxas) {
+    plots <- list()
+    for(i in 1:4) {
+        plots[[i]] <- plot_mean_error_bars_m(ntaxas[i]) +
+            ggtitle(paste0(LETTERS[i], " (n = ", ntaxas[i], ")"))
+    }
+    ggarrange(
+        plots[[1]], plots[[2]], plots[[3]], plots[[4]],
+        nrow = 2, ncol = 2, common.legend = TRUE, legend = 'right'
+    )
+}
+
+
+plot_acc_bars <- function(ntaxa, m) {
+    gg_df <- df_level1 %>%
+        filter(numtaxa == ntaxa & max_subset_size == m) %>%
+        add_error_bins() %>%
+        group_by(gauss_error_level, constraint_error_level) %>%
+        summarise(
+            prop = mean(estRFerror != -1)
+        )
+    gg_df$constraint_error_level <- ordered(gg_df$constraint_error_level)
+    
+
+    p <- gg_df %>%
+        ggplot(aes(x = gauss_error_level, y = prop, fill = constraint_error_level)) +
+        geom_col(position = "dodge", alpha = 0.7, color = "black")+
+        labs(
+            x = "Distance Matrix Error",
+            y = "Success Rate",
+            fill = "Constraint Error Level"
+        ) +
+        scale_fill_manual(
+            values = c("#0571b0", "#abd9e9", "#f4a582", "#ca0020")
+        )
+    p
+}
+
+
+plot_acc_bars_4nets <- function(ntaxas, m) {
+    plots <- list()
+    for(i in 1:4) {
+        plots[[i]] <- plot_acc_bars(ntaxas[i], m) +
+            ggtitle(paste0(LETTERS[i], " (n = ", ntaxas[i], ")"))
+    }
+    ggarrange(
+        plots[[1]], plots[[2]], plots[[3]], plots[[4]],
+        nrow = 2, ncol = 2, common.legend = TRUE, legend = 'right'
+    )
+}
+
+
+plot_acc_bars_m <- function(ntaxa, ms) {
+    plots <- list()
+    for(i in 1:4) {
+        plots[[i]] <- plot_acc_bars(ntaxa, ms[i]) +
+            ggtitle(paste0(LETTERS[i], " (m = ", ms[i], ")"))
+    }
+    ggarrange(
+        plots[[1]], plots[[2]], plots[[3]], plots[[4]],
+        nrow = 2, ncol = 2, common.legend = TRUE, legend = 'right'
+    )
+}
