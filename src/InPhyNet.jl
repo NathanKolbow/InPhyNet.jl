@@ -9,14 +9,15 @@ module InPhyNet
     include("inphynet/structs/SubNet.jl")
     include("inphynet/structs/ReticMap.jl")
     
-    include("inphynet/netnjmerge.jl")
+    include("inphynet/compatibility.jl")
+    include("inphynet/inphynet.jl")
     include("inphynet/internodedistance.jl")
     include("inphynet/mscquartetsinterface.jl")
     include("inphynet/subsetdecomp.jl")
     include("inphynet/subsetdecomp/njhierarchdecomp.jl")
     include("inphynet/subsetdecomp/satedecomp.jl")
 
-    export netnj, netnj!,
+    export inphynet,
         decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,
         majorinternodecount, internodecount, calculateAGIC,
@@ -24,7 +25,8 @@ module InPhyNet
         findvalidpairs, findsiblingpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
         njHierarchDecomp, pruneTruthFromDecomp,
         sateIdecomp, sateIIdecomp,
-        SolutionDNEError, ConstraintError
+        SolutionDNEError, ConstraintError,
+        are_compatible_heuristic, are_compatible_after_merge
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")
