@@ -63,6 +63,8 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
             end
 
             leaf_overlap = intersect(i_leaves, j_leaves)
+            if length(leaf_overlap) <= 3 continue end
+
             nodej_match = findfirst(n -> n == nodenamej, leaf_overlap)
             if nodej_match !== nothing deleteat!(leaf_overlap, nodej_match) end
 
