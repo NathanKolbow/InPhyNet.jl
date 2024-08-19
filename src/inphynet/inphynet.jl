@@ -16,6 +16,28 @@ function netnj(estgts::Vector{HybridNetwork})
 end
 
 
+function inphynet_pairwise(D, constraints, namelist; kwargs...)
+    D = deepcopy(D)
+    constraints = deepcopy(constraints)
+    namelist = deepcopy(namelist)
+
+    for i = 1:(length(constraints) - 1)
+        constraints = constraints[sortperm([c.numTaxa for c in constraints])]
+
+        cs = constraints[[1, 2]]
+        leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
+        idxfilter = findall(n -> n in leaf_names, namelist)
+
+        temp = inphynet(view(D, idxfilter, idxfilter), cs, view(namelist, idxfilter))
+        deleteat!(constraints, 2)
+        deleteat!(constraints, 1)
+        push!(constraints, temp)
+    end
+
+    return constraints[1]
+end
+
+
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, kwargs...)
     return inphynet!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), use_heuristic = use_heuristic; kwargs...)
 end
@@ -42,17 +64,22 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
     rootretics, rootreticprocessed = setup_root_retics(constraints; kwargs...)
-    constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in constraints]
+    compatibility_trees = [majorTree(c) for c in constraints]
+    constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
     
     # Main iterative loop
     while n > 1
-        possible_siblings = findvalidpairs(constraints, constraint_sibling_pairs, namelist; kwargs...)
-        i, j = findoptQidx(D, possible_siblings, constraints, namelist = namelist, use_heuristic = use_heuristic)
+        @debug n
+
+        possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist; kwargs...)
+        i, j = findoptQidx(D, possible_siblings, compatibility_trees, namelist = namelist, use_heuristic = use_heuristic)
 
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
-        updateconstraints!(namelist[i], namelist[j], constraints, constraint_sibling_pairs, reticmap, edgei, edgej; kwargs...)
 
-        fix_root_retics!(constraints, subnets, rootretics, rootreticprocessed)
+        update_compat_trees!(namelist[i], namelist[j], compatibility_trees, constraint_sibling_pairs; kwargs...)
+        updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej; kwargs...)
+
+        fix_root_retics!(constraints, subnets, rootretics, rootreticprocessed, reticmap, i)
 
         for l = 1:n
             if l != i && l != j
@@ -78,7 +105,7 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
 end
 
 
-function fix_root_retics!(constraints::AbstractVector{HybridNetwork}, subnets::AbstractVector{SubNet}, rootretics::AbstractArray, rootreticprocessed::BitVector)
+function fix_root_retics!(constraints::AbstractVector{HybridNetwork}, subnets::AbstractVector{SubNet}, rootretics::AbstractArray, rootreticprocessed::BitVector, reticmap::ReticMap, i)
     # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
     for (cidx, c) in enumerate(constraints)
         if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
@@ -139,7 +166,7 @@ end
 function check_inphynet_parameters(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; skip_constraint_check::Bool=false, kwargs...)
 
     !isempty(namelist) || throw(ArgumentError("Please provide a non-empty `namelist`."))
-    PhyloNetworks.check_distance_matrix(D)
+    PhyloNetworks.check_distance_matrix(Matrix{Float64}(D))
     if skip_constraint_check
         @warn "Skipping constraint validation - unexpected behavior may occur if one or more constraints violate certain conditions."
     else
@@ -175,7 +202,7 @@ end
 
 
 function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; 
-    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false, force_unrooted::Bool=false, skip_constraint_check::Bool=false, kwargs...)
+    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false, force_unrooted::Bool=true, skip_constraint_check::Bool=false, kwargs...)
     
     PhyloNetworks.check_distance_matrix(D)
     if skip_constraint_check
@@ -258,7 +285,7 @@ function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist
         # Find optimal (i, j) idx pair for matrix Q
         i = j = nothing
         try
-            i, j = findoptQidx(D, possible_siblings, namelist=namelist) 
+            i, j = findoptQidx(D, possible_siblings, constraints, namelist=namelist, use_heuristic=false) 
         catch e
             for c in constraints
                 @debug "$(writeTopology(c))"
@@ -515,7 +542,7 @@ in this process.
 By convention we keep `nodenamei` and replace node names with `nodenamej`
 """
 function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString, 
-    constraints::Vector{HybridNetwork}, constraint_sibling_pairs, reticmap::ReticMap,
+    constraints::Vector{HybridNetwork}, reticmap::ReticMap,
     subnetedgei::Edge, subnetedgej::Edge; kwargs...)
 
     # print("(\"$(nodenamei)\",\"$(nodenamej)\"), ")
@@ -540,7 +567,6 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
         # if !hasi && !hasj: do nothing
         if hasj && !hasi
             net.node[idxj].name = nodenamei
-            # constraint_sibling_pairs[netidx] = findsiblingpairs(net; kwargs...)
             
             # Don't need to update sibling pairs here b/c changing the name does that for us
         elseif hasi && hasj
@@ -549,9 +575,36 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
 
             @debug "Merging in net #$(netidx)"
             mergeconstraintnodes!(net, nodei, nodej, reticmap, subnetedgei, subnetedgej)
+        end
+    end
+end
 
-            # Update sibling pairs
-            constraint_sibling_pairs[netidx] = findsiblingpairs(net; kwargs...)
+
+function update_compat_trees!(nodenamei::AbstractString, nodenamej::AbstractString, compat_trees::AbstractVector{HybridNetwork}, constraint_sibling_pairs::AbstractVector)
+    
+    for (netidx, net) in enumerate(compat_trees)
+        idxi = -1
+        idxj = -1
+        for (nodeidx, node) in enumerate(net.node)
+            if node.name == nodenamei idxi = nodeidx
+            elseif node.name == nodenamej idxj = nodeidx
+            elseif idxi != -1 && idxj != -1 break
+            end
+        end
+
+        hasi = idxi != -1
+        hasj = idxj != -1
+
+        if hasj && !hasi
+            net.node[idxj].name = nodenamei
+        elseif hasi && hasj
+            if net.numTaxa > 2
+                deleteleaf!(net, net.node[idxj])
+            else
+                compat_trees[netidx] = pruneTruthFromDecomp(net, [nodenamei])
+            end
+
+            constraint_sibling_pairs[netidx] = findsiblingpairs(net)
         end
     end
 end
@@ -573,14 +626,17 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "a: ($(nodei.name), $(nodej.name))"
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
+        println(net)
         for edge in net.edge
             if edge.hybrid && !edge.isMajor
-                if reticmap.map[getchild(edge)][1] === nothing
-                    logretic!(reticmap, edge, subnetedgei, "from")
-                end
-                if reticmap.map[getchild(edge)][2] === nothing
-                    logretic!(reticmap, edge, subnetedgej, "to")
-                end
+                try
+                    if reticmap.map[getchild(edge)][1] === nothing
+                        logretic!(reticmap, edge, subnetedgei, "from")
+                    end
+                    if reticmap.map[getchild(edge)][2] === nothing
+                        logretic!(reticmap, edge, subnetedgej, "to")
+                    end
+                catch end
             end
         end
         ################
@@ -740,7 +796,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "p(j): $(getparent(nodej))"
         @debug "p(p(j)): $(getparents(getparent(nodej)))"
         @debug "c(p(j)): $(getchildren(getparent(nodej)))"
-        deleteleaf!(net, nodej) # yup, this is all we have to do.
+        deleteNode!(net, nodej)
+        for edge in net.edge
+            deleteEdge!(net, edge)
+        end
+        # deleteleaf! doesn't work anymore...
+        # deleteleaf!(net, nodej) # yup, this is all we have to do.
     elseif parentsi == parentsj
         @debug "b: ($(nodei.name), $(nodej.name))"
         # 04/25/2024:   (this note is written well after this code was first written)
@@ -1153,7 +1214,7 @@ end
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
 TIEWARNING = false
-function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, constraints::AbstractVector{HybridNetwork}; namelist=nothing, use_heuristic::Bool=true)
+function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_trees::AbstractVector{HybridNetwork}; namelist=nothing, use_heuristic::Bool=true)
     global TIEWARNING
 
     n = size(D)[1]
@@ -1184,7 +1245,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, constrain
         idxs = idxs[perm]
 
         for (i, j) in idxs
-            if are_compatible_after_merge(constraints, namelist[i], namelist[j])
+            if are_compatible_after_merge(compat_trees, namelist[i], namelist[j])
                 return (i, j)
             end
         end
@@ -1199,7 +1260,7 @@ end
 
 Finds all valid sibling pairs among the constraint networks.
 """
-function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_pairs, namelist::AbstractVector{<:AbstractString}; major_tree_only::Bool=false, force_unrooted::Bool=false)
+function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_pairs, namelist::AbstractVector{<:AbstractString})
     n = length(namelist)
 
     # Shorthand functions for name lookups (we'll be doing a lot of these if there are many constraints)
@@ -1225,10 +1286,8 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_p
         # Set valid pair idxs to 1 only if they are either 1 or -1
         # if a pair idx is 0 then it was invalid elsewhere and needs to stay 0
         for idx in pairidxs
-            if !validpairs[idx[1], idx[2], 1]
-                # Enter twice, once in the upper triangle and once in the lower+
-                validpairs[idx[1], idx[2], 2] = validpairs[idx[2], idx[1], 2] = true
-            end
+            # Enter twice, once in the upper triangle and once in the lower+
+            validpairs[idx[1], idx[2], 2] = validpairs[idx[2], idx[1], 2] = true
         end
 
         # Mark all these indices as seen together now
@@ -1249,7 +1308,7 @@ These pairs are valid for `net` but may not be valid when the
     other constraint networks are also considered.
 Returns a vector of tuples of nodes corresponding to siblings.
 """
-function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false, force_unrooted::Bool=false)
+function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_unrooted::Bool=true)
     pairs = BitArray(undef, net.numTaxa, net.numTaxa)
     pairs .= false
 
@@ -1257,6 +1316,40 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=false, force
     # hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.isMajor)])
     # push!(hybedges, nothing)
     
+    if major_tree_only
+        node_map = Dict(leaf => i for (i, leaf) in enumerate(net.leaf))
+
+        for nodei_idx = 1:net.numTaxa
+            nodei = net.leaf[nodei_idx]
+            if nodei == net.node[net.root] continue end
+            neighbors = [child for child in getchildren(getparent(nodei)) if child.leaf && !(child == nodei)]
+
+            if getparent(nodei) == net.node[net.root] && force_unrooted
+                for child in getchildren(getparent(nodei))
+                    for child_child in getchildren(child)
+                        if child_child.leaf && !(child_child == nodei)
+                            push!(neighbors, child_child)
+                        end
+                    end
+                end
+            end
+
+            for neighbor in neighbors
+                idx1 = min(nodei_idx, node_map[neighbor])
+                idx2 = max(nodei_idx, node_map[neighbor])
+                pairs[idx1, idx2] = true
+            end
+        end
+        
+        # Convert pairs to Tuples of Nodes
+        nodepairs = Array{Tuple{Node, Node}}(undef, sum(pairs))
+        for (arr_idx, leaf_idxs) in enumerate(findall(pairs))
+            nodepairs[arr_idx] = (net.leaf[leaf_idxs[1]], net.leaf[leaf_idxs[2]])
+        end
+
+        return nodepairs
+    end
+
     # if major_tree_only
     #     hybedges = [nothing]
     # end
