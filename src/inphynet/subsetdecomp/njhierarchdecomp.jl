@@ -54,7 +54,6 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
     nets = Array{HybridNetwork}(undef, length(subsets))
     for (i, set) in enumerate(subsets)
         tempnet = deepcopy(truenet)
-        @debug writeTopology(tempnet)
         namelist = [leaf.name for leaf in tempnet.leaf]
         for name in namelist
             if !(name in set)
