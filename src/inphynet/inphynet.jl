@@ -21,7 +21,12 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
     constraints = deepcopy(constraints)
     namelist = deepcopy(namelist)
 
+    if length(constraints) == 1
+        return inphynet!(D, constraints, namelist)
+    end
+
     for i = 1:(length(constraints) - 1)
+        @debug "\n\n----------------------------\n\n"
         constraints = constraints[sortperm([c.numTaxa for c in constraints])]
 
         cs = constraints[[1, 2]]
@@ -50,6 +55,8 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     # TODO: keep track of pairs of siblings through the algo instead of re-doing work each time - this is something
     #       that should have to be done once and should be very easy to keep track of afterwards
 
+    orig_namelist = deepcopy(namelist)
+    orig_constraints = deepcopy(constraints)
     n = size(D, 1)
     check_inphynet_parameters(D, constraints, namelist; kwargs...)
 
@@ -620,8 +627,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     parentsi = parentsi[1]
     parentsj = parentsj[1]
 
-    @debug "merging ($(nodei.name), $(nodej.name))"
-
     if (parentsi == parentsj && length(net.leaf) == 2) || (parentsi == nodej && parentsj == nodei)
         @debug "a: ($(nodei.name), $(nodej.name))"
 
@@ -651,6 +656,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         net.root = 1
         nodei.edge = []
     elseif length(net.leaf) == 2
+        @debug "e: ($(nodei.name), $(nodej.name))"
+
         # Some retics may still exist in the net, but only 2 leaves are left, so clean up
         nodes_above_nodei = []
         nodes_above_nodej = []
@@ -680,7 +687,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         search_node = nodei
         hybedges_i = []
         hybedges_j = []
-        while !(mrca in getparents(search_node))
+        # while !(mrca in getparents(search_node))
+        while search_node != mrca
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
@@ -692,7 +700,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
 
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor
+                if edge.hybrid # && !edge.isMajor
                     if getchild(edge) == search_node
                         push!(hybedges_i, (edge, "to"))
                     else
@@ -705,7 +713,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         while length(search_queue) > 0
             search_node = pop!(search_queue)
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor
+                if edge.hybrid # && !edge.isMajor
                     if !((edge, "from") in hybedges_i)
                         push!(hybedges_i, (edge, "from"))
                     else
@@ -719,7 +727,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         # Find all retics that come from nodej
         search_node = nodej
-        while !(mrca in getparents(search_node))
+        # while !(mrca in getparents(search_node))
+        while search_node != mrca
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
@@ -763,6 +772,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         for (edge, direction) in hybedges_i
             if direction != "from" continue end
             trylogretic_single!(reticmap, edge, subnetedgei, "from")
+            # logretic!(reticmap, edge, subnetedgei, "from")
         end
         for (edge, direction) in hybedges_j
             if direction != "from" continue end
@@ -856,11 +866,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
             # Log retics
             relevanttoi = true
+            logged_edgeinpath = false
             for (node_idx, node) in enumerate(nodesinpath)
-                log_edge_path_retics_from_node(
+                logged_edgeinpath = log_edge_path_retics_from_node(
                     node, edgesinpath, relevanttoi, false, nothing,
                     reticmap, subnetedgei, subnetedgej,
-                    net, false, nodesinpath, nodei, nodej
+                    net, logged_edgeinpath, nodesinpath, nodei, nodej
                 )
 
                 if node == net.node[net.root]
@@ -933,6 +944,13 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "c: ($(nodei.name), $(nodej.name))"
         # println("Before any operations:\n\t$(writeTopology(net))")
         graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
+
+        if !isassigned(nodesinpath, 1)
+            println(nodesinpath)
+            println(net)
+            println(nodei)
+            println(nodej)
+        end
 
         # find the node that should be the new tip after merging
         newtip = nodesinpath[1]
@@ -1275,6 +1293,12 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_p
     for (net_idx, net) in enumerate(constraints)
         if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
+
+        # What is up with this xor (⊻)?
+        # If we have seen a given entry before and NOT found that pair to be siblings (1 0) we want that to stay the same (1 stays 1)
+        # if we have seen an entry AND FOUND that pair to be siblings (1 1) we want to change to (0 0) so it can be overridden
+        # that's what this does.
+        validpairs[leafidxs, leafidxs, 1] .= xor.(validpairs[leafidxs, leafidxs, 1], validpairs[leafidxs, leafidxs, 2])
         validpairs[leafidxs, leafidxs, 2] .= false
 
         # Find valid sibling pairs
@@ -1286,8 +1310,10 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_p
         # Set valid pair idxs to 1 only if they are either 1 or -1
         # if a pair idx is 0 then it was invalid elsewhere and needs to stay 0
         for idx in pairidxs
-            # Enter twice, once in the upper triangle and once in the lower+
-            validpairs[idx[1], idx[2], 2] = validpairs[idx[2], idx[1], 2] = true
+            if !validpairs[idx[1], idx[2], 1]
+                # Enter twice, once in the upper triangle and once in the lower+
+                validpairs[idx[1], idx[2], 2] = validpairs[idx[2], idx[1], 2] = true
+            end
         end
 
         # Mark all these indices as seen together now
