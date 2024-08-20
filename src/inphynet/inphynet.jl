@@ -631,7 +631,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "a: ($(nodei.name), $(nodej.name))"
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
-        println(net)
         for edge in net.edge
             if edge.hybrid && !edge.isMajor
                 try
