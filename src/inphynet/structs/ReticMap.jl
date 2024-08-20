@@ -94,7 +94,6 @@ logretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
     logretic!(r, r.edge_map[hyb_edge], subnetedge, fromorto)
 
 function check_reticmap(r::ReticMap)
-    @show r
     for (i, key) in enumerate(keys(r.map))
         if length(r.map[key]) != 3
             throw(ErrorException("ReticMap key $i has $(length(r.map[key])) attached edges."))
