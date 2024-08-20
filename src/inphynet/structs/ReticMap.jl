@@ -1,19 +1,25 @@
 const EdgeOrNA = Union{Edge, Nothing}
 struct ReticMap
     map::Dict{Node, Vector{EdgeOrNA}}
+    edge_map::Dict{Edge, Node}
+
     function ReticMap(constraints::Vector{HybridNetwork})
         # map all existing reticulations in `constraints` to `(nothing, nothing)`
         d = Dict()
+        e_map = Dict()
         for net in constraints
             for e in net.edge
-                if e.hybrid && !e.isMajor
-                    d[getchild(e)] = Vector{EdgeOrNA}([nothing, nothing, nothing])      # first entry:  `from` edge,
-                                                                                        # second entry: `to` edge,
-                                                                                        # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)
+                if e.hybrid
+                    if !e.isMajor
+                        d[getchild(e)] = Vector{EdgeOrNA}([nothing, nothing, nothing])      # first entry:  `from` edge,
+                                                                                            # second entry: `to` edge,
+                                                                                            # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)
+                    end
+                    e_map[e] = getchild(e)
                 end
             end
         end
-        new(d)
+        new(d, e_map)
     end
 end
 
@@ -35,7 +41,7 @@ function trylogretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String
     end
 end
 trylogretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
-    trylogretic!(r, getchild(hyb_edge), subnetedge, fromorto)
+    trylogretic!(r, r.edge_map[hyb_edge], subnetedge, fromorto)
 
 function trylogretic_single!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     try
@@ -44,7 +50,7 @@ function trylogretic_single!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto:
     end
 end
 trylogretic_single!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
-    trylogretic_single!(r, getchild(hyb_edge), subnetedge, fromorto)
+    trylogretic_single!(r, r.edge_map[hyb_edge], subnetedge, fromorto)
 
 function logretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     # If we're double logging identical edges then return w/o error
@@ -85,9 +91,10 @@ function logretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     end
 end
 logretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
-    logretic!(r, getchild(hyb_edge), subnetedge, fromorto)
+    logretic!(r, r.edge_map[hyb_edge], subnetedge, fromorto)
 
 function check_reticmap(r::ReticMap)
+    @show r
     for (i, key) in enumerate(keys(r.map))
         if length(r.map[key]) != 3
             throw(ErrorException("ReticMap key $i has $(length(r.map[key])) attached edges."))
