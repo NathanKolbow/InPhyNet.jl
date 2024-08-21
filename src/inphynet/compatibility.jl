@@ -30,47 +30,53 @@ end
 
 function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei::AbstractString, nodenamej::AbstractString)
 
-    for i = 1:(length(ns) - 1)
-        i_leaves = [leaf.name for leaf in ns[i].leaf]
-        if length(i_leaves) <= 3 continue end
-        i_matches = (nodenamei in i_leaves) + (nodenamej in i_leaves)
-        if i_matches == 0 continue end
-
-        # Merge the nodes
-        ni_prime = deepcopy(ns[i])
-        if i_matches == 1
-            nodej_match = findfirst(n -> n == nodenamej, i_leaves)
+    to_copy = Vector{Int64}([])
+    ns_prime = Array{HybridNetwork}(undef, length(ns))
+    n_matches = Array{Int64}(undef, length(ns))
+    leaves = Array{Vector{String}}(undef, length(ns))
+    matching_ns = 0
+    for (k, n) in enumerate(ns)
+        leaves[k] = [leaf.name for leaf in n.leaf]
+        n_matches[k] = (nodenamei in leaves[k]) + (nodenamej in leaves[k])
+        
+        if n_matches[k] > 0 && length(leaves[k]) > 3
+            push!(to_copy, k)
+            matching_ns += 1
+        end
+    end
+    if matching_ns <= 1 return true end
+    
+    for (k, n) in enumerate(ns)
+        ns_prime[k] = deepcopy(n)
+        
+        if n_matches[k] == 1
+            nodej_match = findfirst(n -> n == nodenamej, leaves[k])
             if nodej_match !== nothing
-                ni_prime.leaf[nodej_match].name = nodenamei
-                i_leaves[nodej_match] = nodenamei
+                ns_prime[k].leaf[nodej_match].name = nodenamei
+                leaves[k][nodej_match] = nodenamei
+            end
+        elseif n_matches[k] == 2
+            nodej_match = findfirst(n -> n == nodenamej, leaves[k])
+            if nodej_match !== nothing
+                deleteat!(leaves[k], nodej_match)
             end
         end
+    end
+
+
+
+    for i = 1:(length(ns) - 1)
+        if !isassigned(ns_prime, i) continue end
 
         for j = (i+1):length(ns)
-            j_leaves = [leaf.name for leaf in ns[j].leaf]
-            if length(j_leaves) <= 3 continue end
-            j_matches = (nodenamei in j_leaves) + (nodenamej in j_leaves)
-            if j_matches == 0 continue end
-            
-            # "Merge" the nodes
-            nj_prime = deepcopy(ns[j])
-            if j_matches == 1
-                nodej_match = findfirst(n -> n == nodenamej, j_leaves)
-                if nodej_match !== nothing
-                    nj_prime.leaf[nodej_match].name = nodenamei
-                    j_leaves[nodej_match] = nodenamei
-                end
-            end
+            if !isassigned(ns_prime, j) continue end
 
-            leaf_overlap = intersect(i_leaves, j_leaves)
+            leaf_overlap = intersect(leaves[i], leaves[j])
             if length(leaf_overlap) <= 3 continue end
 
-            nodej_match = findfirst(n -> n == nodenamej, leaf_overlap)
-            if nodej_match !== nothing deleteat!(leaf_overlap, nodej_match) end
-
             if hardwiredClusterDistance(
-                pruneTruthFromDecomp(ni_prime, leaf_overlap),
-                pruneTruthFromDecomp(nj_prime, leaf_overlap),
+                pruneTruthFromDecomp(asdf, leaf_overlap),
+                pruneTruthFromDecomp(ns_prime[j], leaf_overlap),
                 false) > 0 return false end
         end
     end
