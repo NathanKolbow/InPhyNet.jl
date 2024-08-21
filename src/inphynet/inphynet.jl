@@ -1,14 +1,7 @@
 # Author: Nathan Kolbow
-# Hosted at https://github.com/NathanKolbow/network-merging
+# Hosted at https://github.com/NathanKolbow/InPhyNet.jl
 #
 # Source code for main components of the InPhyNet algorithm.
-
-"""
-Deep search for `netnj`
-"""
-function inphynet_deep_search()
-    error("not implemented yet")
-end
 
 
 function netnj(estgts::Vector{HybridNetwork})
@@ -26,6 +19,7 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
     end
 
     for i = 1:(length(constraints) - 1)
+        # TODO: do in order of most similar subsets
         @debug "\n\n----------------------------\n\n"
         constraints = constraints[sortperm([c.numTaxa for c in constraints])]
 
