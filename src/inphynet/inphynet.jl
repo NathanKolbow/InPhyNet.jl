@@ -24,10 +24,11 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         constraints = constraints[sortperm([c.numTaxa for c in constraints])]
 
         cs = constraints[[1, 2]]
+        println(" ($(cs[1].numTaxa), $(cs[2].numTaxa))")
         leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
         idxfilter = findall(n -> n in leaf_names, namelist)
 
-        temp = inphynet(view(D, idxfilter, idxfilter), cs, view(namelist, idxfilter))
+        temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter))
         deleteat!(constraints, 2)
         deleteat!(constraints, 1)
         push!(constraints, temp)
@@ -38,7 +39,56 @@ end
 
 
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, kwargs...)
-    return inphynet!(deepcopy(D), deepcopy(constraints), deepcopy(namelist), use_heuristic = use_heuristic; kwargs...)
+    queue::Vector{<:AbstractVector{HybridNetwork}} = [constraints]
+    while true
+        # Quit the loop if we're done
+        if length(queue) == 1 && length(queue[1]) == 1
+            break
+        end
+
+        # If the next item in the queue has >1 item, try merging them
+        if length(queue[1]) > 1
+            try
+                cs = deepcopy(queue[1])
+                leaf_names = reduce(vcat, [[leaf.name for leaf in c.leaf] for c in cs])
+                idxfilter = findall(i -> namelist[i] in leaf_names, 1:length(namelist))
+
+                mnet = inphynet!(
+                    deepcopy(D[idxfilter, idxfilter]),
+                    cs,
+                    namelist[idxfilter]
+                )
+
+                deleteat!(queue, 1)
+                push!(queue, [mnet])
+            catch e
+                # Failed, split up the constraints and put them back in the queue
+                temp = queue[1]
+                deleteat!(queue, 1)
+
+                if length(temp) == 2
+                    throw(e)
+                elseif length(temp) == 3
+                    pushfirst!(queue, temp[1:2])
+                    push!(queue, [temp[3]])
+                else
+                    pushfirst!(queue, temp[1:(length(temp) ÷ 2)])
+                    pushfirst!(queue, temp[(length(temp) ÷ 2 + 1):length(temp)])
+                end
+            end
+        elseif length(queue[2]) == 1
+            temp = [queue[1][1], queue[2][1]]
+            deleteat!(queue, 2)
+            deleteat!(queue, 1)
+            pushfirst!(queue, temp)
+        else
+            temp = queue[1]
+            deleteat!(queue, 1)
+            push!(queue, temp)
+        end
+    end
+
+    return queue[1][1]
 end
 
 
@@ -872,11 +922,31 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 end
             end
 
-            # Arbitrarily delete one of the nodes (nodej) and keep the other (nodei) without changing the root
-            curr = getparent(nodej)
-            getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
-            deleteNode!(net, nodej)
-            deleteEdge!(net, getparentedge(nodej))
+            # Delete the node that is alone on the other side of the root
+            curr = getparent(nodei)
+            if has_direct_root_connection(net, nodej)
+                # println("\n\n\n------------------------")
+                # println("$(nodej.name) has direct connection")
+                # println("------------------------\n\n\n")
+                curr = getparent(nodej)
+                getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
+                deleteNode!(net, nodej)
+                deleteEdge!(net, getparentedge(nodej))
+            elseif has_direct_root_connection(net, nodei)
+                nodei_name = nodei.name
+                curr = getparent(nodei)
+                getparent(nodei).edge = filter(e -> e != getparentedge(nodei), getparent(nodei).edge)
+                deleteNode!(net, nodei)
+                deleteEdge!(net, getparentedge(nodei))
+                nodej.name = nodei_name
+            else
+                @show net
+                @show nodei
+                @show nodej
+
+                throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
+            end
+
 
             # If there are a series of nodes above `nodej` that are not the node (nodes leading to retics): remove those nodes
             while curr != net.node[net.root] && length(getparents(curr)) > 0
@@ -1225,37 +1295,51 @@ end
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
 TIEWARNING = false
-function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_trees::AbstractVector{HybridNetwork}; namelist=nothing, use_heuristic::Bool=true)
+function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_trees::AbstractVector{HybridNetwork}; namelist=nothing, use_heuristic::Bool=true, max_sorted_entries::Int64=5)
+    # max_sorted_entries: push!(sorted_values, ...) is the majority of algorithm run time. In an effort to combat this,
+    #                     we iteratively cap the maximum size of sorted_values, b/c we usually don't actually need to
+    #                     evaluate every `qij`, just the smallest 1 or 2
     global TIEWARNING
 
     n = size(D)[1]
     sums = sum(D, dims=1)
-    values = []
-    idxs = []
+    sorted_values = SortedSet{Tuple{Float64, Tuple{Int64, Int64}}}()
+    max_val = (-Inf, (-Inf, -Inf))
 
     # New, faster
     for i = 1:n
         for j = (i+1):n
             if !validpairs[i, j] continue end
+            # TODO: refactor code so that we don't have to re-calculate `D`
+            #       every time and specific entries are instead refactored when changed,
+            #       then this function just receives the already sorted list of qij's
+            #       instead of the matrix `D` itself
 
             qij = (n-2) * D[i,j] - sums[i] - sums[j]
-            push!(values, qij)
-            push!(idxs, (i, j))
+
+            # push!(sorted_values, (qij, (i, j)))
+            if length(sorted_values) < max_sorted_entries || qij < max_val[1]
+                if length(sorted_values) >= max_sorted_entries
+                    delete!(sorted_values, max_val)
+                end
+
+                push!(sorted_values, (qij, (i, j)))
+                max_val = maximum(sorted_values)
+            end
         end
     end
 
-    if length(values) == 0
+    if length(sorted_values) == 0
+        if max_sorted_entries < n
+            return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
+        end
         throw(SolutionDNEError())
     end
 
     if !use_heuristic
-        return idxs[findmin(values)[2]]
+        return first(idxs)[2]
     else
-        perm = sortperm(values)
-        values = values[perm]
-        idxs = idxs[perm]
-
-        for (i, j) in idxs
+        for (_, (i, j)) in sorted_values
             if are_compatible_after_merge(compat_trees, namelist[i], namelist[j])
                 return (i, j)
             end
@@ -1414,6 +1498,47 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_
     end
 
     return nodepairs
+end
+
+
+"""
+Helper function - returns true if the node `node` is connected directly to
+the root of `net`, or if the path connecting `node` to `net`'s root is
+multiple redundant edges (e.g. returns true for A in the net: "((((((A))))), (B,C));")
+"""
+function has_direct_root_connection(net::HybridNetwork, node::Node)
+    curr = node
+    last_node = nothing
+
+    while true
+        if curr == net.node[net.root] break end
+        if length(getparents(curr)) > 1 return false end
+        
+        children = getchildren(curr)
+        for child in children
+            if child != curr && child.hybrid
+                try
+                    if curr == getparent(getparentedge(child)) return false end
+                catch
+                end
+            end
+        end
+
+        if length(getparents(curr)) == 0 throw(ErrorException("Unexpected case.")) end
+
+        last_node = curr
+        curr = getparents(curr)[1]
+    end
+    return true
+
+    # Now, there may still have been a major hybrid edge in the path that doesn't lead to leaves
+    # - we want to still return true in this case, so the final check is to see whether `node`
+    # is the only descendant of the final edge that we checked
+    edge = [e for e in curr.edge if curr in e.node && last_node in e.node]
+    length(edge) == 1 || throw(ErrorException("Only expected 1 match."))
+    edge = edge[1]
+
+    return length(getLeavesUnderEdge(edge)) == 1
 end
 
 
