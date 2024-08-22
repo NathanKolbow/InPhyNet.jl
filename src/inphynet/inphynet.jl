@@ -500,7 +500,10 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
     counter = 0
     
     check_reticmap(reticmap)
-    for hyb in keys(reticmap.map)
+    collected_keys = collect(keys(reticmap.map))
+    collected_keys = collected_keys[sortperm([k.name for k in collected_keys])]
+
+    for hyb in collected_keys
         from = reticmap.map[hyb][1]
         to = reticmap.map[hyb][2]
         
