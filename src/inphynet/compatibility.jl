@@ -77,7 +77,8 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
             if hardwiredClusterDistance(
                 pruneTruthFromDecomp(ns_prime[i], leaf_overlap),
                 pruneTruthFromDecomp(ns_prime[j], leaf_overlap),
-                false) > 0 return false end
+                false) > 0 return false
+            end
         end
     end
 
