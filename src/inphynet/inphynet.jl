@@ -24,7 +24,6 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         constraints = constraints[sortperm([c.numTaxa for c in constraints])]
 
         cs = constraints[[1, 2]]
-        println(" ($(cs[1].numTaxa), $(cs[2].numTaxa))")
         leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
         idxfilter = findall(n -> n in leaf_names, namelist)
 
