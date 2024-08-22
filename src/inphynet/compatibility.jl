@@ -46,7 +46,7 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
     end
     if matching_ns <= 1 return true end
     
-    for (k, n) in enumerate(ns)
+    for (k, n) in enumerate(ns)]
         ns_prime[k] = deepcopy(n)
         
         if n_matches[k] == 1
@@ -75,7 +75,7 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
             if length(leaf_overlap) <= 3 continue end
 
             if hardwiredClusterDistance(
-                pruneTruthFromDecomp(asdf, leaf_overlap),
+                pruneTruthFromDecomp(ns_prime[i], leaf_overlap),
                 pruneTruthFromDecomp(ns_prime[j], leaf_overlap),
                 false) > 0 return false end
         end
