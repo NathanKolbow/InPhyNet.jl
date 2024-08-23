@@ -37,7 +37,7 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
 end
 
 
-function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, kwargs...)
+function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
     queue::Vector{<:AbstractVector{HybridNetwork}} = [constraints]
     while true
         # Quit the loop if we're done
@@ -721,6 +721,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     @show search_node.edge
                     @show net.leaf
                     @show net.node[net.root]
+                    @show net.node
+                    @show net.edge
                     rethrow(e)
                 end
             end
