@@ -55,7 +55,8 @@ function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridN
                 mnet = inphynet!(
                     deepcopy(D[idxfilter, idxfilter]),
                     cs,
-                    namelist[idxfilter]
+                    namelist[idxfilter];
+                    kwargs...
                 )
 
                 deleteat!(queue, 1)
