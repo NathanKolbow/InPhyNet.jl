@@ -718,6 +718,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     @show search_node
                     @show getparents(search_node)
                     @show search_node.edge
+                    @show net.leaf
+                    @show net.node[net.root]
                     rethrow(e)
                 end
             end
