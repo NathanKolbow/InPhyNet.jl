@@ -905,7 +905,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
-    elseif major_mrca(nodei, nodej) == net.node[net.root]
+    elseif major_mrca(nodei, nodej, net.node[net.root]) == net.node[net.root]
         # Merging unrooted constraint across the "root"
         if length(net.node) == 3
             @debug "cross-root B: ($(nodei.name), $(nodej.name))"
@@ -914,6 +914,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             throw(ErrorException("Case not implemented yet."))
         else
             @debug "cross-root A: ($(nodei.name), $(nodej.name))"
+            @show net
             graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
             if any(i -> !isassigned(nodesinpath, i), 1:length(nodesinpath))
@@ -964,6 +965,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 @show nodej
                 @show major_mrca(nodei, nodej)
                 @show net.node[net.root]
+
+                @show getparent(nodei)
+                @show getparent(getparent(nodei))
+                @show getparent(nodej)
+                @show getparent(getparent(nodej))
+                @show getparent(getparent(getparent(nodej)))
 
                 throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
             end
@@ -1192,12 +1199,12 @@ end
 
 Gets the MRCA of `nodei` and `nodej` along their major tree.
 """
-function major_mrca(nodei::Node, nodej::Node)
+function major_mrca(nodei::Node, nodej::Node, root::Node)
     obs_nodes = Set()
     while true
-        if nodei in obs_nodes
+        if nodei in obs_nodes && nodei != root
             return nodei
-        elseif nodej in obs_nodes
+        elseif nodej in obs_nodes && nodej != root
             return nodej
         elseif nodei == nodej
             return nodei
