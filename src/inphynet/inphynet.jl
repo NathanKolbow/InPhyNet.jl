@@ -448,7 +448,7 @@ Checks validity of a single input constraint networks. Checks include:
 1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
 2. Reticulations do not lead directly into other reticulations
 """
-function check_constraint(idx::Int64, net::HybridNetwork; autofix::Bool=false)
+function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; kwargs...)
     if net.numTaxa == 1 return end
 
     # Check #1
