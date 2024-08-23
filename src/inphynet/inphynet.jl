@@ -712,7 +712,14 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             try
                 search_node = getparent(getparentedge(search_node))
             catch
-                search_node = getparent(getparentedgeminor(search_node))
+                try
+                    search_node = getparent(getparentedgeminor(search_node))
+                catch e
+                    @show search_node
+                    @show getparents(search_node)
+                    @show search_node.edge
+                    rethrow(e)
+                end
             end
         end
         search_node = nodej
@@ -721,7 +728,14 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             try
                 search_node = getparent(getparentedge(search_node))
             catch
-                search_node = getparent(getparentedgeminor(search_node))
+                try
+                    search_node = getparent(getparentedgeminor(search_node))
+                catch e
+                    @show search_node
+                    @show getparents(search_node)
+                    @show search_node.edge
+                    rethrow(e)
+                end
             end
         end
         push!(nodes_above_nodei, net.node[net.root])
