@@ -948,13 +948,19 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 curr = getparent(nodej)
                 getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
                 deleteNode!(net, nodej)
-                deleteEdge!(net, getparentedge(nodej))
+                e = getparentedge(nodej)
+                deleteEdge!(net, e)
+
+                for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
             elseif has_direct_root_connection(net, nodei)
                 nodei_name = nodei.name
                 curr = getparent(nodei)
                 getparent(nodei).edge = filter(e -> e != getparentedge(nodei), getparent(nodei).edge)
                 deleteNode!(net, nodei)
-                deleteEdge!(net, getparentedge(nodei))
+                e = getparentedge(nodei)
+                deleteEdge!(net, e)
+
+                for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
             else
                 @show net
