@@ -126,7 +126,7 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
         i, j = findoptQidx(D, possible_siblings, compatibility_trees, namelist = namelist, use_heuristic = use_heuristic)
 
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
-
+    
         update_compat_trees!(namelist[i], namelist[j], compatibility_trees, constraint_sibling_pairs)
         updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej; kwargs...)
 
@@ -462,6 +462,20 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
             if length(node.edge) != 2
                 throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
+
+            children = getchildren(node)
+            if children[1].hybrid
+                try
+                    rootatnode!(net, children[2])
+                catch
+                end
+            elseif children[2].hybrid
+                try
+                    rootatnode!(net, children[1])
+                catch
+                end
+            end
+
         elseif length(node.edge) != 3
             throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
         end
