@@ -462,22 +462,17 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
             if length(node.edge) != 2
                 throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
-
-            children = getchildren(node)
-            if children[1].hybrid
-                try
-                    rootatnode!(net, children[2])
-                catch
-                end
-            elseif children[2].hybrid
-                try
-                    rootatnode!(net, children[1])
-                catch
-                end
-            end
-
         elseif length(node.edge) != 3
             throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
+        end
+    end
+
+    # Check #2: try to make it so that the root does NOT have a reticulation coming out of it
+    i = 1
+    while any(child.hybrid for child in getchildren(net.node[net.root])) && i <= length(net.node)
+        try
+            rootatnode!(net, net.node[i])
+        catch
         end
     end
 
@@ -947,19 +942,19 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 # println("------------------------\n\n\n")
                 curr = getparent(nodej)
                 getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
+
                 deleteNode!(net, nodej)
                 e = getparentedge(nodej)
                 deleteEdge!(net, e)
-
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
             elseif has_direct_root_connection(net, nodei)
                 nodei_name = nodei.name
                 curr = getparent(nodei)
                 getparent(nodei).edge = filter(e -> e != getparentedge(nodei), getparent(nodei).edge)
+
                 deleteNode!(net, nodei)
                 e = getparentedge(nodei)
                 deleteEdge!(net, e)
-
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
             else
