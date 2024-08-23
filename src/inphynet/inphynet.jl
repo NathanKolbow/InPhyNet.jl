@@ -459,7 +459,7 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
                 throw(ConstraintError(idx, "Leaf nodes must have exactly 1 attached edge."))
             end
         elseif node == net.node[net.root]
-            if length(node.edge) != 2
+            if length(node.edge) != 2   
                 throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
         elseif length(node.edge) != 3
@@ -468,8 +468,9 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
     end
 
     # Check #2: try to make it so that the root does NOT have a reticulation coming out of it
-    i = 1
+    i = 0
     while any(child.hybrid for child in getchildren(net.node[net.root])) && i <= length(net.node)
+        i += 1
         try
             rootatnode!(net, net.node[i])
         catch
