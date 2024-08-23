@@ -962,6 +962,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 @show net
                 @show nodei
                 @show nodej
+                @show major_mrca(nodei, nodej)
+                @show net.node[net.root]
 
                 throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
             end
