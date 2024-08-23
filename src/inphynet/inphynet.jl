@@ -176,7 +176,7 @@ function fix_root_retics!(constraints::AbstractVector{HybridNetwork}, subnets::A
 end
 
 
-function setup_root_retics(constraints::AbstractVector{HybridNetwork}, supressunsampledwarning::Bool=false)
+function setup_root_retics(constraints::AbstractVector{HybridNetwork}; supressunsampledwarning::Bool=false)
     rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
     for (i, c) in enumerate(constraints)
         hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
