@@ -914,7 +914,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             throw(ErrorException("Case not implemented yet."))
         else
             @debug "cross-root A: ($(nodei.name), $(nodej.name))"
-            @show net
             graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
             if any(i -> !isassigned(nodesinpath, i), 1:length(nodesinpath))
