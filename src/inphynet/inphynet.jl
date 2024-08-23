@@ -122,12 +122,12 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     while n > 1
         @debug n
 
-        possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist; kwargs...)
+        possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist)
         i, j = findoptQidx(D, possible_siblings, compatibility_trees, namelist = namelist, use_heuristic = use_heuristic)
 
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
 
-        update_compat_trees!(namelist[i], namelist[j], compatibility_trees, constraint_sibling_pairs; kwargs...)
+        update_compat_trees!(namelist[i], namelist[j], compatibility_trees, constraint_sibling_pairs)
         updateconstraints!(namelist[i], namelist[j], constraints, reticmap, edgei, edgej; kwargs...)
 
         fix_root_retics!(constraints, subnets, rootretics, rootreticprocessed, reticmap, i)
@@ -495,7 +495,7 @@ check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwarg
 Updates `net` to include the reticulations that we've kept track of along the way
 in our algo but haven't placed yet.
 """
-function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::Bool=false)
+function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::Bool=false, kwargs...)
     namepairs = []
     retic_names = []
     counter = 0
@@ -1432,7 +1432,7 @@ These pairs are valid for `net` but may not be valid when the
     other constraint networks are also considered.
 Returns a vector of tuples of nodes corresponding to siblings.
 """
-function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_unrooted::Bool=true)
+function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_unrooted::Bool=true, kwargs...)
     pairs = BitArray(undef, net.numTaxa, net.numTaxa)
     pairs .= false
 
