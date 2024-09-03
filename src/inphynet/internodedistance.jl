@@ -32,7 +32,8 @@ function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractV
 
     D = pairwiseTaxonDistanceMatrix(N)
     if namelist === nothing
-        return D, tipLabels(N)
+        idxs = sortperm(tipLabels(N))
+        return D[idxs, idxs], tipLabels(N)[idxs]
     end
 
     idxs = Array{Int64}(undef, size(D, 1))
