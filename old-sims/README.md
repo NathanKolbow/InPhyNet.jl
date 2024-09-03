@@ -1,1 +1,0 @@
-`old-sims` is a directory of simulations that were performed to try and understand the strengths and weaknesses of the algorithm. It does not contain any data that will end up in the eventual manuscript.
