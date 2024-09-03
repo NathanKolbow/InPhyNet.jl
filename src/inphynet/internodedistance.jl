@@ -28,24 +28,19 @@ end
 Calculates internode distance between all pairs of taxa in network `N`.
 """
 function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}}=nothing)
-    D = zeros(N.numTaxa, N.numTaxa)
-    if namelist == nothing
-        namelist = Array{String}(undef, N.numTaxa)
-        for i=1:N.numTaxa namelist[i] = N.leaf[i].name end
+    N.numHybrids == 0 || throw(ErrorException("N must be tree-like."))
+
+    D = pairwiseTaxonDistanceMatrix(N)
+    if namelist === nothing
+        return D, tipLabels(N)
     end
 
-    Ngraph, Nweights = Graph(N, withweights = true)
-    nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
-
-    for i=1:(N.numTaxa-1)
-        paths = bellman_ford_shortest_paths(Ngraph, nodelistidx[i], Nweights)
-        D[i, :] .= D[:, i] .= paths.dists[nodelistidx]
-        D[i, i] = 0.
-
-        # for j=(i+1):(net.numTaxa)
-        #     D[i, j] = D[j, i] = paths.dists[nodelistidx[j]] - 1
-        # end
+    idxs = Array{Int64}(undef, size(D, 1))
+    for j = 1:size(D, 1)
+        idxs[j] = findfirst(namelist_item -> namelist_item == tipLabels(N)[j], namelist)
     end
+    D = D[idxs, idxs]
+
     return D, namelist
 end
 
