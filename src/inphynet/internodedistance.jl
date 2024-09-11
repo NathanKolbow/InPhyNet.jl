@@ -36,13 +36,20 @@ function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractV
         return D[idxs, idxs], tipLabels(N)[idxs]
     end
 
-    idxs = Array{Int64}(undef, size(D, 1))
-    for j = 1:size(D, 1)
-        idxs[j] = findfirst(namelist_item -> namelist_item == tipLabels(N)[j], namelist)
-    end
-    D = D[idxs, idxs]
+    # We want to re-order the idxs in `D` so that they match up with the provided namelist
+    # So, if `namelist[j]` is "A", `map[j]` should return `i` where `tipLabels(N)[i]` is "A"
+    tip_labels = tipLabels(N)
+    label_map = Dict(taxon_name => j for (j, taxon_name) in enumerate(tip_labels))
+    namelist_map = Dict(namelist_item => j for (j, namelist_item) in enumerate(namelist))
 
-    return D, namelist
+    idxfilter = Array{Int64}(undef, size(D, 1))
+    for i = 1:size(D, 1)
+        tip_name = tip_labels[i]
+        idxfilter[label_map[tip_name]] = namelist_map[tip_name]
+    end
+
+    return view(D, idxfilter, idxfilter)
+    
 end
 
 
