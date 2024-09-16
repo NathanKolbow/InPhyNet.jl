@@ -191,6 +191,12 @@ function setup_root_retics(constraints::AbstractVector{HybridNetwork}; supressun
                     "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
             end
         else
+            # If there are 0 hybrids in the entire network, we can skip this work
+            if length(c.edge) == 0 || sum(edge.hybrid for edge in c.edge) == 0
+                rootretics[i] = nothing
+                continue
+            end
+
             # None of the nodes coming out of the root are hybrids, but now
             # we need to make sure that none of the nodes coming out of the
             # root lead to _only_ hybrids, thus effectively making the root
