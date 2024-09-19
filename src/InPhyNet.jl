@@ -9,6 +9,7 @@ module InPhyNet
     include("inphynet/structs/SubNet.jl")
     include("inphynet/structs/ReticMap.jl")
     
+    include("inphynet/neighbors.jl")
     include("inphynet/compatibility.jl")
     include("inphynet/inphynet.jl")
     include("inphynet/internodedistance.jl")
@@ -26,7 +27,8 @@ module InPhyNet
         njHierarchDecomp, pruneTruthFromDecomp,
         sateIdecomp, sateIIdecomp,
         SolutionDNEError, ConstraintError,
-        are_compatible_heuristic, are_compatible_after_merge
+        are_compatible_heuristic, are_compatible_after_merge,
+        get_neighbor_set
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")
