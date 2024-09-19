@@ -12,11 +12,15 @@ function get_neighbor_set(net::HybridNetwork)
 
     # Inefficient implementation, but this algo will never be a bottleneck so who cares!
     for leaf in net.leaf
-        neighbor_nodes = getnodes(leaf)
+        neighbor_nodes = getnodes(getparent(leaf))
         for node in neighbor_nodes
-            if node.leaf
-                # min/max so that we don't enter the same pair twice
-                push!(pairs, (min(leaf, node), max(leaf, node)))
+            if node.leaf && node != leaf
+                # This way we don't enter the same pair twice
+                if leaf.name < node.name
+                    push!(pairs, (leaf, node))
+                else
+                    push!(pairs, (node, leaf))
+                end
             end
         end
     end
