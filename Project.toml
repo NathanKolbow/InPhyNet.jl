@@ -1,7 +1,7 @@
 name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
-version = "0.2.2"
+version = "0.2.3"
 
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
