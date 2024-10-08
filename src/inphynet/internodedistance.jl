@@ -36,19 +36,11 @@ function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractV
         return D[idxs, idxs], tipLabels(N)[idxs]
     end
 
-    # We want to re-order the idxs in `D` so that they match up with the provided namelist
-    # So, if `namelist[j]` is "A", `map[j]` should return `i` where `tipLabels(N)[i]` is "A"
-    tip_labels = tipLabels(N)
-    label_map = Dict(taxon_name => j for (j, taxon_name) in enumerate(tip_labels))
-    namelist_map = Dict(namelist_item => j for (j, namelist_item) in enumerate(namelist))
-
-    idxfilter = Array{Int64}(undef, size(D, 1))
-    for i = 1:size(D, 1)
-        tip_name = tip_labels[i]
-        idxfilter[label_map[tip_name]] = namelist_map[tip_name]
-    end
-
-    return view(D, idxfilter, idxfilter), namelist
+    # BELOW DOESN'T WORK. IMPLEMENT WORKING FIRST THEN SPEED UP
+    N_labels = tipLabels(N)
+    idx_in_N = Dict{String, Int}(taxa => j for (j, taxa) in enumerate(N_labels))
+    idx_map = [idx_in_N[name] for name in namelist]
+    return D[idx_map, idx_map], N_labels[idx_map]
     
 end
 
@@ -77,52 +69,6 @@ function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVect
     end
     return D, namelist
 end
-
-
-"""
-    calculate_pairwise_metric_across_networks(nets::AbstractVector{HybridNetwork}, net_metric::Function, summary_metric::Function)
-
-Used as the base of `calculateAGIC`, `calculateAGID`, and `calculateMGIC`.
-
-# Arguments
-- `nets`: vector of `HybridNetwork` objects
-- `net_metric`: metric calculated across each network - `net_metric(net::HybridNetwork, namelist::Vector{String}=namelist)`
-                must be valid and return Float64
-- `summary_metric`: metric that summarized values from `net_metric`. e.g. `mean` or `median`
-"""
-# function calculate_pairwise_metric_across_networks(nets::AbstractVector{HybridNetwork}, net_metric::Function, summary_metric::Function)
-#     all_names = Set()
-#     for net in Ns
-#         union!(all_names, [leaf.name for leaf in net.leaf])
-#     end
-#     n = length(all_names)
-#     namelist = sort(collect(all_names))
-
-#     D = Matrix{Vector{Float64}}(undef, n, n)
-#     D .= []
-
-#     for net in nets
-#         iter_names = sort([leaf.name for leaf in net.leaf])
-#         idx_filter = findall(x -> x in iter_names, namelist)
-#         iter_D = view(D, idx_filter, idx_filter)
-
-#         pairwise_vals = net_metric(net, namelist=iter_names)
-#         for i = 1:size(pairwise_vals, 1)
-#             for j = 1:size(pairwise_vals, 2)
-#                 push!(iter_D[i, j], pairwise_vals[i, j])
-#             end
-#         end
-#     end
-    
-#     summary_matrix = Matrix{Float64}(undef, n, n)
-#     for i = 1:size(D, 1)
-#         for j = 1:size(D, 2)
-#             summary_matrix[i, j] = summary_metric(D[i, j])
-#         end
-#     end
-
-#     return summary_matrix, namelist
-# end
 
 
 """
@@ -179,11 +125,9 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
     for j=1:length(Ns)
         iter_names = sort(tipLabels(Ns[j]))
         idx_filter = findall(i -> namelist[i] in iter_names, 1:length(namelist))
-        iter_D = view(D, idx_filter, idx_filter)
-        iter_count = view(pair_appearance_count, idx_filter, idx_filter)
 
-        iter_D .+= pairwise_metric(Ns[j], namelist=iter_names)[1]
-        iter_count .+= 1
+        D[idx_filter, idx_filter] .+= pairwise_metric(Ns[j], namelist=iter_names)[1]
+        pair_appearance_count[idx_filter, idx_filter] .+= 1
     end
 
     _never_together = findall(e -> e == 0, pair_appearance_count)
