@@ -48,7 +48,7 @@ function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractV
         idxfilter[label_map[tip_name]] = namelist_map[tip_name]
     end
 
-    return view(D, idxfilter, idxfilter)
+    return view(D, idxfilter, idxfilter), namelist
     
 end
 
@@ -57,6 +57,7 @@ end
     internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}}=nothing)
 
 Calculates internode counts between all pairs of taxa in network `N`.
+WARNING: treats `N` as unrooted
 """
 function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}} = nothing)
     D = zeros(N.numTaxa, N.numTaxa)
@@ -135,7 +136,7 @@ across all networks in `Ns`.
 1. AGID matrix
 2. names of taxa corresponding to rows/columns in the AGID matrix
 """
-function calculateAGID(Ns::AbstractVector{HybridNetwork})
+function calculateAGID(Ns::AbstractVector{HybridNetwork}; allow_missing_pairs::Bool=false, default_missing_value=Inf)
     return calculate_average_network_metric(Ns, internodedistance, allow_missing_pairs=allow_missing_pairs, default_missing_value=default_missing_value)
 end
 
@@ -176,7 +177,7 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
     D = zeros(Float64, n, n)
 
     for j=1:length(Ns)
-        iter_names = sort([leaf.name for leaf in Ns[j].leaf])
+        iter_names = sort(tipLabels(Ns[j]))
         idx_filter = findall(i -> namelist[i] in iter_names, 1:length(namelist))
         iter_D = view(D, idx_filter, idx_filter)
         iter_count = view(pair_appearance_count, idx_filter, idx_filter)
@@ -189,7 +190,7 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
     if length(_never_together) == 0
         return D ./ pair_appearance_count, namelist
     elseif !allow_missing_pairs
-        throw(ArgumentError("Taxa \"$(namelist[i])\" and \"$(namelist[j])\" appear in 0 networks together."))
+        throw(ArgumentError("$(Int(length(_never_together)/2)) pairs of taxa appear in 0 networks together."))
     else
         # Set to 1 to avoid the division error
         pair_appearance_count[_never_together] .= 1
