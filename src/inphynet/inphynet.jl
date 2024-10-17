@@ -475,33 +475,23 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
 
     # Check #2: try to make it so that the root does NOT have a reticulation coming out of it
     i = 0
-    while any(child.hybrid for child in getchildren(net.node[net.root])) && i <= length(net.node)
+    edges = net.edge
+    retic_at_root = any(e.hybrid for e in net.node[net.root].edge)
+    while retic_at_root
         i += 1
+
+        if i > length(edges)
+            throw(ConstraintError(idx, "Could not find a valid root placement where a reticulation is not emerging from the root."))
+        end
+
         try
-            rootatnode!(net, net.node[i])
+            rootonedge!(net, edges[i])
+            retic_at_root = any(e.hybrid for e in net.node[net.root].edge)
+            if !retic_at_root break end
         catch
         end
     end
 
-    # UPDATE: this type of topology is actually not an issue and could have biological meaning. Therefore,
-    # we don't want to ignore it.
-    #
-    # Check #2
-    # for hybnode in net.hybrid
-    #     child = getchild(hybnode)
-    #     if child.hybrid && getchildedge(hybnode).hybrid && !getchildedge(hybnode).isMajor
-    #         # TODO: make a post explaining this error w/ visuals
-    #         # Example network: ((#H128:0.563::0.397,(t35:0.828,(t62:0.647)#H172:0.181::0.719):0.744):0.295,((#H172:0.0::0.281)#H128:0.851::0.603,t48:0.747):2.38);
-    #         if autofix
-    #             auto_fix_redundant_retics!(net, hybnode, child)
-    #         else
-    #             # throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
-    #             #     "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
-    #             throw(ConstraintError(idx, "Found redundant reticulations. You can resolve this manually or automatically by setting `autofix=true`. " *
-    #             "See this post for more information: POST NOT MADE YET; IF YOU SEE THIS, PLEASE SUBMIT A GITHUB ISSUE."))
-    #         end
-    #     end
-    # end
 end
 check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
 
