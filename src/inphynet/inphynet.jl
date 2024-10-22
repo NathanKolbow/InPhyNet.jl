@@ -454,11 +454,11 @@ Checks validity of a single input constraint networks. Checks include:
 1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
 2. Reticulations do not lead directly into other reticulations
 """
-function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; kwargs...)
+function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kwargs...)
     if net.numTaxa == 1 return end
 
     # Check #1
-    for node in net.node
+    for (node_idx, node) in enumerate(net.node)
         nedge = length(node.edge)
         if node.leaf
             if length(node.edge) != 1
@@ -469,7 +469,11 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=false; k
                 throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
         elseif length(node.edge) != 3
-            throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
+            if autofix && length(node.edge) == 2
+                PhyloNetworks.fuseedgesat!(node_idx, net)
+            else
+                throw(ConstraintError(idx, "Internal nodes must have exactly 3 attached edges."))
+            end
         end
     end
 
