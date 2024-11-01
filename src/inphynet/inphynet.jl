@@ -34,57 +34,18 @@ end
 
 
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
-    queue::Vector{<:AbstractVector{HybridNetwork}} = [constraints]
-    while true
-        # Quit the loop if we're done
-        if length(queue) == 1 && length(queue[1]) == 1
-            break
-        end
 
-        # If the next item in the queue has >1 item, try merging them
-        if length(queue[1]) > 1
-            try
-                cs = deepcopy(queue[1])
-                leaf_names = reduce(vcat, [[leaf.name for leaf in c.leaf] for c in cs])
-                idxfilter = findall(i -> namelist[i] in leaf_names, 1:length(namelist))
-
-                mnet = inphynet!(
-                    deepcopy(D[idxfilter, idxfilter]),
-                    cs,
-                    namelist[idxfilter];
-                    kwargs...
-                )
-
-                deleteat!(queue, 1)
-                push!(queue, [mnet])
-            catch e
-                # Failed, split up the constraints and put them back in the queue
-                temp = queue[1]
-                deleteat!(queue, 1)
-
-                if length(temp) == 2
-                    throw(e)
-                elseif length(temp) == 3
-                    pushfirst!(queue, temp[1:2])
-                    push!(queue, [temp[3]])
-                else
-                    pushfirst!(queue, temp[1:(length(temp) ÷ 2)])
-                    pushfirst!(queue, temp[(length(temp) ÷ 2 + 1):length(temp)])
-                end
-            end
-        elseif length(queue[2]) == 1
-            temp = [queue[1][1], queue[2][1]]
-            deleteat!(queue, 2)
-            deleteat!(queue, 1)
-            pushfirst!(queue, temp)
+    try
+        return inphynet!(deepcopy(D), deepcopy(constraints), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
+    catch e
+        if !(typeof(e) <: ErrorException) || string(e) != "ErrorException(\"No compatible merge found.\")"
+            # We don't know what this error is, re-throw it.
+            rethrow(e)
         else
-            temp = queue[1]
-            deleteat!(queue, 1)
-            push!(queue, temp)
+            return inphynet_pairwise(D, constraints, namelist)
         end
     end
 
-    return queue[1][1]
 end
 
 
@@ -111,7 +72,6 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
     
     # Main iterative loop
-    @info "Entering loop"
     while n > 1
         start_time = time_ns()
         @debug n
@@ -141,7 +101,6 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
 
         time_elapsed = round((time_ns() - start_time) / 1e9, digits=2)
         @debug "Iteration $(n) took $(time_elapsed)s"
-        @info "Iteration $(n) took $(time_elapsed)s"
     end
 
     mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
