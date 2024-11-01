@@ -33,6 +33,10 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
 end
 
 
+"""
+Runs the InPhyNet algorithm on the given distance matrix and constraint networks
+where the entries in `namelist` correspond to indices in `D`.
+"""
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
 
     try
