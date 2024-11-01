@@ -1,7 +1,7 @@
 # Most relevant functions
 
 ```@docs
-netnj
+inphynet
 ```
 
 ```@docs
