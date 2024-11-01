@@ -1,14 +1,10 @@
 using Documenter, InPhyNet
-using DocThemeIndigo
 
-indigo = DocThemeIndigo.install(InPhyNet)
+
 makedocs(
     modules=[InPhyNet],
     sitename="InPhyNet.jl",
     authors="Nathan Kolbow",
-    format=Documenter.HTML(;
-        assets=String[indigo]
-    ),
     clean=true,
     draft=true,
     doctest=false,
