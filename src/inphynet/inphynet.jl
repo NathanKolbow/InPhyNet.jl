@@ -4,10 +4,6 @@
 # Source code for main components of the InPhyNet algorithm.
 
 
-function netnj(estgts::Vector{HybridNetwork})
-    error("not implemented yet")
-end
-
 
 function inphynet_pairwise(D, constraints, namelist; kwargs...)
     D = deepcopy(D)
@@ -99,19 +95,15 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     # TODO: keep track of pairs of siblings through the algo instead of re-doing work each time - this is something
     #       that should have to be done once and should be very easy to keep track of afterwards
 
+    @debug "Entering inphynet!"
     orig_namelist = deepcopy(namelist)
     orig_constraints = deepcopy(constraints)
     n = size(D, 1)
+    @debug "Checking parameters"
     check_inphynet_parameters(D, constraints, namelist; kwargs...)
-
-    # do setup here
-    # how should all of the objects that are relevant to the algo be stored?
-    #   - dict
-    #   - many, many variables
-    #   - make a struct that holds it all
-    #   - I like the dict idea
     
     # Setup
+    @debug "Setting up"
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
     rootretics, rootreticprocessed = setup_root_retics(constraints; kwargs...)
@@ -119,7 +111,9 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
     
     # Main iterative loop
+    @info "Entering loop"
     while n > 1
+        start_time = time_ns()
         @debug n
 
         possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist)
@@ -139,10 +133,15 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
         end
 
         idxfilter = [1:(j-1); (j+1):n]
-        D = view(D, idxfilter, idxfilter)
-        subnets = view(subnets, idxfilter)
-        namelist = view(namelist, idxfilter)
+        D = D[idxfilter, idxfilter]
+        subnets = subnets[idxfilter]
+        namelist = namelist[idxfilter]
         n -= 1
+
+
+        time_elapsed = round((time_ns() - start_time) / 1e9, digits=2)
+        @debug "Iteration $(n) took $(time_elapsed)s"
+        @info "Iteration $(n) took $(time_elapsed)s"
     end
 
     mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
