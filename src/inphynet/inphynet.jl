@@ -23,6 +23,9 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
         idxfilter = findall(n -> n in leaf_names, namelist)
 
+        println("--------------------------------------------------")
+        println("1: $(cs[1].numTaxa), $(cs[1].numHybrids): $(writeTopology(cs[1]))")
+        println("2: $(cs[2].numTaxa), $(cs[2].numHybrids): $(writeTopology(cs[2]))")
         temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter))
         deleteat!(constraints, 2)
         deleteat!(constraints, 1)
@@ -82,6 +85,8 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
 
         possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist)
         i, j = findoptQidx(D, possible_siblings, compatibility_trees, namelist = namelist, use_heuristic = use_heuristic)
+
+        @info "($(namelist[i]), $(namelist[j]))"
 
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
     
@@ -1326,7 +1331,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
     end
 
     if !use_heuristic
-        return first(idxs)[2]
+        return first(sorted_values)[2]
     else
         for (_, (i, j)) in sorted_values
             if are_compatible_after_merge(compat_trees, namelist[i], namelist[j])
@@ -1334,6 +1339,12 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
             end
         end
 
+        if max_sorted_entries < n
+            return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
+        end
+
+        @show compat_trees
+        @show validpairs
         throw(ErrorException("No compatible merge found."))
     end
 end
