@@ -86,8 +86,6 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
         possible_siblings = findvalidpairs(compatibility_trees, constraint_sibling_pairs, namelist)
         i, j = findoptQidx(D, possible_siblings, compatibility_trees, namelist = namelist, use_heuristic = use_heuristic)
 
-        @info "($(namelist[i]), $(namelist[j]))"
-
         subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
     
         update_compat_trees!(namelist[i], namelist[j], compatibility_trees, constraint_sibling_pairs)
