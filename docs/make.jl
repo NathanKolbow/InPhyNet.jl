@@ -1,26 +1,25 @@
 using Documenter, InPhyNet
-using DocThemeIndigo
 
-indigo = DocThemeIndigo.install(InPhyNet)
+
 makedocs(
     modules=[InPhyNet],
     sitename="InPhyNet.jl",
     authors="Nathan Kolbow",
-    format=Documenter.HTML(;
-        assets=String[indigo]
-    ),
     clean=true,
     draft=true,
     doctest=false,
     pages=[
         "Introduction" => "index.md",
         "Installation" => "guide/installation.md",
-        "Simulation Study Results" => [
+        "Guide" => [
+            "Inferring gene trees" => "guide/estgts.md",
+            "Choosing your subsets" => "guide/subsets.md",
+            "Inferring constraint networks" => "guide/constraints.md",
+            "Constructing the full network" => "guide/full_net.md"
+        ],
+        "Simulation Results" => [
             "Runtime evaluations" => "intro/runtimes.md",
             "Accuracy evaluations" => "intro/accuracies.md"
-        ],
-        "Guide" => [
-            "Using estimated gene trees and SNaQ" => "guide/estgts.md"
         ],
         "Documentation" => "documentation.md"
     ]
