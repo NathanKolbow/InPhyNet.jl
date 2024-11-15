@@ -34,6 +34,9 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
     ns_prime = Array{HybridNetwork}(undef, length(ns))
     n_matches = Array{Int64}(undef, length(ns))
     leaves = Array{Vector{String}}(undef, length(ns))
+    
+    # Check 1: if at most 1 network has nodes i and j, then that network is compatible
+    #          with itself and we can just quit
     matching_ns = 0
     for (k, n) in enumerate(ns)
         leaves[k] = [leaf.name for leaf in n.leaf]
@@ -46,6 +49,7 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
     end
     if matching_ns <= 1 return true end
     
+    # Generate the pruned versions of the input networks
     for (k, n) in enumerate(ns)
         ns_prime[k] = deepcopy(n)
         
@@ -64,7 +68,13 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
     end
 
 
-
+    # Check 2: for each pair of post-merge networks with overlapping taxa,
+    #          when pruned to only contain their overlapping taxa, are
+    #          they topologically identical? If not, this merge does not work.
+    #
+    # TODO: we don't actually need to check every pair (i, j)...
+    #       RF(t1, t2) = 0 implies that t1 and t2 are IDENTICAL,
+    #       so we actually only need to check every pair (i, i+1)
     for i = 1:(length(ns) - 1)
         if !isassigned(ns_prime, i) continue end
 
