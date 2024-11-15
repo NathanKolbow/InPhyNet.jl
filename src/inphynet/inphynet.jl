@@ -33,6 +33,10 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
 end
 
 
+"""
+Runs the InPhyNet algorithm on the given distance matrix and constraint networks
+where the entries in `namelist` correspond to indices in `D`.
+"""
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
 
     try
@@ -1356,7 +1360,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_p
         if net.numTaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
 
-        # What is up with this xor (⊻)? This is what:
+        # What is up with this xor (⊻)?
         # If we have seen a given entry before and NOT found that pair to be siblings (1 0) we want that to stay the same (1 stays 1)
         # if we have seen an entry AND FOUND that pair to be siblings (1 1) we want to change to (0 0) so it can be overridden
         # that's what this does.
