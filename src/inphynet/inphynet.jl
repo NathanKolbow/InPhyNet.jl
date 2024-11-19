@@ -473,6 +473,7 @@ in our algo but haven't placed yet.
 function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::Bool=false, kwargs...)
     namepairs = []
     retic_names = []
+    gammas = []
     counter = 0
     
     check_reticmap(reticmap)
@@ -505,6 +506,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
         if !(newpair in namepairs)
             push!(namepairs, newpair)
             push!(retic_names, hyb.name)
+            push!(gammas, getparentedgeminor(hyb).gamma)
         end
     end
     mnet = readTopology(writeTopology(net))
@@ -535,6 +537,9 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
         fromedge, toedge = edgepairs[i]
 
         hybnode, hybedge = addhybridedge!(mnet, fromedge, toedge, true)
+        getparentedgeminor(hybnode).gamma = gammas[i]
+        getparentedge(hybnode).gamma = 1 - gammas[i]
+
         hybnode.name = copy_retic_names ? retic_names[i] : hybnode.name
         mnet.root = findfirst([n.name == "root" for n in mnet.node])
 
