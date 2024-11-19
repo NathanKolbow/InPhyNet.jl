@@ -74,6 +74,7 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     @debug "Setting up"
     subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
     reticmap = ReticMap(constraints)
+    gammas = [getparentedgeminor(h).gamma for h in collect(keys(reticmap.map))]
     rootretics, rootreticprocessed = setup_root_retics(constraints; kwargs...)
     compatibility_trees = [majorTree(c) for c in constraints]
     constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
@@ -114,7 +115,7 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     mnet.root = mnet.numNodes
     mnet.node[mnet.root].name = "root"
 
-    mnet = placeretics!(mnet, reticmap; kwargs...)
+    mnet = placeretics!(mnet, reticmap, gammas; kwargs...)
     removeplaceholdernames!(mnet)
 
     return mnet
@@ -202,166 +203,6 @@ function check_inphynet_parameters(D::AbstractMatrix{<:Real}, constraints::Abstr
     if length(unique(namelist)) != length(namelist)
         throw(ArgumentError("Namelist contains non-unique names."))
     end
-end
-
-
-"""
-    netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
-
-Creates a supernetwork based on the constraint trees/networks in `constraints` and
-distance matrix `D`.
-
-# Arguments
-- D: distance matrix relating pairs of taxa. This can be generated from estimated gene trees with [`calculateAGID`](@ref)
-"""
-function netnj(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; search::Bool=false, kwargs...)
-    if search
-        return netnj_retry_driver(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), deepcopy(namelist); kwargs...)
-    end
-
-    return netnj!(deepcopy(D), Vector{HybridNetwork}(deepcopy(constraints)), deepcopy(namelist); kwargs...)
-end
-
-
-function netnj!(D::Matrix{Float64}, constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; 
-    supressunsampledwarning=false, copy_retic_names::Bool=false, major_tree_only::Bool=false, force_unrooted::Bool=true, skip_constraint_check::Bool=false, kwargs...)
-    
-    PhyloNetworks.check_distance_matrix(D)
-    if skip_constraint_check
-        @warn "Skipping constraint validation - unexpected behavior may occur if one or more constraints violate certain conditions."
-    else
-        check_constraints(constraints)
-    end
-
-    if !force_unrooted
-        root_constraints!(constraints)
-    end
-    n = size(D, 1)
-
-    # If namelist is not provided
-    if isempty(namelist)
-        namelist = string.(1:n)
-    end
-    if length(namelist) != n
-        m = length(namelist)
-        throw(ArgumentError("D has dimensions $n x $n but only $m names were provided."))
-    elseif length(unique(namelist)) != length(namelist)
-        throw(ArgumentError("Names must be unique."))
-    end
-
-    # Used for path-finding
-    # TODO: `Graph` is a limiting factor in algo speed. If it seems that
-    #       we still need to improve algo speed, we can re-use graphs
-    #       that are created here instead of making them on-demand
-    # full_netgraphs = [Graph(c) for c in constraints]
-
-    # Empty network
-    subnets = Vector{SubNet}([SubNet(i, namelist[i]) for i in 1:n])
-    reticmap = ReticMap(constraints)
-
-    # Edge case: remove (but log) retics that emerge from the root of constraints
-    rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
-    for (i, c) in enumerate(constraints)
-        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
-        if any(hybridbools)
-            sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
-            hybedge = c.node[c.root].edge[hybridbools][1]
-            rootretics[i] = hybedge
-
-            if !supressunsampledwarning
-                @warn "Hybridization involving upsampled taxa detected in constraint network $(i). "*
-                    "Merging may not behave as expected, see this post for important details: "*
-                    "POST NOT MADE YET - PLEASE POST AN ISSUE ON GITHUB"
-            end
-        else
-            # None of the nodes coming out of the root are hybrids, but now
-            # we need to make sure that none of the nodes coming out of the
-            # root lead to _only_ hybrids, thus effectively making the root
-            # lead directly to hybrids.
-            children = getchildren(c.node[c.root])
-            hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
-            needtowarn = supressunsampledwarning
-
-            if sum(hybridbools[1]) == 2
-                rootretics[i] = (children[1].edge[1], children[1].edge[2])
-            elseif sum(hybridbools[2]) == 2
-                rootretics[i] = (children[2].edge[1], children[2].edge[2])
-            else
-                rootretics[i] = nothing
-                needtowarn = false
-            end
-        end
-    end
-    rootreticprocessed = [false for _ in 1:length(constraints)]
-    constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in constraints]
-    # constraint_sibling_pairs = []
-
-    # Main algorithm loop
-    @debug "----- ENTERING MAIN ALGO LOOP -----"
-    while n > 1
-        # DEBUG STATEMENT
-        @debug n
-        
-        possible_siblings = findvalidpairs(constraints, constraint_sibling_pairs, namelist; kwargs...)
-        
-        # Find optimal (i, j) idx pair for matrix Q
-        i = j = nothing
-        try
-            i, j = findoptQidx(D, possible_siblings, constraints, namelist=namelist, use_heuristic=false) 
-        catch e
-            for c in constraints
-                @debug "$(writeTopology(c))"
-            end
-            rethrow(e)
-        end
-        @debug (namelist[i], namelist[j])
-        @debug "(i, j) = ($(i), $(j))"
-
-        # connect subnets i and j
-        subnets[i], edgei, edgej = mergesubnets!(subnets[i], subnets[j])
-        updateconstraints!(namelist[i], namelist[j], constraints, constraint_sibling_pairs, reticmap, edgei, edgej; kwargs...)
-
-        # if a constraint with a root-retic is down to a single taxa, place that root-retic in the appropriate subnet
-        for (cidx, c) in enumerate(constraints)
-            if length(c.leaf) == 1 && rootretics[cidx] !== nothing && !rootreticprocessed[cidx]
-                fakesubnet = SubNet(-cidx, "__placeholder_for_rootretic_num$(cidx)__")
-                subnets[i], edgei, edgej = mergesubnets!(subnets[i], fakesubnet)
-                
-                if typeof(rootretics[cidx]) <: Edge
-                    trylogretic!(reticmap, rootretics[cidx], edgei, "from")
-                else # type is Tuple
-                    trylogretic!(reticmap, rootretics[cidx][1], edgei, "from")
-                    trylogretic!(reticmap, rootretics[cidx][2], edgej, "from")
-                end
-                # println("logging retic for edge number $(rootretics[cidx].number)")
-                rootreticprocessed[cidx] = true
-            end
-        end
-
-        # collapse taxa i into j
-        for l in 1:n
-            if l != i && l != j
-                D[l, i] = D[i, l] = (D[l, i] + D[j, l] - D[i, j]) / 2
-            end
-        end
-
-        # Remove data elements that corresponded to `j`
-        idxfilter = [1:(j-1); (j+1):n]
-        D = view(D, idxfilter, idxfilter)   # remove j from D
-        subnets = view(subnets, idxfilter)
-        namelist = view(namelist, idxfilter)
-
-        n -= 1
-    end
-
-    mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
-    mnet.root = mnet.numNodes
-    mnet.node[mnet.root].name = "root"
-
-    mnet = placeretics!(mnet, reticmap; kwargs...)
-    removeplaceholdernames!(mnet)
-
-    return mnet
 end
 
 
@@ -470,10 +311,9 @@ check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwarg
 Updates `net` to include the reticulations that we've kept track of along the way
 in our algo but haven't placed yet.
 """
-function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::Bool=false, kwargs...)
+function placeretics!(net::HybridNetwork, reticmap::ReticMap, gammas; copy_retic_names::Bool=false, kwargs...)
     namepairs = []
     retic_names = []
-    gammas = []
     counter = 0
     
     check_reticmap(reticmap)
@@ -506,7 +346,6 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap; copy_retic_names::
         if !(newpair in namepairs)
             push!(namepairs, newpair)
             push!(retic_names, hyb.name)
-            push!(gammas, getparentedgeminor(hyb).gamma)
         end
     end
     mnet = readTopology(writeTopology(net))
