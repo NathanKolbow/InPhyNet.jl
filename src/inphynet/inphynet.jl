@@ -22,10 +22,14 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         cs = constraints[[1, 2]]
         leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
         idxfilter = findall(n -> n in leaf_names, namelist)
+        if length(constraints) == 2
+            leaf_names = namelist
+            idxfilter = 1:length(namelist)
+        end
 
-        println("--------------------------------------------------")
-        println("1: $(cs[1].numTaxa), $(cs[1].numHybrids): $(writeTopology(cs[1]))")
-        println("2: $(cs[2].numTaxa), $(cs[2].numHybrids): $(writeTopology(cs[2]))")
+        @debug "--------------------------------------------------"
+        @debug "1: $(cs[1].numTaxa), $(cs[1].numHybrids): $(writeTopology(cs[1]))"
+        @debug "2: $(cs[2].numTaxa), $(cs[2].numHybrids): $(writeTopology(cs[2]))"
         temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter))
         deleteat!(constraints, 2)
         deleteat!(constraints, 1)
@@ -771,7 +775,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 @show net
                 @show nodei
                 @show nodej
-                @show major_mrca(nodei, nodej)
+                @show major_mrca(nodei, nodej, net.node[net.root])
                 @show net.node[net.root]
 
                 @show getparent(nodei)
@@ -1185,8 +1189,9 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
 
-        @show compat_trees
-        @show validpairs
+        #@show compat_trees
+        #@show validpairs
+        @error "No compatible merge found."
         throw(ErrorException("No compatible merge found."))
     end
 end
