@@ -1189,8 +1189,6 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
 
-        #@show compat_trees
-        #@show validpairs
         @error "No compatible merge found."
         throw(ErrorException("No compatible merge found."))
     end
