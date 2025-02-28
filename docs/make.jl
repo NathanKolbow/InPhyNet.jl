@@ -15,6 +15,7 @@ makedocs(
             "How to use InPhyNet" => "guide/how-to-use-inphynet.md",
             "Choosing your subsets" => "guide/subsets.md",
             "Inferring constraint networks" => "guide/constraints.md",
+            "Pairwise dissimilarity matrix" => "guide/d-matrix.md",
             "Constructing the full network" => "guide/full_net.md"
         ],
         "Simulation Results" => [
