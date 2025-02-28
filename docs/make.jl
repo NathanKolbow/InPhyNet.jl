@@ -12,7 +12,7 @@ makedocs(
         "Introduction" => "index.md",
         "Installation" => "guide/installation.md",
         "Guide" => [
-            "Inferring gene trees" => "guide/estgts.md",
+            "How to use InPhyNet" => "guide/how-to-use-inphynet.md",
             "Choosing your subsets" => "guide/subsets.md",
             "Inferring constraint networks" => "guide/constraints.md",
             "Constructing the full network" => "guide/full_net.md"
