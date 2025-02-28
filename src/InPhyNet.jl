@@ -19,6 +19,8 @@ module InPhyNet
     include("inphynet/subsetdecomp/njhierarchdecomp.jl")
     include("inphynet/subsetdecomp/satedecomp.jl")
 
+    include("inphynet/pipeline.jl")
+
     export inphynet,
         decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,

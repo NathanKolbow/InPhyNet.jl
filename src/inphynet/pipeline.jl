@@ -1,9 +1,16 @@
-using Distributed
+# using Distributed
 
 
 # THINGS TO TEST:
 # - all error/warning triggers found below
 # - normal runs
+
+
+function inphynet_snaq(
+
+)
+    isdefined(Main, :snaq!) || error("snaq! function not found, make sure to load SNaQ with `using SNaQ.jl`!")
+end
 
 
 function inphynet(
@@ -32,6 +39,7 @@ function inphynet(
     end
     length(taxa_in_subsets) < sum([length(set) for set in subsets]) && @warn "Some taxa appear in `subsets` multiple times. This may lead to conflicts."
     has_missing_pairs(estgts) && throw(ArgumentError("All pairs of taxa must appear together in at least one gene tree, otherwise pairwise distance is undefined."))
+    minimum(length(S) for S in subsets) > 4 || error("All subsets must have length > 4 (required by SNaQ).")
 
 
     constraint_networks::AbstractVector{HybridNetwork} = Distributed.pmap(1:length(subsets)) do i
