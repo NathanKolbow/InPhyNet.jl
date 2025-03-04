@@ -14,19 +14,19 @@ implemented pathfinding algorithms.
       `removeredundantedges!` and sets their weights in `W` to 0
 """
 function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1., removeredundantedgecost::Bool=false)
-    graph = SimpleGraph(net.numNodes)
-    weights = Matrix{Float64}(undef, net.numNodes, net.numNodes)
+    graph = SimpleGraph(net.numnodes)
+    weights = Matrix{Float64}(undef, net.numnodes, net.numnodes)
     weights .= Inf
     nodemap = Dict{Node, Int64}(node => idx for (idx, node) in enumerate(net.node))
     for edge in net.edge
-        if !includeminoredges && edge.hybrid && !edge.isMajor && edge != alwaysinclude continue end
+        if !includeminoredges && edge.hybrid && !edge.ismajor && edge != alwaysinclude continue end
         enode1 = edge.node[1]
         enode2 = edge.node[2]
         if haskey(nodemap, enode1) && haskey(nodemap, enode2)
             add_edge!(graph, nodemap[enode1], nodemap[enode2])
             if withweights
                 weight = 1
-                if edge.hybrid && !edge.isMajor
+                if edge.hybrid && !edge.ismajor
                     weight = minoredgeweight
                 elseif edge.length == -1.
                     weight = 1
@@ -91,7 +91,7 @@ function find_valid_node_path(net::HybridNetwork, nodei::Node, nodej::Node)
             edgesinpath[i] = netedge
         end
 
-        retics_in_path = sum([e.hybrid && !e.isMajor for e in edgesinpath])
+        retics_in_path = sum([e.hybrid && !e.ismajor for e in edgesinpath])
     end
 
     return graph, W, nodesinpath, edgesinpath
@@ -120,7 +120,7 @@ when some hybrids are pruned from the graph.
 function removeredundantedges!(graph::SimpleGraph, net::HybridNetwork; keeproot::Bool=true, W::Union{Nothing,Matrix{Float64}}=nothing)
     rootidx = -1
     if keeproot
-        rootidx = net.root
+        rootidx = net.rooti
     end
 
     redundantidxs = []
@@ -149,7 +149,7 @@ function removeredundantedges!(graph::SimpleGraph, net::HybridNetwork; keeproot:
 
     # Remove any nodes in the graph that (1) only have 1 connected node and (2) are not leaves
     for (vert_idx, adj_list) in enumerate(graph.fadjlist)
-        if keeproot && vert_idx == net.root continue
+        if keeproot && vert_idx == net.rooti continue
         elseif length(adj_list) == 1 && !net.node[vert_idx].leaf
             graph.fadjlist[vert_idx] = []
             graph.fadjlist[adj_list[1]] = setdiff(graph.fadjlist[adj_list[1]], vert_idx)
@@ -176,7 +176,7 @@ Helper function that adds edges coming out from the root in `net` back into `gra
 """
 function addrootedge!(graph::SimpleGraph, net::HybridNetwork)
     totaladded = 0
-    rootnode = net.node[net.root]
+    rootnode = getroot(net)
     rootedges = rootnode.edge
 
     dst1 = ifelse(rootedges[1].node[1] == rootnode, rootedges[1].node[2], rootedges[1].node[1])
@@ -189,7 +189,7 @@ function addrootedge!(graph::SimpleGraph, net::HybridNetwork)
     remove_edge!(graph, idxsrc, idxdst1)
     remove_edge!(graph, idxsrc, idxdst2)
 
-    for edge in net.node[net.root].edge
+    for edge in getroot(net).edge
         nidx1 = findfirst(net.node .== [edge.node[1]])
         nidx2 = findfirst(net.node .== [edge.node[2]])
         

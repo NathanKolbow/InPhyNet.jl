@@ -7,7 +7,7 @@ Only implemented for trees right now.
 """
 function get_neighbor_set(net::HybridNetwork)
 
-    net.numHybrids == 0 || throw(ArgumentError("Only implemented for trees right now."))
+    net.numhybrids == 0 || throw(ArgumentError("Only implemented for trees right now."))
     pairs = Set{Tuple{Node, Node}}()
 
     # Inefficient implementation, but this algo will never be a bottleneck so who cares!
