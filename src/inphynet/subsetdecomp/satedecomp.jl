@@ -10,8 +10,6 @@ function sateIdecomp(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; me
     tre0.numhybrids == 0 || throw(ErrorException("tre0 must be tree-like."))
     maxsize >= minsize || throw(ErrorException("maxsize must be >= minsize"))
 
-
-    
     subsets = sateIdecomp(tre0, maxsize)
     lengths = [length(s) for s in subsets]
 
@@ -47,6 +45,7 @@ function sateIdecomp(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; me
 
     return subsets
 end
+centroid_edge_decomposition = sateIdecomp
 
 
 """
