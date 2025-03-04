@@ -1196,7 +1196,7 @@ end
 
 
 """
-    findvalidpairs(constraints::Vector{HybridNetwork}, namelist::AbstractVector{<:AbstractString})
+    findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_pairs, namelist::AbstractVector{<:AbstractString})
 
 Finds all valid sibling pairs among the constraint networks.
 """
