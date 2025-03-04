@@ -2,9 +2,9 @@ using InPhyNet, PhyloNetworks, NamedArrays, Test, Logging
 
 Logging.disable_logging(Logging.Warn)
 
-gt1 = readTopology("((A:1,B:1):1,(C:1,D:1):1);")
-gt2 = readTopology("((A:2,B:2):1,(C:2,D:2):1);")
-gt3 = readTopology("(E:1,F:1):1;")
+gt1 = readnewick("((A:1,B:1):1,(C:1,D:1):1);")
+gt2 = readnewick("((A:2,B:2):1,(C:2,D:2):1);")
+gt3 = readnewick("(E:1,F:1):1;")
 
 @testset "internodedistance" begin
     # Test single gene tree calls
