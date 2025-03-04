@@ -33,7 +33,7 @@ function splitreticulation!(net::HybridNetwork, retic::Node, reticidx::Real, maj
     minoredge.gamma = -1.
     majoredge.hybrid = false
     minoredge.hybrid = false
-    minoredge.isMajor = true
+    minoredge.ismajor = true
 
     retic.name = "s_"*retic.name
 
@@ -167,5 +167,5 @@ end
 
 function removehybridreference!(net::HybridNetwork, retic::Node)
     filter!(s -> s ≠ retic, net.hybrid)
-    net.numHybrids -= 1
+    net.numhybrids -= 1
 end

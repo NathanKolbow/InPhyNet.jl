@@ -46,7 +46,7 @@ function connectnodes!(child::Node, parent::Node)
     edge.node = [child, parent]
     push!(child.edge, edge)
     push!(parent.edge, edge)
-    edge.containRoot = false
-    edge.isChild1 = true
+    edge.containroot = false
+    edge.ischild1 = true
     return edge
 end

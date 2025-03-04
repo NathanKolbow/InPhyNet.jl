@@ -45,7 +45,7 @@ only the taxa named in each respective set in `subsets`.
 # Example
 
 ```julia
-mynetwork = readTopology("((t1,t2),(t3,t4));")
+mynetwork = readnewick("((t1,t2),(t3,t4));")
 pruneTruthFromDecomp(mynetwork, [["t1", "t2"], ["t3", "t4"]])
 > 2-element Vector{HybridNetwork}: (t1, t2); and (t3, t4);
 ```
@@ -102,7 +102,7 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
             end
         end
 
-        nets[i] = readTopology(writeTopology(tempnet))
+        nets[i] = readnewick(writenewick(tempnet))
     end
     return nets
 end

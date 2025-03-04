@@ -10,7 +10,7 @@ struct ReticMap
         for net in constraints
             for e in net.edge
                 if e.hybrid
-                    if !e.isMajor
+                    if !e.ismajor
                         d[getchild(e)] = Vector{EdgeOrNA}([nothing, nothing, nothing])      # first entry:  `from` edge,
                                                                                             # second entry: `to` edge,
                                                                                             # third entry:  second `to` edge (i.e. if a node has 2 hybrid children)

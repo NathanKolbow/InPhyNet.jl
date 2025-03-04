@@ -26,8 +26,8 @@ function load_next_debug_data()
     end
     end_idx -= 1
 
-    constraints = [readTopology(c) for c in log_lines[start_idx:end_idx]]
-    truenet = readTopology(log_lines[end_idx+3])
+    constraints = [readnewick(c) for c in log_lines[start_idx:end_idx]]
+    truenet = readnewick(log_lines[end_idx+3])
     true_D, namelist = majorinternodecount(truenet)
 
     return truenet, constraints, noisy_D, true_D, namelist, parse(Int64, error_id)
@@ -42,17 +42,17 @@ function step_inphynet_starter_vars(D, constraints, namelist)
     reticmap = reticmap = ReticMap(cs_iter)
     rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
     for (i, c) in enumerate(constraints)
-        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        hybridbools = [edge.hybrid for edge in getroot(c).edge]
         if any(hybridbools)
             sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
-            hybedge = c.node[c.root].edge[hybridbools][1]
+            hybedge = getroot(c).edge[hybridbools][1]
             rootretics[i] = hybedge
         else
             # None of the nodes coming out of the root are hybrids, but now
             # we need to make sure that none of the nodes coming out of the
             # root lead to _only_ hybrids, thus effectively making the root
             # lead directly to hybrids.
-            children = getchildren(c.node[c.root])
+            children = getchildren(getroot(c))
             hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
 
             @show hybridbools

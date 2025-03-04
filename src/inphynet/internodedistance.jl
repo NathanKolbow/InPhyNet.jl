@@ -28,9 +28,9 @@ end
 Calculates internode distance between all pairs of taxa in network `N`.
 """
 function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}}=nothing)
-    N.numHybrids == 0 || throw(ErrorException("N must be tree-like."))
+    N.numhybrids == 0 || throw(ErrorException("N must be tree-like."))
 
-    D = pairwiseTaxonDistanceMatrix(N)
+    D = pairwisetaxondistancematrix(N)
     if namelist === nothing
         idxs = sortperm(tipLabels(N))
         return D[idxs, idxs], tipLabels(N)[idxs]
@@ -52,7 +52,7 @@ Calculates internode counts between all pairs of taxa in network `N`.
 WARNING: treats `N` as unrooted
 """
 function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVector{String}} = nothing)
-    D = zeros(N.numTaxa, N.numTaxa)
+    D = zeros(N.numtaxa, N.numtaxa)
     if namelist == nothing
         namelist = sort([l.name for l in N.leaf])
     end
@@ -62,7 +62,7 @@ function internodecount(N::HybridNetwork; namelist::Union{Nothing,<:AbstractVect
     # nodelistidx = [findfirst([n.name == name for n in N.node]) for name in namelist]
     nodelistidx = [findfirst(n -> n.name == name, N.node) for name in namelist]
 
-    for i=1:(N.numTaxa-1)
+    for i=1:(N.numtaxa-1)
         paths = bellman_ford_shortest_paths(Ngraph, nodelistidx[i])
         D[i, :] .= D[:, i] .= paths.dists[nodelistidx] .- 1
         D[i, i] = 0.
