@@ -1,9 +1,9 @@
 # All necessary portions of the package should already be imported
 constraints = [
-    readTopology("((A,((B)#H2)#H1), (((C,#H2),#H1),D));"),
-    readTopology("(((A)#H1,(E,#H1)),((F)#H2,(G,#H2)));"),
-    readTopology("((B,E),(G,H));"),
-    readTopology("((A,F),(G,I));")
+    readnewick("((A,((B)#H2)#H1), (((C,#H2),#H1),D));"),
+    readnewick("(((A)#H1,(E,#H1)),((F)#H2,(G,#H2)));"),
+    readnewick("((B,E),(G,H));"),
+    readnewick("((A,F),(G,I));")
 ]
 
 leafnames = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
