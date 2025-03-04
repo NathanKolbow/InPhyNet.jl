@@ -1,3 +1,7 @@
+using Pkg
+Pkg.develop(PackageSpec(path = joinpath(@__DIR__, "..")))
+Pkg.instantiate()
+
 using Documenter, InPhyNet
 
 makedocs(
@@ -17,10 +21,10 @@ makedocs(
             "Inferring constraint networks" => "walkthrough/constraints.md",
             "Constructing the full network" => "walkthrough/full_net.md"
         ],
-        "Simulation Results" => [
-            "Runtime evaluations" => "intro/runtimes.md",
-            "Accuracy evaluations" => "intro/accuracies.md"
-        ],
+        # "Simulation Results" => [
+        #     "Runtime evaluations" => "intro/runtimes.md",
+        #     "Accuracy evaluations" => "intro/accuracies.md"
+        # ],
         "Documentation" => "documentation.md"
     ]
 )

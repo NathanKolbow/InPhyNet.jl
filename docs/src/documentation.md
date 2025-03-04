@@ -1,4 +1,5 @@
-# Most relevant functions
+
+## Most relevant functions
 
 ```@docs
 inphynet
@@ -8,7 +9,7 @@ inphynet
 calculateAGID
 ```
 
-# All documented functions
+## All documented functions
 
 ```@index
 Pages   = ["documentation.md"]

@@ -1134,12 +1134,12 @@ function gather_hyb_descendants_outside_of_path_recur(node::Node, path::Array{No
 end
 
 
+TIEWARNING = false
 """
     findoptQ(D::Matrix{Float64}, idxpairs::Vector{Tuple{<:Integer, <:Integer}})
 
 Finds the minimizer (i*, j*) among all pairs (i, j) in idxpairs for Q, a matrix computed from D.
 """
-TIEWARNING = false
 function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_trees::AbstractVector{HybridNetwork}; namelist=nothing, use_heuristic::Bool=true, max_sorted_entries::Int64=5)
     # max_sorted_entries: push!(sorted_values, ...) is the majority of algorithm run time. In an effort to combat this,
     #                     we iteratively cap the maximum size of sorted_values, b/c we usually don't actually need to
