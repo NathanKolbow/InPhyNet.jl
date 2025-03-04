@@ -20,6 +20,7 @@ module InPhyNet
     include("inphynet/subsetdecomp/satedecomp.jl")
 
     include("inphynet/pipeline.jl")
+    include("data_examples.jl")
 
     export inphynet,
         decomposeFromQuartets,
@@ -27,11 +28,14 @@ module InPhyNet
         majorinternodecount, internodecount, calculateAGIC,
         parsequartets, SubNet,
         findvalidpairs, findsiblingpairs, findoptQidx, ReticMap, updateconstraints!, Edge, mergeconstraintnodes!,
-        njHierarchDecomp, pruneTruthFromDecomp,
+        njHierarchDecomp, prune_network, prune_networks,
         sateIdecomp, sateIIdecomp,
+        centroid_edge_decomposition,
         SolutionDNEError, ConstraintError,
         are_compatible_heuristic, are_compatible_after_merge,
-        get_neighbor_set
+        get_neighbor_set,
+        # DOCS WALKTHROUGH DATA LOADING FXNS
+        load_inphynet_example_gts
 
 # include("ptrees/structs/InterimParentalTree.jl")
 # include("ptrees/structs/Lineage.jl")

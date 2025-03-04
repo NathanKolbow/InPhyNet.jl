@@ -45,9 +45,8 @@ Runs the InPhyNet algorithm on the given distance matrix and constraint networks
 where the entries in `namelist` correspond to indices in `D`.
 """
 function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
-
     try
-        return inphynet!(deepcopy(D), deepcopy(constraints), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
+        return inphynet!(deepcopy(D), Vector{HybridNetwork}([readnewick(writenewick(c)) for c in constraints]), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
     catch e
         if !(typeof(e) <: ErrorException) || string(e) != "ErrorException(\"No compatible merge found.\")"
             # We don't know what this error is, re-throw it.
@@ -56,8 +55,9 @@ function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridN
             return inphynet_pairwise(D, constraints, namelist)
         end
     end
-
 end
+inphynet(D::AbstractMatrix{<:Real}, namelist::AbstractVector{<:AbstractString}; kwargs...) =
+    inphynet(D, Vector{HybridNetwork}(), namelist; kwargs...)
 
 
 function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, kwargs...)
@@ -197,7 +197,7 @@ function check_inphynet_parameters(D::AbstractMatrix{<:Real}, constraints::Abstr
     if skip_constraint_check
         @warn "Skipping constraint validation - unexpected behavior may occur if one or more constraints violate certain conditions."
     else
-        check_constraints(constraints; kwargs...)
+        check_constraints!(constraints; kwargs...)
     end
 
     if length(namelist) != size(D, 1)
@@ -226,9 +226,9 @@ end
 Checks validity of input constraints. So far, the only check is to make sure
 that all nodes have exactly 3 edges except for the root.
 """
-function check_constraints(constraints::Vector{HybridNetwork}; kwargs...)
+function check_constraints!(constraints::Vector{HybridNetwork}; kwargs...)
     for (i, constraint) in enumerate(constraints)
-        check_constraint(i, constraint; kwargs...)
+        check_constraint!(i, constraint, true; kwargs...)
     end
 end
 
@@ -240,14 +240,14 @@ under the root (somewhat randomly).
 """
 function root_constraints!(constraints::Vector{HybridNetwork})
     for c in constraints
-        root_children = getchildren(getroot(c))
-        if length(root_children) > 2
-            if any(child.leaf for child in root_children)
-                rootatnode!(c, root_children[findfirst(child.leaf for child in root_children)])
+        root_edges = getroot(c).edge
+        if length(root_edges) > 2
+            if any(getchild(E).leaf for E in root_edges)
+                rootonedge!(c, root_edges[findfirst(E -> getchild(E).leaf, root_edges)])
             else
-                for root_child in root_children
+                for root_edge in root_edges
                     try
-                        rootatnode!(c, root_child)
+                        rootonedge!(c, root_edge)
                         break
                     catch
                     end
@@ -264,7 +264,7 @@ Checks validity of a single input constraint networks. Checks include:
 1. All nodes have exactly 3 edges except the root (unless the network is a single taxa)
 2. Reticulations do not lead directly into other reticulations
 """
-function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kwargs...)
+function check_constraint!(idx::Int64, net::HybridNetwork, autofix::Bool=true; kwargs...)
     if net.numtaxa == 1 return end
 
     # Check #1
@@ -275,8 +275,13 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kw
                 throw(ConstraintError(idx, "Leaf nodes must have exactly 1 attached edge."))
             end
         elseif node == getroot(net)
-            if length(node.edge) != 2   
-                throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
+            if length(node.edge) != 2
+                if autofix
+                    root_constraints!([net])
+                    check_constraint!(idx, net, false)
+                else
+                    throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
+                end
             end
         elseif length(node.edge) != 3
             if autofix && length(node.edge) == 2
@@ -307,7 +312,7 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kw
     end
 
 end
-check_constraint(net::HybridNetwork; kwargs...) = check_constraint(0, net; kwargs...)
+check_constraint!(net::HybridNetwork; kwargs...) = check_constraint!(0, net; kwargs...)
 
 
 """
