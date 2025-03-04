@@ -29,7 +29,8 @@ makedocs(
     ]
 )
 
-deploydocs(
+deploydocs(;
     repo="github.com/NathanKolbow/InPhyNet.jl",
-    devurl="stable"
+    devurl="stable",
+    devbranch="main"
 )
