@@ -1,6 +1,7 @@
-using StatsBase, Random
+using StatsBase, Random, PhyloNetworks
+using InPhyNet
 
-est_gts = readMultiTopology("tests/examples/Best.33.FAA.tre");
+est_gts = readmultinewick(joinpath(@__DIR__, "examples/Best.33.FAA.tre"));
 D, namelist = calculateAGID(est_gts);
 
 Random.seed!(42)
