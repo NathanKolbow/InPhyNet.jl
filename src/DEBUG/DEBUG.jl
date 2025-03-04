@@ -17,7 +17,7 @@ while true
             @info "SolutionDNEError in $(error_id), removing."
             remove_error_files(error_id)
         else
-            @info "Found case for netid n$(truenet.numTaxa-1)r$(truenet.numHybrids) ($(typeof(e)), $(error_id))"
+            @info "Found case for netid n$(truenet.numtaxa-1)r$(truenet.numhybrids) ($(typeof(e)), $(error_id))"
             break
         end
     end
@@ -136,8 +136,8 @@ end
 
 
 # MWE
-net = readTopology(writeTopology(temp[1]))
-# net = readTopology(writeTopology(cs[1]))
+net = readnewick(writenewick(temp[1]))
+# net = readnewick(writenewick(cs[1]))
 
 D_iter, cs_iter, namelist_iter, subnets, reticmap, rootretics, rootreticprocessed = step_inphynet_starter_vars(D_reduced, [net], namelist_reduced)
 
@@ -171,7 +171,7 @@ PhyloPlots.plot(constraints[1])
 
 
 
-cc = readTopology("((A,(B,#H1)),(C)#H1);")
+cc = readnewick("((A,(B,#H1)),(C)#H1);")
 _, namelist = majorinternodecount(cc)
 D = Matrix{Float64}([0. 2. 3.; 2. 0. 0.; 3. 0. 0.])
 mnet = netnj(D, [cc], namelist)
