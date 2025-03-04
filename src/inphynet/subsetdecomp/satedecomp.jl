@@ -7,7 +7,7 @@ Slightly adjusted implementation of the decomposition algorithm from SATe-I that
 takes a maximum *and* a minimum subset size.
 """
 function sateIdecomp(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; metric::Function=internodedistance)
-    tre0.numHybrids == 0 || throw(ErrorException("tre0 must be tree-like."))
+    tre0.numhybrids == 0 || throw(ErrorException("tre0 must be tree-like."))
     maxsize >= minsize || throw(ErrorException("maxsize must be >= minsize"))
 
 
@@ -64,10 +64,10 @@ function sateIdecomp(inittree::HybridNetwork, maxsize::Integer)
         medge = getMidSplitEdge(curr)
         split1, split2 = splitAtEdge(curr, medge)
         
-        if split1.numTaxa > maxsize push!(workingset, split1)
+        if split1.numtaxa > maxsize push!(workingset, split1)
         else push!(splittrees, split1) end
         
-        if split2.numTaxa > maxsize push!(workingset, split2)
+        if split2.numtaxa > maxsize push!(workingset, split2)
         else push!(splittrees, split2) end
     end
 
@@ -89,10 +89,10 @@ function sateIIdecomp(inittree::HybridNetwork, maxsize::Integer)
         lbranch = getLongestBranch(curr)
         split1, split2 = splitAtEdge(curr, lbranch)
         
-        if split1.numTaxa > maxsize push!(workingset, split1)
+        if split1.numtaxa > maxsize push!(workingset, split1)
         else push!(splittrees, split1) end
         
-        if split2.numTaxa > maxsize push!(workingset, split2)
+        if split2.numtaxa > maxsize push!(workingset, split2)
         else push!(splittrees, split2) end
     end
 
@@ -121,7 +121,7 @@ function getMidSplitEdge(tre::HybridNetwork)
     minsplitdiff = Inf
 
     for edge in tre.edge
-        splitdiff = abs(length(getLeavesUnderEdge(edge)) - (tre.numTaxa / 2))
+        splitdiff = abs(length(getLeavesUnderEdge(edge)) - (tre.numtaxa / 2))
         if splitdiff < minsplitdiff
             minsplitedge = edge
             minsplitdiff = splitdiff

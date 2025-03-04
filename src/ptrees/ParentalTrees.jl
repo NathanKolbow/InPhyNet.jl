@@ -1,5 +1,5 @@
 function getparentaltrees(newick::AbstractString; safe::Bool=true)
-    return getparentaltrees(readTopology(newick))
+    return getparentaltrees(readnewick(newick))
 end
 
 """
@@ -94,7 +94,7 @@ function _getparentaltrees(initnet::IPT, ldict::LDict; usecomplog=true)
     enqueue!(workingset, initnet)
     parentaltrees = Vector{IPT}()
     complog = ifelse(usecomplog, CompDict(), nothing)   # for re-using computations
-    binoms = Array{BigInt}(undef, top(initnet).numTaxa) # pre-computed binomial(j, 2) values
+    binoms = Array{BigInt}(undef, top(initnet).numtaxa) # pre-computed binomial(j, 2) values
     for j=1:length(binoms) binoms[j] = binomial(j, 2) end
 
     while !isempty(workingset)
