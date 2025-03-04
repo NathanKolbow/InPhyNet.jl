@@ -108,3 +108,6 @@ function pruneTruthFromDecomp(truenet::HybridNetwork, subsets::AbstractVector{<:
 end
 pruneTruthFromDecomp(truenet::HybridNetwork, subset::AbstractVector{<:AbstractString}) = 
     pruneTruthFromDecomp(truenet, [subset])[1]
+prune_network = pruneTruthFromDecomp
+prune_networks(nets::AbstractVector{HybridNetwork}, subset::AbstractVector{<:AbstractString}) =
+    [prune_network(net, subset) for net in nets]

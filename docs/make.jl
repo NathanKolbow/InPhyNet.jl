@@ -1,6 +1,5 @@
 using Documenter, InPhyNet
 
-
 makedocs(
     modules=[InPhyNet],
     sitename="InPhyNet.jl",
@@ -9,14 +8,14 @@ makedocs(
     draft=true,
     doctest=false,
     pages=[
-        "Introduction" => "index.md",
-        "Installation" => "guide/installation.md",
-        "Guide" => [
-            "How to use InPhyNet" => "guide/how-to-use-inphynet.md",
-            "Choosing your subsets" => "guide/subsets.md",
-            "Inferring constraint networks" => "guide/constraints.md",
-            "Pairwise dissimilarity matrix" => "guide/d-matrix.md",
-            "Constructing the full network" => "guide/full_net.md"
+        "Home" => "index.md",
+        "Installation" => "installation.md",
+        "Walkthrough" => [
+            "walkthrough/introduction.md",
+            "Estimate a pairwise distance matrix" => "walkthrough/d-matrix.md",
+            "Choosing your subsets" => "walkthrough/subsets.md",
+            "Inferring constraint networks" => "walkthrough/constraints.md",
+            "Constructing the full network" => "walkthrough/full_net.md"
         ],
         "Simulation Results" => [
             "Runtime evaluations" => "intro/runtimes.md",
