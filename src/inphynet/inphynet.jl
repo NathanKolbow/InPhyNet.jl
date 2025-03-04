@@ -17,7 +17,7 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
     for i = 1:(length(constraints) - 1)
         # TODO: do in order of most similar subsets
         @debug "\n\n----------------------------\n\n"
-        constraints = constraints[sortperm([c.numTaxa for c in constraints])]
+        constraints = constraints[sortperm([c.numtaxa for c in constraints])]
 
         cs = constraints[[1, 2]]
         leaf_names = Set(union([leaf.name for leaf in cs[1].leaf], [leaf.name for leaf in cs[2].leaf]))
@@ -28,8 +28,8 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         end
 
         @debug "--------------------------------------------------"
-        @debug "1: $(cs[1].numTaxa), $(cs[1].numHybrids): $(writeTopology(cs[1]))"
-        @debug "2: $(cs[2].numTaxa), $(cs[2].numHybrids): $(writeTopology(cs[2]))"
+        @debug "1: $(cs[1].numtaxa), $(cs[1].numhybrids): $(writenewick(cs[1]))"
+        @debug "2: $(cs[2].numtaxa), $(cs[2].numhybrids): $(writenewick(cs[2]))"
         temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter))
         deleteat!(constraints, 2)
         deleteat!(constraints, 1)
@@ -116,8 +116,8 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     end
 
     mnet = HybridNetwork(subnets[1].nodes, subnets[1].edges)
-    mnet.root = mnet.numNodes
-    mnet.node[mnet.root].name = "root"
+    mnet.rooti = mnet.numnodes
+    getroot(mnet).name = "root"
 
     mnet = placeretics!(mnet, reticmap, gammas; kwargs...)
     removeplaceholdernames!(mnet)
@@ -149,10 +149,10 @@ end
 function setup_root_retics(constraints::AbstractVector{HybridNetwork}; supressunsampledwarning::Bool=false)
     rootretics = Array{Union{Tuple, Edge, Nothing}}(undef, length(constraints))
     for (i, c) in enumerate(constraints)
-        hybridbools = [edge.hybrid for edge in c.node[c.root].edge]
+        hybridbools = [edge.hybrid for edge in getroot(c).edge]
         if any(hybridbools)
             sum(hybridbools) == 1 || error("Two reticulations coming out of root, this is not accounted for!")
-            hybedge = c.node[c.root].edge[hybridbools][1]
+            hybedge = getroot(c).edge[hybridbools][1]
             rootretics[i] = hybedge
 
             if !supressunsampledwarning
@@ -171,7 +171,7 @@ function setup_root_retics(constraints::AbstractVector{HybridNetwork}; supressun
             # we need to make sure that none of the nodes coming out of the
             # root lead to _only_ hybrids, thus effectively making the root
             # lead directly to hybrids.
-            children = getchildren(c.node[c.root])
+            children = getchildren(getroot(c))
             hybridbools = [[edge.hybrid for edge in child.edge] for child in children]
             needtowarn = supressunsampledwarning
 
@@ -240,7 +240,7 @@ under the root (somewhat randomly).
 """
 function root_constraints!(constraints::Vector{HybridNetwork})
     for c in constraints
-        root_children = getchildren(c.node[c.root])
+        root_children = getchildren(getroot(c))
         if length(root_children) > 2
             if any(child.leaf for child in root_children)
                 rootatnode!(c, root_children[findfirst(child.leaf for child in root_children)])
@@ -265,7 +265,7 @@ Checks validity of a single input constraint networks. Checks include:
 2. Reticulations do not lead directly into other reticulations
 """
 function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kwargs...)
-    if net.numTaxa == 1 return end
+    if net.numtaxa == 1 return end
 
     # Check #1
     for (node_idx, node) in enumerate(net.node)
@@ -274,7 +274,7 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kw
             if length(node.edge) != 1
                 throw(ConstraintError(idx, "Leaf nodes must have exactly 1 attached edge."))
             end
-        elseif node == net.node[net.root]
+        elseif node == getroot(net)
             if length(node.edge) != 2   
                 throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
             end
@@ -290,7 +290,7 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kw
     # Check #2: try to make it so that the root does NOT have a reticulation coming out of it
     i = 0
     edges = net.edge
-    retic_at_root = any(e.hybrid for e in net.node[net.root].edge)
+    retic_at_root = any(e.hybrid for e in getroot(net).edge)
     while retic_at_root
         i += 1
 
@@ -300,7 +300,7 @@ function check_constraint(idx::Int64, net::HybridNetwork, autofix::Bool=true; kw
 
         try
             rootonedge!(net, edges[i])
-            retic_at_root = any(e.hybrid for e in net.node[net.root].edge)
+            retic_at_root = any(e.hybrid for e in getroot(net).edge)
             if !retic_at_root break end
         catch
         end
@@ -352,7 +352,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap, gammas; copy_retic
             push!(retic_names, hyb.name)
         end
     end
-    mnet = readTopology(writeTopology(net))
+    mnet = readnewick(writenewick(net))
 
     edgepairs = []
     for ((fromname1, fromname2), (toname1, toname2)) in namepairs
@@ -384,7 +384,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap, gammas; copy_retic
         getparentedge(hybnode).gamma = 1 - gammas[i]
 
         hybnode.name = copy_retic_names ? retic_names[i] : hybnode.name
-        mnet.root = findfirst([n.name == "root" for n in mnet.node])
+        mnet.rooti = findfirst([n.name == "root" for n in mnet.node])
 
         for j=(i+1):length(edgepairs)
             if edgepairs[2] == toedge
@@ -424,11 +424,11 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
 
     # print("(\"$(nodenamei)\",\"$(nodenamej)\"), ")
     # println("merging ($(nodenamei), $(nodenamej))")
-    # println("\t- $(writeTopology(constraints[1]))")
+    # println("\t- $(writenewick(constraints[1]))")
 
     for (netidx, net) in enumerate(constraints)
         # DEBUG STATEMENTS
-        # println("\t$(netidx): $(writeTopology(net))")
+        # println("\t$(netidx): $(writenewick(net))")
         idxi = -1
         idxj = -1
         for (nodeidx, node) in enumerate(net.node)
@@ -475,7 +475,7 @@ function update_compat_trees!(nodenamei::AbstractString, nodenamej::AbstractStri
         if hasj && !hasi
             net.node[idxj].name = nodenamei
         elseif hasi && hasj
-            if net.numTaxa > 2
+            if net.numtaxa > 2
                 deleteleaf!(net, net.node[idxj])
             else
                 compat_trees[netidx] = pruneTruthFromDecomp(net, [nodenamei])
@@ -502,7 +502,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
         for edge in net.edge
-            if edge.hybrid && !edge.isMajor
+            if edge.hybrid && !edge.ismajor
                 try
                     if reticmap.map[getchild(edge)][1] === nothing
                         logretic!(reticmap, edge, subnetedgei, "from")
@@ -519,10 +519,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         deleteNode!(net, nodej)
         net.node = [nodei]
         net.edge = []
-        net.numTaxa = 1
-        net.numNodes = 1
-        net.numEdges = 0
-        net.root = 1
+        net.numtaxa = 1
+        net.numnodes = 1
+        net.numedges = 0
+        net.rooti = 1
         nodei.edge = []
     elseif length(net.leaf) == 2
         @debug "e: ($(nodei.name), $(nodej.name))"
@@ -531,7 +531,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         nodes_above_nodei = []
         nodes_above_nodej = []
         search_node = nodei
-        while search_node != net.node[net.root]
+        while search_node != getroot(net)
             push!(nodes_above_nodei, search_node)
             try
                 search_node = getparent(getparentedge(search_node))
@@ -540,7 +540,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
         end
         search_node = nodej
-        while search_node != net.node[net.root]
+        while search_node != getroot(net)
             push!(nodes_above_nodej, search_node)
             try
                 search_node = getparent(getparentedge(search_node))
@@ -548,8 +548,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 search_node = getparent(getparentedgeminor(search_node))
             end
         end
-        push!(nodes_above_nodei, net.node[net.root])
-        push!(nodes_above_nodej, net.node[net.root])
+        push!(nodes_above_nodei, getroot(net))
+        push!(nodes_above_nodej, getroot(net))
         mrca = intersect(nodes_above_nodei, nodes_above_nodej)[1]
 
         # Find all retics that come from nodei
@@ -569,7 +569,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
 
             for edge in search_node.edge
-                if edge.hybrid # && !edge.isMajor
+                if edge.hybrid # && !edge.ismajor
                     if getchild(edge) == search_node
                         push!(hybedges_i, (edge, "to"))
                     else
@@ -582,7 +582,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         while length(search_queue) > 0
             search_node = pop!(search_queue)
             for edge in search_node.edge
-                if edge.hybrid # && !edge.isMajor
+                if edge.hybrid # && !edge.ismajor
                     if !((edge, "from") in hybedges_i)
                         push!(hybedges_i, (edge, "from"))
                     else
@@ -609,7 +609,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
 
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor
+                if edge.hybrid && !edge.ismajor
                     if getchild(edge) == search_node
                         push!(hybedges_j, (edge, "to"))
                     else
@@ -622,7 +622,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         while length(search_queue) > 0
             search_node = pop!(search_queue)
             for edge in search_node.edge
-                if edge.hybrid && !edge.isMajor
+                if edge.hybrid && !edge.ismajor
                     if !((edge, "from") in hybedges_j)
                         push!(hybedges_j, (edge, "from"))
                     else
@@ -663,12 +663,12 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         deleteNode!(net, nodej)
         net.node = [nodei]
         net.edge = []
-        net.numTaxa = 1
-        net.numNodes = 1
-        net.numEdges = 0
-        net.root = 1
+        net.numtaxa = 1
+        net.numnodes = 1
+        net.numedges = 0
+        net.rooti = 1
         nodei.edge = []
-    elseif parentsi == parentsj && (parentsi == net.node[net.root] || length(getchildren(parentsi)) > 2)
+    elseif parentsi == parentsj && (parentsi == getroot(net) || length(getchildren(parentsi)) > 2)
         # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
         # e.g., this case would happen when joining a & b in (a, b, c, d)
         @debug "b0: ($(nodei.name), $(nodej.name))"
@@ -718,7 +718,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
         newedge = connectnodes!(nodei, internal)  # handy fxn from SubNet.jl
         push!(net.edge, newedge)
-    elseif major_mrca(nodei, nodej, net.node[net.root]) == net.node[net.root]
+    elseif major_mrca(nodei, nodej, getroot(net)) == getroot(net)
         # Merging unrooted constraint across the "root"
         if length(net.node) == 3
             @debug "cross-root B: ($(nodei.name), $(nodej.name))"
@@ -743,7 +743,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                     net, logged_edgeinpath, nodesinpath, nodei, nodej
                 )
 
-                if node == net.node[net.root]
+                if node == getroot(net)
                     relevanttoi = false
                 end
             end
@@ -775,8 +775,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 @show net
                 @show nodei
                 @show nodej
-                @show major_mrca(nodei, nodej, net.node[net.root])
-                @show net.node[net.root]
+                @show major_mrca(nodei, nodej, getroot(net))
+                @show getroot(net)
 
                 @show getparent(nodei)
                 @show getparent(getparent(nodei))
@@ -789,7 +789,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
 
             # If there are a series of nodes above `nodej` that are not the node (nodes leading to retics): remove those nodes
-            while curr != net.node[net.root] && length(getparents(curr)) > 0
+            while curr != getroot(net) && length(getparents(curr)) > 0
                 n_child = length(getchildren(curr))
                 if !(n_child == 0 || (any(edge.hybrid for edge in curr.edge) && n_child == 1))
                     break
@@ -812,7 +812,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             # Disconnect any hybrid edges that were logged
             for node in nodesinpath
                 edges = node.edge
-                isminorhyb = [e.hybrid && !e.isMajor for e in edges]
+                isminorhyb = [e.hybrid && !e.ismajor for e in edges]
 
                 for hyb_edge in edges[isminorhyb]
                     @debug "Disconnecting edge"
@@ -833,10 +833,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
 
         # If the root node is redundant, move the root node down
-        while length(net.node[net.root].edge) == 1 && !getchild(net.node[net.root]).leaf
+        while length(getroot(net).edge) == 1 && !getchild(getroot(net)).leaf
             @debug "Moving root node down"
-            old_root = net.node[net.root]
-            net.root = findfirst(node -> node == getchild(net.node[net.root]), net.node)
+            old_root = getroot(net)
+            net.rooti = findfirst(node -> node == getchild(getroot(net)), net.node)
             
             deleteNode!(net, old_root)
             for node in getnodes(old_root)
@@ -845,7 +845,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
     else
         @debug "c: ($(nodei.name), $(nodej.name))"
-        # println("Before any operations:\n\t$(writeTopology(net))")
+        # println("Before any operations:\n\t$(writenewick(net))")
         graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
         if !isassigned(nodesinpath, 1)
@@ -876,7 +876,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             newtip = getparent(newtip)
         end
         
-        ishybedge = [e.hybrid && !e.isMajor for e in edgesinpath]
+        ishybedge = [e.hybrid && !e.ismajor for e in edgesinpath]
         hybedge = nothing
         hybedgelogged = false
         if newtip === nothing && sum(ishybedge) == 1
@@ -999,7 +999,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         newtip.leaf = true
         newtip.hybrid = false
         push!(net.leaf, newtip)
-        net.numTaxa += 1
+        net.numtaxa += 1
         newtip.name = nodei.name
 
         fuseredundantedges!(net)
@@ -1088,7 +1088,7 @@ Redundant nodes in this case will always have only two edges while *not* being t
 """
 function fuseredundantedges!(net::HybridNetwork)
     for (i, node) in enumerate(net.node)
-        if node.leaf || node.hybrid || node == net.node[net.root] continue end
+        if node.leaf || node.hybrid || node == getroot(net) continue end
         if length(node.edge) == 2
             fuseedgesat!(i, net)
         end
@@ -1213,7 +1213,7 @@ function findvalidpairs(constraints::Vector{HybridNetwork}, constraint_sibling_p
 
     # go through the constraint networks and validate/invalidate pairs
     for (net_idx, net) in enumerate(constraints)
-        if net.numTaxa == 1 continue end
+        if net.numtaxa == 1 continue end
         leafidxs = [idx(leaf.name) for leaf in net.leaf]
 
         # What is up with this xor (⊻)?
@@ -1257,22 +1257,22 @@ These pairs are valid for `net` but may not be valid when the
 Returns a vector of tuples of nodes corresponding to siblings.
 """
 function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_unrooted::Bool=true, kwargs...)
-    pairs = BitArray(undef, net.numTaxa, net.numTaxa)
+    pairs = BitArray(undef, net.numtaxa, net.numtaxa)
     pairs .= false
 
     # new, simpler method just using Graphs.jl
-    # hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.isMajor)])
+    # hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.ismajor)])
     # push!(hybedges, nothing)
     
     if major_tree_only
         node_map = Dict(leaf => i for (i, leaf) in enumerate(net.leaf))
 
-        for nodei_idx = 1:net.numTaxa
+        for nodei_idx = 1:net.numtaxa
             nodei = net.leaf[nodei_idx]
-            if nodei == net.node[net.root] continue end
+            if nodei == getroot(net) continue end
             neighbors = [child for child in getchildren(getparent(nodei)) if child.leaf && !(child == nodei)]
 
-            if getparent(nodei) == net.node[net.root] && force_unrooted
+            if getparent(nodei) == getroot(net) && force_unrooted
                 for child in getchildren(getparent(nodei))
                     for child_child in getchildren(child)
                         if child_child.leaf && !(child_child == nodei)
@@ -1307,11 +1307,11 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_
         graph, W = Graph(net, includeminoredges = false, alwaysinclude = hybedge, withweights = true, minoredgeweight = 1.51)
         InPhyNet.removeredundantedges!(graph, net, W = W, keeproot = !force_unrooted)
         
-        for nodei_idx in 1:(net.numTaxa-1)
+        for nodei_idx in 1:(net.numtaxa-1)
             nodei = net.leaf[nodei_idx]
             idxnodei = findfirst(net.node .== [nodei])
 
-            for nodej_idx in (nodei_idx+1):net.numTaxa
+            for nodej_idx in (nodei_idx+1):net.numtaxa
                 nodej = net.leaf[nodej_idx]
                 idxnodej = findfirst(net.node .== [nodej])
 
@@ -1356,7 +1356,7 @@ function has_direct_root_connection(net::HybridNetwork, node::Node)
     last_node = nothing
 
     while true
-        if curr == net.node[net.root] break end
+        if curr == getroot(net) break end
         if length(getparents(curr)) > 1 return false end
         
         children = getchildren(curr)
@@ -1441,7 +1441,7 @@ function getsiblingcandidates(leaf::Node)
                 
                 idx = isunvisited
                 if followedhyb[i]
-                    idx .&= .![e.hybrid && !e.isMajor for e in child.edge]
+                    idx .&= .![e.hybrid && !e.ismajor for e in child.edge]
                 end
 
                 for (j, nextchild) in enumerate(nextchildren[idx])
@@ -1485,7 +1485,7 @@ function log_edge_path_retics_from_node(
     nodei::Node, nodej::Node
 )
     node_edges = node.edge
-    isminorhyb = [e.hybrid && !e.isMajor for e in node_edges]
+    isminorhyb = [e.hybrid && !e.ismajor for e in node_edges]
 
     if sum(isminorhyb) == 1
         edge = node_edges[isminorhyb][1]
@@ -1544,7 +1544,7 @@ function log_edge_path_retics_from_node(
             @info hyb_edges[1].number
             @info hyb_edges[2].number
             try
-                @info "$(writeTopology(net))"
+                @info "$(writenewick(net))"
             catch
             end
             error("Unaccounted for scenario.")
