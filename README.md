@@ -31,7 +31,7 @@ Any method can be used to compute a dissimilarity matrix, though average gene tr
 using PhyloNetworks, InPhyNet
 
 # 1. Load the gene trees
-gts = readMultiTopology("est_gts.treefile")
+gts = readmultinewick("est_gts.treefile")
 
 # 2. Calculate the dissimilarity matrix
 D, namelist = calculateAGID(gts)
@@ -45,11 +45,11 @@ After inferring your constraint networks and calculating your pairwise dissimila
 using InPhyNet
 
 # 1. We calculate D as above, though any method can be used
-gts = readMultiTopology("est_gts.treefile")
+gts = readmultinewick("est_gts.treefile")
 D, namelist = calculateAGID(gts)
 
 # 2. Load constraint networks
-constraints = readMultiTopology("est_nets.netfile")
+constraints = readmultinewick("est_nets.netfile")
 
 # 3. Run InPhyNet
 full_net = netnj(D, constraints, namelist)

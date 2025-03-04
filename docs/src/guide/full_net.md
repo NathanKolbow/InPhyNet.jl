@@ -3,8 +3,8 @@
 ```julia
 using InPhyNet, PhyloNetworks
 
-constraints = readMultiTopology(...)
-gts = readMultiTopology(...)
+constraints = readmultinewick(...)
+gts = readmultinewick(...)
 D, namelist = calculateAGID(gts)
 
 full_net = inphynet(D, constraints, namelist)
