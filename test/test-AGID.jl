@@ -30,15 +30,15 @@ gt3 = readnewick("(E:1,F:1):1;")
     @test n["B", "D"] == 6
 end
 
-@testset "internodecount" begin
+@testset "AGID - missing pairs" begin
+    D, namelist = calculateAGID([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
+    n = NamedArray(D, (namelist, namelist))
 
+    @test n["A", "E"] == Inf
+    @test n["E", "F"] == 2
+    @test n["A", "B"] == 2
 end
 
-@testset "AGIC" begin
-end
-
-@testset "AGID" begin
-end
 
 @testset "AGIC - missing pairs" begin
     # When some taxa do not appear together, make sure errors are thrown and default values are set
@@ -58,11 +58,3 @@ end
     @test n["E", "F"] == 0  # 0 instead of 1 b/c the tree is treated as unrooted
 end
 
-@testset "AGID - missing pairs" begin
-    D, namelist = calculateAGID([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
-    n = NamedArray(D, (namelist, namelist))
-
-    @test n["A", "E"] == Inf
-    @test n["E", "F"] == 2
-    @test n["A", "B"] == 2
-end
