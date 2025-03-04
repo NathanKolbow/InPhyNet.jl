@@ -1,4 +1,4 @@
-[![Documentation](https://github.com/NathanKolbow/InPhyNet.jl/actions/workflows/documentation.yml/badge.svg)](https://github.com/NathanKolbow/InPhyNet.jl/actions/workflows/documentation.yml)
+[![Documentation](https://github.com/NathanKolbow/InPhyNet.jl/actions/workflows/documentation.yml/badge.svg)](https://nathankolbow.github.io/InPhyNet.jl)
 
 
 # Table of Contents <!-- omit in toc -->
