@@ -42,7 +42,6 @@ function prune_network(net::HybridNetwork, subsets::AbstractVector{<:AbstractVec
                     if !((temp_numbers[1] == true_numbers[1] && temp_numbers[2] == true_numbers[2]) ||
                         (temp_numbers[1] == true_numbers[2] && temp_numbers[2] == true_numbers[1]))
                         # Remove the hybrid edges attached here
-                        # @warn "`prune_network` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
                         for temp_edge in temp_node.edge
                             if temp_edge.hybrid
                                 PhyloNetworks.deletehybridedge!(tempnet, temp_edge)
@@ -53,7 +52,6 @@ function prune_network(net::HybridNetwork, subsets::AbstractVector{<:AbstractVec
                 elseif length(temp_numbers) == 1
                     if temp_numbers[1] != true_numbers[1]
                         # Remove the hybrid edges attached here
-                        # @warn "`prune_network` HAS NOT BEEN SUFFICIENTLY TESTED TO TRUST IN ITS OUTPUT YET. VERIFY SOME OF THE RESULTS RECEIVED BEFORE CONTINUING."
                         for temp_edge in temp_node.edge
                             if temp_edge.hybrid
                                 PhyloNetworks.deletehybridedge!(tempnet, temp_edge)
