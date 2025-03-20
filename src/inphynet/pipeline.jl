@@ -23,7 +23,7 @@ function inphynet(
     # Gather all unique taxa in the estimated gene trees
     taxa_in_trees = Set{AbstractString}()
     for gt in estgts
-        for taxa in tipLabels(gt)
+        for taxa in tiplabels(gt)
             push!(taxa_in_trees, taxa)
         end
     end
@@ -52,7 +52,7 @@ function inphynet(
         subset_gts = Vector{HybridNetwork}()
         for gt in estgts
             if length(findall(taxa -> taxa in gt)) >= 4
-                push!(subset_gts, pruneTruthFromDecomp(gt, subset_taxa))
+                push!(subset_gts, prune_network(gt, subset_taxa))
             end
         end
         if length(subset_gts) == 0
@@ -90,11 +90,11 @@ end
 
 
 function has_missing_pairs(gts::AbstractVector{HybridNetwork})
-    all_taxa = reduce(vcat, [tipLabels(gt) for gt in gts])
+    all_taxa = reduce(vcat, [tiplabels(gt) for gt in gts])
     pairs = [(all_taxa[i], all_taxa[j]) for i = 1:(length(all_taxa)-1) for j = (i+1):length(all_taxa)]
 
     for gt in gts
-        gt_taxa = tipLabels(gt)
+        gt_taxa = tiplabels(gt)
         
         for j = length(pairs):-1:1
             if pairs[j][1] in gt_taxa && pairs[j][2] in gt_taxa

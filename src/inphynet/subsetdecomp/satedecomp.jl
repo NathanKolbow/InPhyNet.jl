@@ -138,8 +138,8 @@ function splitAtEdge(tre::HybridNetwork, edge::PhyloNetworks.Edge)
     childset = [n.name for n in getLeavesUnderEdge(edge)]
 
     # Prune
-    split1 = pruneTruthFromDecomp(tre, [childset])[1]
-    split2 = pruneTruthFromDecomp(tre, [setdiff([l.name for l in tre.leaf], childset)])[1]
+    split1 = prune_network(tre, [childset])[1]
+    split2 = prune_network(tre, [setdiff([l.name for l in tre.leaf], childset)])[1]
 
     return split1, split2
 end
