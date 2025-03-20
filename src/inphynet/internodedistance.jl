@@ -144,29 +144,3 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
         return D, namelist
     end
 end
-
-
-function calculateMGIC(Ns::AbstractVector{HybridNetwork})
-    D_one, namelist_one = internodecount(Ns[1])
-    D_namelist_arr = Array{Matrix{Float64}}(undef, length(Ns))
-    D_namelist_arr[1] = D_one
-    n = size(D_one)[1]
-
-    @info "A"
-    for i=2:length(Ns)
-        D_namelist_arr[i] = internodecount(Ns[i], namelist=namelist_one)[1]
-    end
-
-    @info "B"
-    out_D = zeros(n, n)
-    for i=1:(n-1)
-        for j=(i+1):n
-            vals = Array{Float64}(undef, length(Ns))
-            for (k, D) in enumerate(D_namelist_arr)
-                vals[k] = D[i, j]
-            end
-            out_D[i, j] = out_D[j, i] = median(vals)
-        end
-    end
-    return out_D, namelist_one
-end
