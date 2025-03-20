@@ -1,4 +1,5 @@
 using PhyloNetworks, Graphs, StatsBase
+import DataStructures: SortedSet
 
 import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!, fuseedgesat!
 # import Combinatorics: combinations, partitions, powerset
