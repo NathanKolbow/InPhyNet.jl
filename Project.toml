@@ -4,6 +4,7 @@ authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
 version = "0.2.4"
 
 [deps]
+DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 GraphIO = "aa1b3936-2fda-51b9-ab35-c553d3a640a2"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -13,5 +14,6 @@ StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
+DataStructures = "0.18.22"
 PhyloNetworks = ">=1"
 Random = "1.11.0"
