@@ -20,21 +20,21 @@ gt3 = readnewick("(E:1,F:1):1;")
     D, namelist = internodedistance(gt2)
     @test all(j -> namelist[j] == sort(tiplabels(gt2))[j], 1:length(namelist))
 
-    @test n[1, 2] == 4
-    @test n[3, 4] == 4
-    @test n[1, 3] == 6
-    @test n[1, 4] == 6
-    @test n[2, 3] == 6
-    @test n[2, 4] == 6
+    @test D[1, 2] == 4
+    @test D[3, 4] == 4
+    @test D[1, 3] == 6
+    @test D[1, 4] == 6
+    @test D[2, 3] == 6
+    @test D[2, 4] == 6
 end
 
 @testset "AGID - missing pairs" begin
     D, namelist = calculateAGID([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
     @test all(j -> namelist[j] == sort(vcat(tiplabels(gt1), tiplabels(gt2)))[j], 1:length(namelist))
 
-    @test n[1, 5] == Inf
-    @test n[5, 6] == 2
-    @test n[1, 2] == 2
+    @test D[1, 5] == Inf
+    @test D[5, 6] == 2
+    @test D[1, 2] == 2
 end
 
 
@@ -51,8 +51,8 @@ end
     D, namelist = calculateAGIC([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
     @test all(j -> namelist[j] == sort(vcat(tiplabels(gt1), tiplabels(gt3)))[j], 1:length(namelist))
 
-    @test n[1, 5] == Inf
-    @test n[1, 2] == 1
-    @test n[5, 6] == 0  # 0 instead of 1 b/c the tree is treated as unrooted
+    @test D[1, 5] == Inf
+    @test D[1, 2] == 1
+    @test D[5, 6] == 0  # 0 instead of 1 b/c the tree is treated as unrooted
 end
 
