@@ -29,7 +29,7 @@ using InPhyNet
     ]);
     for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
     mnet = inphynet(D, constraints, [l.name for l in T.leaf])
-    @test hardwiredClusterDistance(T, mnet, false) == 0
+    @test hardwiredclusterdistance(T, mnet, false) == 0
 
 
 
@@ -52,7 +52,7 @@ using InPhyNet
     ])
     for i=1:size(D, 1) for j=(i+1):size(D,1) D[j,i] = D[i,j] end end
     mnet = inphynet(D, constraints, sort([l.name for l in N.leaf]))
-    @test hardwiredClusterDistance(N, mnet, false) == 0
+    @test hardwiredclusterdistance(N, mnet, false) == 0
 
 
     # More complicated example w/ a network
@@ -65,7 +65,7 @@ using InPhyNet
     ]
     D, names = majorinternodecount(N)
     mnet = inphynet(D, constraints, names)
-    @test hardwiredClusterDistance(mnet, N, false) == 0
+    @test hardwiredclusterdistance(mnet, N, false) == 0
 
 
     # Same example as above but duplicated into (A,A)
@@ -82,6 +82,6 @@ using InPhyNet
     ]
     D, names = majorinternodecount(N)
     mnet = inphynet(D, constraints, names)
-    @test hardwiredClusterDistance(mnet, N, false) == 0
+    @test hardwiredclusterdistance(mnet, N, false) == 0
 
 end
