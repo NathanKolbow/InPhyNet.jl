@@ -21,7 +21,6 @@ module InPhyNet
     include("data_examples.jl")
 
     export inphynet,
-        decomposeFromQuartets,
         majorinternodedistance, internodedistance, calculateAGID,
         majorinternodecount, internodecount, calculateAGIC,
         updateconstraints!, Edge, mergeconstraintnodes!,
