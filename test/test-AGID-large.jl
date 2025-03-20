@@ -16,7 +16,7 @@ for (j, (t1, t2)) in enumerate(test_pairs)
     manual_dists[j] = 0.0
     n = 0
     for gt in est_gts
-        if !(t1 in tipLabels(gt)) || !(t2 in tipLabels(gt)) continue end
+        if !(t1 in tiplabels(gt)) || !(t2 in tiplabels(gt)) continue end
         n += 1
 
         iter_D, iter_namelist = internodedistance(gt)

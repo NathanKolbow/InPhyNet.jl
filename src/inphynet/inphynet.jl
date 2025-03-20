@@ -80,7 +80,7 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     reticmap = ReticMap(constraints)
     gammas = [getparentedgeminor(h).gamma for h in collect(keys(reticmap.map))]
     rootretics, rootreticprocessed = setup_root_retics(constraints; kwargs...)
-    compatibility_trees = [majorTree(c) for c in constraints]
+    compatibility_trees = [majortree(c) for c in constraints]
     constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
     
     # Main iterative loop
@@ -483,7 +483,7 @@ function update_compat_trees!(nodenamei::AbstractString, nodenamej::AbstractStri
             if net.numtaxa > 2
                 deleteleaf!(net, net.node[idxj])
             else
-                compat_trees[netidx] = pruneTruthFromDecomp(net, [nodenamei])
+                compat_trees[netidx] = prune_network(net, [nodenamei])
             end
 
             constraint_sibling_pairs[netidx] = findsiblingpairs(net)
