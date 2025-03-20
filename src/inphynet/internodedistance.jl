@@ -1,5 +1,3 @@
-# TODO: change all return values to be NamedArrays instead of matrices and a vector of names
-
 """
     majorinternodedistance(N::HybridNetwork)
 
