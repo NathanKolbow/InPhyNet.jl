@@ -13,7 +13,6 @@ module InPhyNet
     include("inphynet/compatibility.jl")
     include("inphynet/inphynet.jl")
     include("inphynet/internodedistance.jl")
-    include("inphynet/subsetdecomp.jl")
     include("inphynet/subsetdecomp/pruning.jl")
     include("inphynet/subsetdecomp/satedecomp.jl")
 
