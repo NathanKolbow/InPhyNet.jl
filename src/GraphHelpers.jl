@@ -105,13 +105,6 @@ function find_valid_node_path(net::HybridNetwork, namei::String, namej::String)
 end
 
 
-function tester_path(net, namei, namej)
-    nodei = net.node[findfirst(node.name == namei for node in net.node)]
-    nodej = net.node[findfirst(node.name == namej for node in net.node)]
-    return find_valid_node_path(net, nodei, nodej)
-end
-
-
 """
 
 Helper function that removes redundant edges in the graph that exist
