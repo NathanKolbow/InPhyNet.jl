@@ -1,4 +1,4 @@
-using PhyloNetworks, DataStructures, DataFrames, CSV, Graphs, StatsBase
+using PhyloNetworks, DataStructures, Graphs, StatsBase
 
 import PhyloNetworks: deleteNode!, deleteEdge!, addhybridedge!, fuseedgesat!
 # import Combinatorics: combinations, partitions, powerset
