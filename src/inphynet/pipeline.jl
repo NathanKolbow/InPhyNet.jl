@@ -6,13 +6,6 @@
 # - normal runs
 
 
-function inphynet_snaq(
-
-)
-    isdefined(Main, :snaq!) || error("snaq! function not found, make sure to load SNaQ with `using SNaQ.jl`!")
-end
-
-
 function inphynet(
     estgts::AbstractVector{HybridNetwork},
     subsets::AbstractVector{<:AbstractVector{<:AbstractString}};
