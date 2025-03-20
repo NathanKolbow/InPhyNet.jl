@@ -30,7 +30,7 @@ end
 
 @testset "AGID - missing pairs" begin
     D, namelist = calculateAGID([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
-    @test all(j -> namelist[j] == sort(vcat(tiplabels(gt1), tiplabels(gt2)))[j], 1:length(namelist))
+    @test all(j -> namelist[j] == ["A", "B", "C", "D", "E", "F"][j], 1:length(namelist))
 
     @test D[1, 5] == Inf
     @test D[5, 6] == 2
@@ -49,7 +49,7 @@ end
 
     
     D, namelist = calculateAGIC([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
-    @test all(j -> namelist[j] == sort(vcat(tiplabels(gt1), tiplabels(gt3)))[j], 1:length(namelist))
+    @test all(j -> namelist[j] == ["A", "B", "C", "D", "E", "F"][j], 1:length(namelist))
 
     @test D[1, 5] == Inf
     @test D[1, 2] == 1
