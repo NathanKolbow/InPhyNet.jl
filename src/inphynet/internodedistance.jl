@@ -7,7 +7,7 @@ Calculates internode distances between all pairs of taxa in the major displayed 
 of network `N`. If `N` is a tree, then internode distances are as expected for a tree.
 """
 function majorinternodedistance(N::HybridNetwork)
-    return internodedistance(majorTree(N))
+    return internodedistance(majortree(N))
 end
 
 
@@ -18,7 +18,7 @@ Calculates major internode counts between all pairs of taxa in the major display
 of network `N`. If `N` is a tree, then internode counts are as expected for a tree.
 """
 function majorinternodecount(N::HybridNetwork)
-    return internodecount(majorTree(N))
+    return internodecount(majortree(N))
 end
 
 
@@ -32,12 +32,12 @@ function internodedistance(N::HybridNetwork; namelist::Union{Nothing,<:AbstractV
 
     D = pairwisetaxondistancematrix(N)
     if namelist === nothing
-        idxs = sortperm(tipLabels(N))
-        return D[idxs, idxs], tipLabels(N)[idxs]
+        idxs = sortperm(tiplabels(N))
+        return D[idxs, idxs], tiplabels(N)[idxs]
     end
 
     # BELOW DOESN'T WORK. IMPLEMENT WORKING FIRST THEN SPEED UP
-    N_labels = tipLabels(N)
+    N_labels = tiplabels(N)
     idx_in_N = Dict{String, Int}(taxa => j for (j, taxa) in enumerate(N_labels))
     idx_map = [idx_in_N[name] for name in namelist]
     return D[idx_map, idx_map], N_labels[idx_map]
@@ -114,7 +114,7 @@ Calculates `pairwise_metric` on each pair of networks in `Ns`. Called by `calcul
 function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pairwise_metric::Function; allow_missing_pairs::Bool=false, default_missing_value=Inf)
     all_names = Set()
     for net in Ns
-        union!(all_names, tipLabels(net))
+        union!(all_names, tiplabels(net))
     end
     n = length(all_names)
     namelist = Vector{String}(sort(collect(all_names)))
@@ -123,7 +123,7 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
     D = zeros(Float64, n, n)
 
     for j=1:length(Ns)
-        iter_names = sort(tipLabels(Ns[j]))
+        iter_names = sort(tiplabels(Ns[j]))
         idx_filter = findall(i -> namelist[i] in iter_names, 1:length(namelist))
 
         D[idx_filter, idx_filter] .+= pairwise_metric(Ns[j], namelist=iter_names)[1]

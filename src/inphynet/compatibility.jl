@@ -22,10 +22,10 @@ function are_compatible_heuristic(t1::HybridNetwork, t2::HybridNetwork)
     
     if length(leaf_overlap) <= 3 return true end
 
-    t1_prime = pruneTruthFromDecomp(t1, leaf_overlap)
-    t2_prime = pruneTruthFromDecomp(t2, leaf_overlap)
+    t1_prime = prune_network(t1, leaf_overlap)
+    t2_prime = prune_network(t2, leaf_overlap)
     
-    return hardwiredClusterDistance(t1_prime, t2_prime, false) == 0
+    return hardwiredclusterdistance(t1_prime, t2_prime, false) == 0
 end
 
 
@@ -61,12 +61,12 @@ function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei
         for j = (i+1):length(relevant_nets)
             netj = relevant_nets[j]
 
-            overlapping_taxa = intersect(tipLabels(neti), tipLabels(netj))
+            overlapping_taxa = intersect(tiplabels(neti), tiplabels(netj))
             if length(overlapping_taxa) <= 3 continue end
-            neti_pruned = pruneTruthFromDecomp(neti, overlapping_taxa)
-            netj_pruned = pruneTruthFromDecomp(netj, overlapping_taxa)
+            neti_pruned = prune_network(neti, overlapping_taxa)
+            netj_pruned = prune_network(netj, overlapping_taxa)
 
-            if hardwiredClusterDistance(neti_pruned, netj_pruned, false) > 0 return false end
+            if hardwiredclusterdistance(neti_pruned, netj_pruned, false) > 0 return false end
         end
     end
 

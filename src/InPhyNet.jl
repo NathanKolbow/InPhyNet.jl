@@ -16,7 +16,7 @@ module InPhyNet
     include("inphynet/internodedistance.jl")
     include("inphynet/mscquartetsinterface.jl")
     include("inphynet/subsetdecomp.jl")
-    include("inphynet/subsetdecomp/njhierarchdecomp.jl")
+    include("inphynet/subsetdecomp/pruning.jl")
     include("inphynet/subsetdecomp/satedecomp.jl")
 
     include("inphynet/pipeline.jl")
@@ -27,7 +27,7 @@ module InPhyNet
         majorinternodedistance, internodedistance, calculateAGID,
         majorinternodecount, internodecount, calculateAGIC,
         updateconstraints!, Edge, mergeconstraintnodes!,
-        njHierarchDecomp, prune_network, prune_networks,
+        prune_network, prune_networks,
         sateIdecomp, sateIIdecomp,
         centroid_edge_decomposition,
         SolutionDNEError, ConstraintError,
