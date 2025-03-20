@@ -1543,16 +1543,7 @@ function log_edge_path_retics_from_node(
     elseif sum(isminorhyb) == 2
         hyb_edges = node_edges[isminorhyb]
         if hyb_edges[1] in edgesinpath && hyb_edges[2] in edgesinpath
-            @info "($(nodei.name), $(nodej.name))"
-            @info getchild(hyb_edges[1]).name
-            @info getchild(hyb_edges[2]).name
-            @info hyb_edges[1].number
-            @info hyb_edges[2].number
-            try
-                @info "$(writenewick(net))"
-            catch
-            end
-            error("Unaccounted for scenario.")
+            error("This scenario should not be possible. Please submit an issue on GitHub.")
         end
 
         # `edge_i` corresponds to `node_i`, and `_j` to `_j`.
