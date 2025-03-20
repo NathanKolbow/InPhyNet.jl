@@ -32,7 +32,6 @@ module InPhyNet
         centroid_edge_decomposition,
         SolutionDNEError, ConstraintError,
         are_compatible_heuristic, are_compatible_after_merge,
-        get_neighbor_set,
         # DOCS WALKTHROUGH DATA LOADING FXNS
         load_inphynet_example_gts
 
