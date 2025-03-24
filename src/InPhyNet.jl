@@ -27,7 +27,7 @@ module InPhyNet
         sateIdecomp, sateIIdecomp,
         centroid_edge_decomposition,
         SolutionDNEError, ConstraintError,
-        are_compatible_heuristic, are_compatible_after_merge,
+        are_compatible_after_merge,
         # DOCS WALKTHROUGH DATA LOADING FXNS
         load_inphynet_example_gts
 

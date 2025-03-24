@@ -3,32 +3,6 @@ using PhyloNetworks
 """
 Heuristic for determining whether the set of networks `ns` are compatible.
 """
-function are_compatible_heuristic(ns::AbstractVector{<:HybridNetwork})
-    for i = 1:(length(ns) - 1)
-        for j = 2:length(ns)
-            if !are_compatible_heuristic(ns[i], ns[j]) return false end
-        end
-    end
-    return true
-end
-
-
-"""
-Heuristic for determining whether trees `t1` and `t2` are compatible.
-In the case of networks, `t1` and `t2` are the major trees of some other networks.
-"""
-function are_compatible_heuristic(t1::HybridNetwork, t2::HybridNetwork)
-    leaf_overlap = intersect([leaf.name for leaf in t1.leaf], [leaf.name for leaf in t2.leaf])
-    
-    if length(leaf_overlap) <= 3 return true end
-
-    t1_prime = prune_network(t1, leaf_overlap)
-    t2_prime = prune_network(t2, leaf_overlap)
-    
-    return hardwiredclusterdistance(t1_prime, t2_prime, false) == 0
-end
-
-
 function are_compatible_after_merge(ns::AbstractVector{HybridNetwork}, nodenamei::AbstractString, nodenamej::AbstractString)
 
 
