@@ -139,7 +139,6 @@ function fix_root_retics!(constraints::AbstractVector{HybridNetwork}, subnets::A
                 trylogretic!(reticmap, rootretics[cidx][1], edgei, "from")
                 trylogretic!(reticmap, rootretics[cidx][2], edgej, "from")
             end
-            # println("logging retic for edge number $(rootretics[cidx].number)")
             rootreticprocessed[cidx] = true
         end
     end
@@ -414,13 +413,7 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
     constraints::Vector{HybridNetwork}, reticmap::ReticMap,
     subnetedgei::Edge, subnetedgej::Edge; kwargs...)
 
-    # print("(\"$(nodenamei)\",\"$(nodenamej)\"), ")
-    # println("merging ($(nodenamei), $(nodenamej))")
-    # println("\t- $(writenewick(constraints[1]))")
-
     for (netidx, net) in enumerate(constraints)
-        # DEBUG STATEMENTS
-        # println("\t$(netidx): $(writenewick(net))")
         idxi = -1
         idxj = -1
         for (nodeidx, node) in enumerate(net.node)
@@ -432,8 +425,6 @@ function updateconstraints!(nodenamei::AbstractString, nodenamej::AbstractString
 
         hasi = idxi != -1
         hasj = idxj != -1
-        # if hasi && !hasj:  do nothing
-        # if !hasi && !hasj: do nothing
         if hasj && !hasi
             net.node[idxj].name = nodenamei
             
@@ -738,9 +729,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             # Delete the node that is alone on the other side of the root
             curr = getparent(nodei)
             if has_direct_root_connection(net, nodej)
-                # println("\n\n\n------------------------")
-                # println("$(nodej.name) has direct connection")
-                # println("------------------------\n\n\n")
                 curr = getparent(nodej)
                 getparent(nodej).edge = filter(e -> e != getparentedge(nodej), getparent(nodej).edge)
 
@@ -759,18 +747,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
             else
-                # @show net
-                # @show nodei
-                # @show nodej
-                # @show major_mrca(nodei, nodej, getroot(net))
-                # @show getroot(net)
-
-                # @show getparent(nodei)
-                # @show getparent(getparent(nodei))
-                # @show getparent(nodej)
-                # @show getparent(getparent(nodej))
-                # @show getparent(getparent(getparent(nodej)))
-
                 throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
             end
 
@@ -832,7 +808,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
     else
         @debug "c: ($(nodei.name), $(nodej.name))"
-        # println("Before any operations:\n\t$(writenewick(net))")
         graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
 
         # find the node that should be the new tip after merging
@@ -899,9 +874,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         elseif newtip === nothing && any(ishybedge)
             error("Unknown case. Multiple hybrid edges in the path merging $(nodei.name) and $(nodej.name).")
         elseif newtip === nothing
-            println(net)
-            println(nodei)
-            println(nodej)
             error("Unknown case. No newtip found but we also don't take a hybrid path.")
         end
 
@@ -1168,8 +1140,6 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
         if max_sorted_entries < n
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
-
-        @error "No compatible merge found."
         throw(ErrorException("No compatible merge found."))
     end
 end
@@ -1307,15 +1277,6 @@ function has_direct_root_connection(net::HybridNetwork, node::Node)
         curr = getparents(curr)[1]
     end
     return true
-
-    # Now, there may still have been a major hybrid edge in the path that doesn't lead to leaves
-    # - we want to still return true in this case, so the final check is to see whether `node`
-    # is the only descendant of the final edge that we checked
-    edge = [e for e in curr.edge if curr in e.node && last_node in e.node]
-    length(edge) == 1 || throw(ErrorException("Only expected 1 match."))
-    edge = edge[1]
-
-    return length(getLeavesUnderEdge(edge)) == 1
 end
 
 
@@ -1356,12 +1317,6 @@ function log_edge_path_retics_from_node(
             fromorto = ifelse(getchild(edge) == node, "to", "from")
             
             if !hybedgelogged || edge != hybedge
-                # if edge !== nothing && getchild(edge).name == "H32"
-                #     println("D: $(fromorto) (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-                #     println(newtip == node)
-                #     println(edge in edgesinpath)
-                # end
-
                 trylogretic_single!(reticmap, edge, ifelse(relevanttoi, subnetedgei, subnetedgej), fromorto)
                 if edge == hybedge hybedgelogged = true end
 
@@ -1376,12 +1331,6 @@ function log_edge_path_retics_from_node(
         else
             # Edge *IS* traversed in the path
             if !edgeinpath_logged
-                # if edge !== nothing && getchild(edge).name == "H32"
-                #     println("F: relevanttoi: $(relevanttoi): $(subnetedgei.number) --> $(subnetedgej.number)")
-                #     println(newtip == node)
-                #     println(edge in edgesinpath)
-                # end
-
                 if getchild(edge) == node
                     # edge goes from j --> i
                     logretic!(reticmap, edge, subnetedgej, "from")
@@ -1419,16 +1368,10 @@ function log_edge_path_retics_from_node(
 
         # Now we know the direction of the retic, so let's place them.
         if inpath_from_i_to_j
-            # println("E: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-            # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgej.number) --> $(subnetedgei.number)")
-
             logretic!(reticmap, inpath_edge, subnetedgei, "from")
             trylogretic!(reticmap, inpath_edge, subnetedgej, "to")
             logretic!(reticmap, notinpath_edge, notinpath_subnet, notinpath_direction)
         else
-            # println("F: from (new root num: $(newtip.number)), relevanttoi: $(relevanttoi)")
-            # println("Fully logged $(getchild(inpath_edge).name): $(subnetedgei.number) --> $(subnetedgej.number)")
-            
             logretic!(reticmap, inpath_edge, subnetedgej, "from")
             trylogretic!(reticmap, inpath_edge, subnetedgei, "to")
             logretic!(reticmap, notinpath_edge, notinpath_subnet, notinpath_direction)
