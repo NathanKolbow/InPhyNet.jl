@@ -118,3 +118,24 @@ end
         @test hardwiredClusterDistance(mnet, net, true) <= 3
     end
 end
+
+
+@testset "InPhyNet - root reticulations" begin
+    constraints = [
+        readnewick("(#H1,(((((a)#H1,b),(c,d)),((e,f),(g,h)))));"),
+        readnewick("(((i,j),k),(l,m));")
+    ];
+    try
+        calculateAGID([majortree(c) for c in constraints])
+        @test false
+    catch e
+        @test typeof(e) <: ArgumentError
+    end
+    init_mnet = inphynet(zeros(13, 13), constraints, vcat(tiplabels(constraints[1]), tiplabels(constraints[2])))
+
+    D, namelist = majorinternodecount(bad_mnet)
+    mnet = inphynet(D, constraints, namelist)
+
+    @test hardwiredClusterDistance(mnet, init_mnet, false) == 0
+end
+
