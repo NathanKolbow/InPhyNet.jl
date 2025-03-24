@@ -277,7 +277,7 @@ function check_constraint!(idx::Int64, net::HybridNetwork, autofix::Bool=true; d
             if length(node.edge) != 2
                 if autofix && depth < 5
                     root_constraints!([net])
-                    check_constraint!(idx, net, true, depth=depth+1)
+                    return check_constraint!(idx, net, true, depth=depth+1)
                 else
                     throw(ConstraintError(idx, "Root node must have 2 attached edges (even if net is treated as unrooted - no polytomies allowed)."))
                 end
