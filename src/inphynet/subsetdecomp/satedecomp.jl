@@ -6,7 +6,7 @@ using PhyloNetworks, StatsBase
 Slightly adjusted implementation of the decomposition algorithm from SATe-I that
 takes a maximum *and* a minimum subset size.
 """
-function sateIdecomp(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; metric::Function=internodedistance)
+function centroid_edge_decomposition(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; metric::Function=internodedistance)
     tre0.numhybrids == 0 || throw(ErrorException("tre0 must be tree-like."))
     maxsize >= minsize || throw(ErrorException("maxsize must be >= minsize"))
 
@@ -45,7 +45,6 @@ function sateIdecomp(tre0::HybridNetwork, minsize::Integer, maxsize::Integer; me
 
     return subsets
 end
-centroid_edge_decomposition = sateIdecomp
 
 
 """
