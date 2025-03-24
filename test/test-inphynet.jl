@@ -85,3 +85,19 @@ using InPhyNet
     @test hardwiredclusterdistance(mnet, N, false) == 0
 
 end
+
+
+@testset "InPhyNet - pruned subtrees" begin
+    for m in [5, 10, 25, 50, 100]
+        T = readnewick(joinpath(@__DIR__, "examples", "n250.tre"))
+        T_subsets = centroid_edge_decomposition(T, 5, m)
+        T_constraints = prune_network(T, T_subsets)
+        D, namelist = internodedistance(T)
+        mnet = inphynet(D, T_constraints, namelist)
+        @test hardwiredClusterDistance(T, mnet, false) == 0
+
+        pair_mnet = InPhyNet.inphynet_pairwise(D, T_constraints, namelist)
+        @test hardwiredClusterDistance(T, pair_mnet, false) == 0
+    end
+end
+
