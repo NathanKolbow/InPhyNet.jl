@@ -402,18 +402,6 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap, gammas; copy_retic
 end
 
 
-function namepairsreplace!(namepairs::AbstractVector, newname::String, oldname1::String, oldname2::String)
-    for (_, topair) in namepairs
-        if topair[1] == oldname1 || topair[1] == oldname2
-            topair[1] = newname
-        end
-        if topair[2] == oldname1 || topair[2] == oldname2
-            topair[2] = newname
-        end
-    end
-end
-
-
 """
 
 Updates constraint networks after (i, j) with names (nodenamei, nodenamej) have been
@@ -675,16 +663,11 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
     elseif parentsi == parentsj && (parentsi == getroot(net) || length(getchildren(parentsi)) > 2)
         # this case happens when `net` is unrooted and nodei & nodej are "outgroup" taxa
         # e.g., this case would happen when joining a & b in (a, b, c, d)
-        @debug "b0: ($(nodei.name), $(nodej.name))"
-        @debug "p(j): $(getparent(nodej))"
-        @debug "p(p(j)): $(getparents(getparent(nodej)))"
-        @debug "c(p(j)): $(getchildren(getparent(nodej)))"
         deleteNode!(net, nodej)
         for edge in net.edge
             deleteEdge!(net, edge)
         end
-        # deleteleaf! doesn't work anymore...
-        # deleteleaf!(net, nodej) # yup, this is all we have to do.
+        # deleteleaf!(net, nodej)
     elseif parentsi == parentsj
         @debug "b: ($(nodei.name), $(nodej.name))"
         # 04/25/2024:   (this note is written well after this code was first written)
@@ -776,17 +759,17 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
             else
-                @show net
-                @show nodei
-                @show nodej
-                @show major_mrca(nodei, nodej, getroot(net))
-                @show getroot(net)
+                # @show net
+                # @show nodei
+                # @show nodej
+                # @show major_mrca(nodei, nodej, getroot(net))
+                # @show getroot(net)
 
-                @show getparent(nodei)
-                @show getparent(getparent(nodei))
-                @show getparent(nodej)
-                @show getparent(getparent(nodej))
-                @show getparent(getparent(getparent(nodej)))
+                # @show getparent(nodei)
+                # @show getparent(getparent(nodei))
+                # @show getparent(nodej)
+                # @show getparent(getparent(nodej))
+                # @show getparent(getparent(getparent(nodej)))
 
                 throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
             end
@@ -851,13 +834,6 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "c: ($(nodei.name), $(nodej.name))"
         # println("Before any operations:\n\t$(writenewick(net))")
         graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
-
-        if !isassigned(nodesinpath, 1)
-            println(nodesinpath)
-            println(net)
-            println(nodei)
-            println(nodej)
-        end
 
         # find the node that should be the new tip after merging
         newtip = nodesinpath[1]
@@ -1260,7 +1236,7 @@ These pairs are valid for `net` but may not be valid when the
     other constraint networks are also considered.
 Returns a vector of tuples of nodes corresponding to siblings.
 """
-function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_unrooted::Bool=true, kwargs...)
+function findsiblingpairs(net::HybridNetwork; force_unrooted::Bool=true, kwargs...)
     pairs = BitArray(undef, net.numtaxa, net.numtaxa)
     pairs .= false
 
@@ -1268,78 +1244,30 @@ function findsiblingpairs(net::HybridNetwork; major_tree_only::Bool=true, force_
     # hybedges = Vector{Any}([edge for edge in net.edge if (edge.hybrid && !edge.ismajor)])
     # push!(hybedges, nothing)
     
-    if major_tree_only
-        node_map = Dict(leaf => i for (i, leaf) in enumerate(net.leaf))
+    node_map = Dict(leaf => i for (i, leaf) in enumerate(net.leaf))
 
-        for nodei_idx = 1:net.numtaxa
-            nodei = net.leaf[nodei_idx]
-            if nodei == getroot(net) continue end
-            neighbors = [child for child in getchildren(getparent(nodei)) if child.leaf && !(child == nodei)]
+    for nodei_idx = 1:net.numtaxa
+        nodei = net.leaf[nodei_idx]
+        if nodei == getroot(net) continue end
+        neighbors = [child for child in getchildren(getparent(nodei)) if child.leaf && !(child == nodei)]
 
-            if getparent(nodei) == getroot(net) && force_unrooted
-                for child in getchildren(getparent(nodei))
-                    for child_child in getchildren(child)
-                        if child_child.leaf && !(child_child == nodei)
-                            push!(neighbors, child_child)
-                        end
+        if getparent(nodei) == getroot(net) && force_unrooted
+            for child in getchildren(getparent(nodei))
+                for child_child in getchildren(child)
+                    if child_child.leaf && !(child_child == nodei)
+                        push!(neighbors, child_child)
                     end
                 end
             end
-
-            for neighbor in neighbors
-                idx1 = min(nodei_idx, node_map[neighbor])
-                idx2 = max(nodei_idx, node_map[neighbor])
-                pairs[idx1, idx2] = true
-            end
-        end
-        
-        # Convert pairs to Tuples of Nodes
-        nodepairs = Array{Tuple{Node, Node}}(undef, sum(pairs))
-        for (arr_idx, leaf_idxs) in enumerate(findall(pairs))
-            nodepairs[arr_idx] = (net.leaf[leaf_idxs[1]], net.leaf[leaf_idxs[2]])
         end
 
-        return nodepairs
-    end
-
-    # if major_tree_only
-    #     hybedges = [nothing]
-    # end
-    hybedges = [nothing]
-
-    for hybedge in hybedges
-        graph, W = Graph(net, includeminoredges = false, alwaysinclude = hybedge, withweights = true, minoredgeweight = 1.51)
-        InPhyNet.removeredundantedges!(graph, net, W = W, keeproot = !force_unrooted)
-        
-        for nodei_idx in 1:(net.numtaxa-1)
-            nodei = net.leaf[nodei_idx]
-            idxnodei = findfirst(net.node .== [nodei])
-
-            for nodej_idx in (nodei_idx+1):net.numtaxa
-                nodej = net.leaf[nodej_idx]
-                idxnodej = findfirst(net.node .== [nodej])
-
-                # TODO: make this not A*, A* is so slow...
-                # A* b/c the graph structure gets weird as the algo goes, so simple checks won't do...
-                edgepath = a_star(graph, idxnodei, idxnodej, W)
-                nodesinpath = Array{Node}(undef, length(edgepath)+1)
-                for (i, gedge) in enumerate(edgepath)
-                    srcnode = net.node[gedge.src]
-                    dstnode = net.node[gedge.dst]
-
-                    if i == 1 nodesinpath[1] = net.node[gedge.src] end
-                    nodesinpath[i+1] = dstnode
-                end
-
-                if length(edgepath) <= 2 ||
-                    (length(edgepath) == 3 && any((hybedge in n.edge) for n in nodesinpath))
-                    
-                    pairs[nodei_idx, nodej_idx] = true
-                end
-            end
+        for neighbor in neighbors
+            idx1 = min(nodei_idx, node_map[neighbor])
+            idx2 = max(nodei_idx, node_map[neighbor])
+            pairs[idx1, idx2] = true
         end
     end
-
+    
     # Convert pairs to Tuples of Nodes
     nodepairs = Array{Tuple{Node, Node}}(undef, sum(pairs))
     for (arr_idx, leaf_idxs) in enumerate(findall(pairs))
@@ -1404,77 +1332,6 @@ function vecreplace!(vec::Vector{T}, pattern::T, with::T) where T
 end
 
 
-"""
-A helper function that finds other nodes in the net that `leaf` belongs to that may be its sibling.
-This function sees past reticulations, so that e.g. in ((A,(B,#H1)),((C)#H1,D)) B and C will be
-    marked as siblings.
-"""
-function getsiblingcandidates(leaf::Node)
-    # NOTE: `children` is used in a loose, unrooted sense here to mean a
-    #       node connected to the `parent` by an edge
-
-    # one level up
-    parentnode = getnodes(leaf)[1]
-    children = getnodes(parentnode)
-    followedhyb = repeat([false], length(children))
-    visited = Set{Node}([parentnode])
-    
-    # Pre-process the `children` list so that we can see past reticulations
-    keeplooping = true
-    while keeplooping
-        keeplooping = false
-        for (i, child) in enumerate(children)
-            if child in visited continue end
-            push!(visited, child)
-            nextchildren = getnodes(child)
-
-            # If this case is met, the node `child` is an internal node that defined
-            # a reticulation. In this case, sibling relationships can still exist 1
-            # level deeper, so we iterate one level deeper.
-            ishybrid = [nextchild.hybrid || any([e.hybrid for e in nextchild.edge]) for nextchild in nextchildren]
-            isunvisited = .![nc in visited for nc in nextchildren]
-
-            if child.hybrid || (any(ishybrid) & any(isunvisited))
-                # If one of the children of `child` is a hybrid, then `child` is an internal
-                # node corresponding to a reticulation, and we want to be able to see siblings
-                # through it. So, we replace it with any of its children that are NOT hybrids.
-                # NOT b/c we don't want to follow a potentially large path of reticulations,
-                # we just want to maintain sibling status for taxa that would be siblings if
-                # the network were pruned of its reticulations.
-                keeplooping = true  # go through at least one more time
-                
-                idx = isunvisited
-                if followedhyb[i]
-                    idx .&= .![e.hybrid && !e.ismajor for e in child.edge]
-                end
-
-                for (j, nextchild) in enumerate(nextchildren[idx])
-                    # If we had to cross a reticulation to get to this child,
-                    # then we mark it as visited so that we don't continue
-                    # our search in that direction anymore
-                    if j == 1
-                        children[i] = nextchild
-                        followedhyb[i] = true
-                    else
-                        push!(children, nextchild)
-                        push!(followedhyb, true)
-
-                        if followedhyb[i]
-                            push!(visited, nextchild)
-                        end
-                    end
-                end
-            elseif followedhyb[i]
-                for n in nextchildren
-                    push!(children, n)
-                    push!(visited, n)
-                end
-            end
-        end
-    end
-
-    return children
-end
 
 getnodes(n::Node) = reduce(vcat, [[child for child in e.node if child != n] for e in n.edge], init=Vector{Node}())
 
