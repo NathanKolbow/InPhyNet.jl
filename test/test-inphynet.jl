@@ -98,10 +98,10 @@ end
 
         D, namelist = internodedistance(T)
         mnet = inphynet(D, T_constraints, namelist)
-        @test hardwiredClusterDistance(T, mnet, false) == 0
+        @test hardwiredclusterdistance(T, mnet, false) == 0
 
         pair_mnet = InPhyNet.inphynet_pairwise(D, T_constraints, namelist)
-        @test hardwiredClusterDistance(T, pair_mnet, false) == 0
+        @test hardwiredclusterdistance(T, pair_mnet, false) == 0
     end
 end
 
@@ -115,7 +115,7 @@ end
         D, namelist = majorinternodedistance(net)
         mnet = inphynet(D, constraints, namelist)
         rootatnode!(mnet, "OUTGROUP")
-        @test hardwiredClusterDistance(mnet, net, true) <= 3
+        @test hardwiredclusterdistance(mnet, net, true) <= 3
     end
 end
 
@@ -133,9 +133,9 @@ end
     end
     init_mnet = inphynet(zeros(13, 13), constraints, vcat(tiplabels(constraints[1]), tiplabels(constraints[2])))
 
-    D, namelist = majorinternodecount(bad_mnet)
+    D, namelist = majorinternodecount(init_mnet)
     mnet = inphynet(D, constraints, namelist)
 
-    @test hardwiredClusterDistance(mnet, init_mnet, false) == 0
+    @test hardwiredclusterdistance(mnet, init_mnet, false) == 0
 end
 
