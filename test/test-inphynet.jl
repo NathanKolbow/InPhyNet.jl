@@ -106,4 +106,15 @@ end
 end
 
 
-
+@testset "InPhyNet - n500 networks" begin
+    nets = readmultinewick(joinpath(@__DIR__, "examples", "n500.net"))
+    for net in nets
+        PhyloNetworks.addleaf!(net, getroot(net), "OUTGROUP", 2.0)
+        subsets = centroid_edge_decomposition(majortree(net), 5, 50)
+        constraints = prune_network(net, subsets)
+        D, namelist = majorinternodedistance(net)
+        mnet = inphynet(D, constraints, namelist)
+        rootatnode!(mnet, "OUTGROUP")
+        @test hardwiredClusterDistance(mnet, net, true) <= 3
+    end
+end
