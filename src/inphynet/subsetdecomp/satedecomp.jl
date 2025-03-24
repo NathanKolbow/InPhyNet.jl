@@ -74,44 +74,6 @@ end
 
 
 """
-Performs subset decomposition as outlined in SATe-II on `inittree`.
-"""
-function sateIIdecomp(inittree::HybridNetwork, maxsize::Integer)
-    workingset = Vector{HybridNetwork}([inittree])
-    splittrees = Vector{HybridNetwork}()
-
-    while length(workingset) != 0
-        curr = workingset[1]
-        deleteat!(workingset, 1)
-
-        lbranch = getLongestBranch(curr)
-        split1, split2 = splitAtEdge(curr, lbranch)
-        
-        if split1.numtaxa > maxsize push!(workingset, split1)
-        else push!(splittrees, split1) end
-        
-        if split2.numtaxa > maxsize push!(workingset, split2)
-        else push!(splittrees, split2) end
-    end
-
-    return splittrees
-end
-
-
-"""
-Gets the longest edge in `tre`.
-"""
-function getLongestBranch(tre::HybridNetwork)
-    # Find longest branch
-    lbranch = tre.edge[1]
-    for edge in tre.edge
-        if edge.length > lbranch.length lbranch = edge end
-    end
-    return lbranch
-end
-
-
-"""
 Finds a branch in `tre` that, when pruned on, splits the tree roughly in half.
 """
 function getMidSplitEdge(tre::HybridNetwork)
