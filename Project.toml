@@ -2,23 +2,22 @@ name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 license = "MIT"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
-version = "0.2.4"
+version = "1.0.0"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-GraphIO = "aa1b3936-2fda-51b9-ab35-c553d3a640a2"
 Graphs = "86223c79-3864-5bf0-83f7-82e725a168b6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PhyloNetworks = "33ad39ac-ed31-50eb-9b15-43d0656eaa72"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-StaticArraysCore = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-DataStructures = "0.18.22"
-PhyloNetworks = ">=1"
-Random = "1.11.0"
-Test = "1.11.0"
+DataStructures = "0.18"
+Graphs = "1"
+PhyloNetworks = "1"
+Random = "1"
+Test = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
