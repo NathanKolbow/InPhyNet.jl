@@ -1,3 +1,11 @@
+# SEE THIS PAGE FOR CONDITIONAL LOADING OF CODE, I.E. TO ONLY LOAD THE CODE IN THIS SECTION
+# IF SNAQ IS ALSO LOADED
+# STILL NEED TO WAIT TO IMPLEMENT THIS UNTIL SNAQ.JL IS FULLY RELEASED AND IDEALLY REGISTERED, THOUGH
+#
+# https://pkgdocs.julialang.org/dev/creating-packages/#Conditional-loading-of-code-in-packages-(Extensions)
+
+
+
 # THINGS TO TEST:
 # - all error/warning triggers found below
 # - normal runs
