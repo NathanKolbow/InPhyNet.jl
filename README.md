@@ -1,7 +1,15 @@
 # InPhyNet: Infinitely scalable inference of phylogenetic networks
 
-[![Documentation](https://github.com/NathanKolbow/InPhyNet.jl/actions/workflows/documentation.yml/badge.svg)](https://nathankolbow.github.io/InPhyNet.jl)
-[![codecov](https://codecov.io/gh/NathanKolbow/InPhyNet.jl/graph/badge.svg?token=30WKTJF2QD)](https://codecov.io/gh/NathanKolbow/InPhyNet.jl)
+|**Documentation**| **Code Coverage**   |
+|:---------------:|:----------------:|
+|[![stable][docs-stable-img]][docs-stable-url] | [![coverage][coverage-img]][codecov-url] |
+
+
+[docs-stable-img]: https://img.shields.io/badge/docs-stable-blue.svg
+[docs-stable-url]: https://nathankolbow.github.io/InPhyNet.jl
+[coverage-img]: https://codecov.io/gh/NathanKolbow/InPhyNet.jl/graph/badge.svg?token=30WKTJF2QD
+[codecov-url]: https://codecov.io/gh/NathanKolbow/InPhyNet.jl
+
 
 <!--## Overview-->
 
