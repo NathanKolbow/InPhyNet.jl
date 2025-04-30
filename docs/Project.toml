@@ -2,4 +2,5 @@
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 InPhyNet = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 PhyloNetworks = "33ad39ac-ed31-50eb-9b15-43d0656eaa72"
+RCall = "6f49c342-dc21-5d91-9882-a32aef131414"
 SNaQ = "c2bf7a07-44d2-4d11-b5e2-76dc5aa199d6"
