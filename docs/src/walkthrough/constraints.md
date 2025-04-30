@@ -1,6 +1,6 @@
 # Inferring constraint networks
 
-We infer constraint networks here with [SNaQ](https://github.com/JuliaPhylo/SNaQ.jl), but any applicable method can be used, including [PhyNEST](https://github.com/sungsik-kong/PhyNEST.jl), [PhyloNet](https://phylogenomics.rice.edu/html/phylonetTutorial.html), or [NANUQ (implemented in the MSCquartets R package)](https://www.rdocumentation.org/packages/MSCquartets/versions/2.0.1).
+Constraint networks can be inferred with any method of your choosing, such as [SNaQ](https://github.com/JuliaPhylo/SNaQ.jl), [PhyNEST](https://github.com/sungsik-kong/PhyNEST.jl), [PhyloNet](https://phylogenomics.rice.edu/html/phylonetTutorial.html), or [NANUQ (implemented in the MSCquartets R package)](https://www.rdocumentation.org/packages/MSCquartets/versions/2.0.1). We utilize SNaQ because it is also implemented in Julia, so the workflow can all be contained in a single, straight-forward script.
 
 For each subset, we need to perform the following in order to infer a network with SNaQ:
 1. Prune the estimated gene trees to only include taxa in the subset
