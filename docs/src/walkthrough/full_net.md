@@ -16,7 +16,7 @@ Now, we can use [PhyloPlots.jl](https://github.com/JuliaPhylo/PhyloPlots.jl) to 
 
 ```julia
 using PhyloPlots
-plot(species_network);
+plot(species_net);
 ```
 
 ![Full network](full_net.png)
