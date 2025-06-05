@@ -11,6 +11,6 @@ For this walkthrough, we will use the AGID metric:
 ```julia
 using InPhyNet, PhyloNetworks, SNaQ
 
-est_gts = load_inphynet_example_gts()
+est_gts = load_inphynet_example_gts();
 D, namelist = calculateAGID(est_gts);
 ```
