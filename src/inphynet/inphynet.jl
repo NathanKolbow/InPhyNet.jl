@@ -384,7 +384,7 @@ function placeretics!(net::HybridNetwork, reticmap::ReticMap, gammas; copy_retic
 
         hybnode, hybedge = addhybridedge!(mnet, fromedge, toedge, true)
         getparentedgeminor(hybnode).gamma = gammas[i]
-        getparentedge(hybnode).gamma = 1 - gammas[i]
+        getparentedge(hybnode).gamma = gammas[i] == -1 ? -1 : 1 - gammas[i]
 
         hybnode.name = copy_retic_names ? retic_names[i] : hybnode.name
         mnet.rooti = findfirst([n.name == "root" for n in mnet.node])
