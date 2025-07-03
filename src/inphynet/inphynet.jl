@@ -1102,11 +1102,6 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
     for i = 1:n
         for j = (i+1):n
             if !validpairs[i, j] continue end
-            # TODO: refactor code so that we don't have to re-calculate `D`
-            #       every time and specific entries are instead refactored when changed,
-            #       then this function just receives the already sorted list of qij's
-            #       instead of the matrix `D` itself
-
             qij = (n-2) * D[i,j] - sums[i] - sums[j]
 
             # push!(sorted_values, (qij, (i, j)))
@@ -1137,9 +1132,11 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
             end
         end
 
-        if max_sorted_entries < n
+        if max_sorted_entries < n*(n-1)/2
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
+        @show max_sorted_entries
+        @show n
         throw(ErrorException("No compatible merge found."))
     end
 end
