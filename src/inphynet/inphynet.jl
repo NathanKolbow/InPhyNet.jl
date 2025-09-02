@@ -484,7 +484,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         @debug "a: ($(nodei.name), $(nodej.name))"
 
         # TODO: clean this up, when they're nothing we're assigning them randomly right now
-        for edge in net.edge
+        # Sort edges by object_id for deterministic order
+        sorted_edges = sort(collect(net.edge), by=e->string(objectid(e)))
+        for edge in sorted_edges
             if edge.hybrid && !edge.ismajor
                 try
                     if reticmap.map[getchild(edge)][1] === nothing
@@ -498,7 +500,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
         ################
 
-        for edge in net.edge deleteEdge!(net, edge) end
+        for edge in net.edge deleteEdge!(net, edge; part=false) end
         deleteNode!(net, nodej)
         net.node = [nodei]
         net.edge = []
@@ -533,7 +535,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
         push!(nodes_above_nodei, getroot(net))
         push!(nodes_above_nodej, getroot(net))
-        mrca = intersect(nodes_above_nodei, nodes_above_nodej)[1]
+        # Sort intersection results for deterministic MRCA selection
+        mrca_candidates = intersect(nodes_above_nodei, nodes_above_nodej)
+        mrca = sort(mrca_candidates, by=n->string(objectid(n)))[1]
 
         # Find all retics that come from nodei
         search_node = nodei
@@ -551,7 +555,9 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 end
             end
 
-            for edge in search_node.edge
+            # Sort edges for deterministic iteration
+            sorted_edges = sort(collect(search_node.edge), by=e->string(objectid(e)))
+            for edge in sorted_edges
                 if edge.hybrid # && !edge.ismajor
                     if getchild(edge) == search_node
                         push!(hybedges_i, (edge, "to"))
@@ -564,7 +570,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         search_queue = [search_node] # now search going downwards to find all children
         while length(search_queue) > 0
             search_node = pop!(search_queue)
-            for edge in search_node.edge
+            sorted_edges = sort(collect(search_node.edge), by=e->string(objectid(e)))
+            for edge in sorted_edges
                 if edge.hybrid # && !edge.ismajor
                     if !((edge, "from") in hybedges_i)
                         push!(hybedges_i, (edge, "from"))
@@ -591,7 +598,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 end
             end
 
-            for edge in search_node.edge
+            sorted_edges = sort(collect(search_node.edge), by=e->string(objectid(e)))
+            for edge in sorted_edges
                 if edge.hybrid && !edge.ismajor
                     if getchild(edge) == search_node
                         push!(hybedges_j, (edge, "to"))
@@ -604,7 +612,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         search_queue = [search_node] # now search going downwards to find all children
         while length(search_queue) > 0
             search_node = pop!(search_queue)
-            for edge in search_node.edge
+            sorted_edges = sort(collect(search_node.edge), by=e->string(objectid(e)))
+            for edge in sorted_edges
                 if edge.hybrid && !edge.ismajor
                     if !((edge, "from") in hybedges_j)
                         push!(hybedges_j, (edge, "from"))
@@ -642,7 +651,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         end
 
         #
-        for edge in net.edge deleteEdge!(net, edge) end
+        for edge in net.edge deleteEdge!(net, edge; part=false) end
         deleteNode!(net, nodej)
         net.node = [nodei]
         net.edge = []
@@ -656,7 +665,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # e.g., this case would happen when joining a & b in (a, b, c, d)
         deleteNode!(net, nodej)
         for edge in net.edge
-            deleteEdge!(net, edge)
+            deleteEdge!(net, edge; part=false)
         end
         # deleteleaf!(net, nodej)
     elseif parentsi == parentsj
@@ -670,7 +679,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         
         # 1. remove the edge connecting nodej and its parent
         parent.edge = filter(e -> e != nodej.edge[1], parent.edge)
-        deleteEdge!(net, nodej.edge[1], part=false)
+        deleteEdge!(net, nodej.edge[1]; part=false)
         nodej.edge = []
 
         # 2. remove node j entirely
@@ -689,8 +698,8 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         parent.edge = []
         deleteNode!(net, parent)
         
-        deleteEdge!(net, edge1)
-        deleteEdge!(net, edge2)
+        deleteEdge!(net, edge1; part=false)
+        deleteEdge!(net, edge2; part=false)
         internal.edge = filter(e -> e != edge1 && e != edge2, internal.edge)
         nodei.edge = filter(e -> e != edge1 && e != edge2, nodei.edge)
 
@@ -702,7 +711,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             @debug "cross-root B: ($(nodei.name), $(nodej.name))"
             # tricky case b/c ((a, b), c) all pairs of taxa are valid siblings
             # so keep retics straight is tough
-            throw(ErrorException("Case not implemented yet."))
+            throw(ErrorException("Unknown case E.")) #Case not implemented yet."))
         else
             @debug "cross-root A: ($(nodei.name), $(nodej.name))"
             graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
@@ -734,7 +743,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
                 deleteNode!(net, nodej)
                 e = getparentedge(nodej)
-                deleteEdge!(net, e)
+                deleteEdge!(net, e; part=false)
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
             elseif has_direct_root_connection(net, nodei)
                 nodei_name = nodei.name
@@ -743,10 +752,60 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
                 deleteNode!(net, nodei)
                 e = getparentedge(nodei)
-                deleteEdge!(net, e)
+                deleteEdge!(net, e; part=false)
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
             else
+                # @info has_direct_root_connection(net, nodei)
+                # @info has_direct_root_connection(net, nodej)
+                # @info getroot(net).number
+
+                # p1 = getparent(nodei)
+                # p2 = getparent(getparent(nodei))
+                # p3 = getparent(getparent(getparent(nodei)))
+                # println("-------------------------------------------")
+                # @info getchildren(nodei)
+                # @info getparent(nodei)
+                # @info getchildren(getparent(nodei))
+                # @info getparent(getparent(nodei))
+                # @info getchildren(getparent(getparent(nodei)))
+                # @info getparent(getparent(getparent(nodei)))
+                # @info getchildren(getparent(getparent(getparent(nodei))))
+                # println("-------------------------------------------")
+                # @info [
+                #     nodei.name,
+                #     (p1.number, p1.name),
+                #     (p2.number, p2.name),
+                #     (p3.number, p3.name)
+                # ]
+                # @info [
+                #     [(c.number, c.name) for c in getchildren(p1)],
+                #     [(c.number, c.name) for c in getchildren(p2)],
+                #     [(c.number, c.name) for c in getchildren(p3)]
+                # ]
+                # @info getchildren(getchildren(p2)[1])
+                
+                # p1 = getparent(nodej)
+                # p2 = getparent(getparent(nodej))
+                # p3 = getparent(getparent(getparent(nodej)))
+                # p4 = getparent(getparent(getparent(getparent(nodej))))
+                # p5 = getparent(getparent(getparent(getparent(getparent(nodej)))))
+                # @info [
+                #     nodej.name,
+                #     (p1.number, p1.name),
+                #     (p2.number, p2.name),
+                #     (p3.number, p3.name),
+                #     (p4.number, p4.name),
+                #     (p5.number, p5.name)
+                # ]
+                # @info [
+                #     [(c.number, c.name) for c in getchildren(p1)],
+                #     [(c.number, c.name) for c in getchildren(p2)],
+                #     [(c.number, c.name) for c in getchildren(p3)],
+                #     [(c.number, c.name) for c in getchildren(p4)],
+                #     [(c.number, c.name) for c in getchildren(p5)]
+                # ]
+
                 throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
             end
 
@@ -768,7 +827,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 
                 getparent(curr).edge = filter(e -> e != getparentedge(curr), getparent(curr).edge)
                 deleteNode!(net, curr)
-                deleteEdge!(net, getparentedge(curr))
+                deleteEdge!(net, getparentedge(curr); part=false)
                 curr = next_curr
             end
 
@@ -786,10 +845,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
 
                     # Changing an edge's node list to only have 1 node causes errors, so replace w/ a placeholder
                     if hyb_edge.node[1] in nodesinpath
-                        hyb_edge.node[1] = PhyloNetworks.Node(abs(rand(Int64)), false, false)
+                        hyb_edge.node[1] = PhyloNetworks.Node(hyb_edge.node[1].number, false, false)
                     end
                     if hyb_edge.node[2] in nodesinpath
-                        hyb_edge.node[2] = PhyloNetworks.Node(abs(rand(Int64)), false, false)
+                        hyb_edge.node[2] = PhyloNetworks.Node(hyb_edge.node[2].number, false, false)
                     end
                 end
             end
@@ -942,7 +1001,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             deleteNode!(net, node)
         end
         for edge in edgesinpath
-            deleteEdge!(net, edge)
+            deleteEdge!(net, edge; part=false)
             for node in edge.node
                 node.edge = filter(e -> e != edge, node.edge)
             end
@@ -1255,14 +1314,30 @@ function has_direct_root_connection(net::HybridNetwork, node::Node)
     last_node = nothing
 
     while true
-        if curr == getroot(net) break end
+        if curr == getroot(net) return true end
         if length(getparents(curr)) > 1 return false end
         
         children = getchildren(curr)
         for child in children
             if child != curr && child.hybrid
                 try
-                    if curr == getparent(getparentedge(child)) return false end
+                    if length(getchildren(child)) == 2
+                        othernode = getchildren(child)[1]
+                        if getchildren(child)[1] == last_node
+                            othernode = getchildren(child)[2]
+                        end
+                        if !othernode.hybrid || length(getparent(othernode)) > 1
+                            return false
+                        end
+                    elseif child != last_node && getchild(child) != last_node
+                        return false
+                    end
+                    # if length(getchildren(child)) > 0
+                    #     if getchildren(child)[1] != last_node
+                    #         return false
+                    #     end
+                    # end
+#                    if curr == getparent(getparentedge(child)) return false end
                 catch
                 end
             end
