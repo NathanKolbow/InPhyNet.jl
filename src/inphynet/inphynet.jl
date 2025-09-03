@@ -47,12 +47,14 @@ function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridN
     try
         return inphynet!(deepcopy(D), Vector{HybridNetwork}([readnewick(writenewick(c)) for c in constraints]), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
     catch e
-        if (typeof(e) <: ErrorException && string(e) == "ErrorException(\"No compatible merge found.\")") || typeof(e) <: SolutionDNEError
-            return inphynet_pairwise(D, constraints, namelist)
-        else
-            # We don't know what this error is, re-throw it.
-            rethrow(e)
-        end
+        return inphynet_pairwise(D, constraints, namelist)
+
+        # if (typeof(e) <: ErrorException && string(e) == "ErrorException(\"No compatible merge found.\")") || typeof(e) <: SolutionDNEError
+        #     return inphynet_pairwise(D, constraints, namelist)
+        # else
+        #     # We don't know what this error is, re-throw it.
+        #     rethrow(e)
+        # end
     end
 end
 inphynet(D::AbstractMatrix{<:Real}, namelist::AbstractVector{<:AbstractString}; kwargs...) =
