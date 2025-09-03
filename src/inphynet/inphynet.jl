@@ -1176,7 +1176,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
     end
 
     if length(sorted_values) == 0
-        if max_sorted_entries < n
+        if max_sorted_entries < n*(n-1)/2
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
         throw(SolutionDNEError())
