@@ -15,7 +15,6 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
     end
 
     for i = 1:(length(constraints) - 1)
-        # TODO: do in order of most similar subsets
         @debug "\n\n----------------------------\n\n"
         constraints = constraints[sortperm([c.numtaxa for c in constraints])]
 
@@ -48,11 +47,11 @@ function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridN
     try
         return inphynet!(deepcopy(D), Vector{HybridNetwork}([readnewick(writenewick(c)) for c in constraints]), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
     catch e
-        if !(typeof(e) <: ErrorException) || string(e) != "ErrorException(\"No compatible merge found.\")"
+        if (typeof(e) <: ErrorException && string(e) == "ErrorException(\"No compatible merge found.\")") || typeof(e) <: SolutionDNEError
+            return inphynet_pairwise(D, constraints, namelist)
+        else
             # We don't know what this error is, re-throw it.
             rethrow(e)
-        else
-            return inphynet_pairwise(D, constraints, namelist)
         end
     end
 end
@@ -61,12 +60,6 @@ inphynet(D::AbstractMatrix{<:Real}, namelist::AbstractVector{<:AbstractString}; 
 
 
 function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, kwargs...)
-    # TODO: re-implement `netnj` with heuristic checking in a manner such that undoing steps is relatively easy
-    #       to do so, a lot of the code in the `netnj` body should be compartmentalized - this function, on its
-    #       own, should probably around 10-40 lines of code
-    # TODO: keep track of pairs of siblings through the algo instead of re-doing work each time - this is something
-    #       that should have to be done once and should be very easy to keep track of afterwards
-
     @debug "Entering inphynet!"
     orig_namelist = deepcopy(namelist)
     orig_constraints = deepcopy(constraints)
@@ -1152,6 +1145,7 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
     #                     evaluate every `qij`, just the smallest 1 or 2
     global TIEWARNING
 
+    any(validpairs) || throw(SolutionDNEError())
     n = size(D)[1]
     sums = sum(D, dims=1)
     sorted_values = SortedSet{Tuple{Float64, Tuple{Int64, Int64}}}()
@@ -1179,6 +1173,8 @@ function findoptQidx(D::AbstractMatrix{Float64}, validpairs::BitArray, compat_tr
         if max_sorted_entries < n*(n-1)/2
             return findoptQidx(D, validpairs, compat_trees, max_sorted_entries=2*max_sorted_entries, namelist=namelist, use_heuristic=use_heuristic)
         end
+        @info D
+        @info validpairs
         throw(SolutionDNEError())
     end
 
