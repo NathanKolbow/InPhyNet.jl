@@ -2,7 +2,7 @@ name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 license = "MIT"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
-version = "1.0.4"
+version = "1.0.5"
 
 [deps]
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"

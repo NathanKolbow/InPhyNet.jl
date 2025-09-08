@@ -40,8 +40,10 @@ function trylogretic!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String
         end
     end
 end
-trylogretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String) =
+function trylogretic!(r::ReticMap, hyb_edge::Edge, subnetedge::Edge, fromorto::String)
+    if !haskey(r.edge_map, hyb_edge) return end
     trylogretic!(r, r.edge_map[hyb_edge], subnetedge, fromorto)
+end
 
 function trylogretic_single!(r::ReticMap, hyb::Node, subnetedge::Edge, fromorto::String)
     try
