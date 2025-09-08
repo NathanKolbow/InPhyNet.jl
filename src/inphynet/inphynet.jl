@@ -710,6 +710,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         else
             @debug "cross-root A: ($(nodei.name), $(nodej.name))"
             graph, W, nodesinpath, edgesinpath = find_valid_node_path(net, nodei, nodej)
+            @debug net
 
             if any(i -> !isassigned(nodesinpath, i), 1:length(nodesinpath))
                 throw(ErrorException("Runtime error: no path exists connecting $(nodei.name) and $(nodej.name)"))
@@ -718,7 +719,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             # Log retics
             relevanttoi = true
             logged_edgeinpath = false
+            @debug "--------------------------"
+            @debug nodesinpath
             for (node_idx, node) in enumerate(nodesinpath)
+                @debug "> $(node)"
                 logged_edgeinpath = log_edge_path_retics_from_node(
                     node, edgesinpath, relevanttoi, false, nothing,
                     reticmap, subnetedgei, subnetedgej,
@@ -1401,12 +1405,12 @@ function log_edge_path_retics_from_node(
             if !edgeinpath_logged
                 if getchild(edge) == node
                     # edge goes from j --> i
-                    logretic!(reticmap, edge, subnetedgej, "from")
-                    logretic!(reticmap, edge, subnetedgei, "to")
+                    trylogretic!(reticmap, edge, subnetedgej, "from")
+                    trylogretic!(reticmap, edge, subnetedgei, "to")
                 else
                     # edge goes from i --> j
-                    logretic!(reticmap, edge, subnetedgei, "from")
-                    logretic!(reticmap, edge, subnetedgej, "to")
+                    trylogretic!(reticmap, edge, subnetedgei, "from")
+                    trylogretic!(reticmap, edge, subnetedgej, "to")
                 end
 
                 edgeinpath_logged = true
