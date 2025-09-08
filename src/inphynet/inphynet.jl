@@ -506,6 +506,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         nodei.edge = []
     elseif length(net.leaf) == 2
         @debug "e: ($(nodei.name), $(nodej.name))"
+        @debug net
 
         # Some retics may still exist in the net, but only 2 leaves are left, so clean up
         nodes_above_nodei = []
@@ -520,7 +521,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
             end
         end
         search_node = nodej
-        while search_node != getroot(net)
+        while search_node != getroot(net) && length(getparents(search_node)) > 0
             push!(nodes_above_nodej, search_node)
             try
                 search_node = getparent(getparentedge(search_node))
@@ -532,14 +533,17 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         push!(nodes_above_nodej, getroot(net))
         # Sort intersection results for deterministic MRCA selection
         mrca_candidates = intersect(nodes_above_nodei, nodes_above_nodej)
-        mrca = sort(mrca_candidates, by=n->string(objectid(n)))[1]
+        mrca = nothing
+        if length(mrca_candidates) > 0
+            sort(mrca_candidates, by=n->string(objectid(n)))[1]
+        end
 
         # Find all retics that come from nodei
         search_node = nodei
         hybedges_i = []
         hybedges_j = []
         # while !(mrca in getparents(search_node))
-        while search_node != mrca
+        while search_node != mrca && length(getparents(search_node)) > 0
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
@@ -582,7 +586,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
         # Find all retics that come from nodej
         search_node = nodej
         # while !(mrca in getparents(search_node))
-        while search_node != mrca
+        while search_node != mrca && length(getparents(search_node)) > 0
             if length(getparents(search_node)) != 1
                 search_node = getparent(getparentedge(search_node))
             else
