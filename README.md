@@ -1,5 +1,7 @@
 # InPhyNet: Infinitely scalable inference of phylogenetic networks
 
+<img src="https://nathankolbow.github.io/InPhyNet.jl/stable/assets/logo.png" width=150 height=150 align=right>
+
 |**Documentation**| **Code Coverage**   |
 |:---------------:|:----------------:|
 |[![stable][docs-stable-img]][docs-stable-url] | [![coverage][coverage-img]][codecov-url] |
@@ -14,4 +16,5 @@
 <!--## Overview-->
 
 InPhyNet is a method for merging level-1 phylogenetic networks into a single, combined network. For more information and a walkthrough with real data, [see the documentation](https://nathankolbow.github.io/InPhyNet.jl).
+
 
