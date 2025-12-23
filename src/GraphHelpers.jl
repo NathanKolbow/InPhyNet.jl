@@ -13,7 +13,7 @@ implemented pathfinding algorithms.
 - removeredundantedgecost (default=false): if true, finds all the nodes that would be removed via
       `removeredundantedges!` and sets their weights in `W` to 0
 """
-function Graph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1., removeredundantedgecost::Bool=false)
+function buildgraph(net::HybridNetwork; includeminoredges::Bool=true, alwaysinclude::Union{Edge,Nothing}=nothing, withweights::Bool=false, minoredgeweight::Float64=1., removeredundantedgecost::Bool=false)
     graph = SimpleGraph(net.numnodes)
     weights = Matrix{Float64}(undef, net.numnodes, net.numnodes)
     weights .= Inf
@@ -72,7 +72,7 @@ function find_valid_node_path(net::HybridNetwork, nodei::Node, nodej::Node)
         minor_edge_weight += 0.50
 
         # find shortest path from `nodei` to `nodej`
-        graph, W = Graph(net, includeminoredges=true, withweights=true, minoredgeweight=minor_edge_weight, removeredundantedgecost=true)
+        graph, W = buildgraph(net, includeminoredges=true, withweights=true, minoredgeweight=minor_edge_weight, removeredundantedgecost=true)
 
         idxnodei = findfirst(net.node .== [nodei])
         idxnodej = findfirst(net.node .== [nodej])
