@@ -5,13 +5,25 @@
 
 
 
-function inphynet_pairwise(D, constraints, namelist; kwargs...)
+"""
+Runs the "pairwise" version of the InPhyNet algorithm, with the following steps:
+
+1. Instead of merging all constraints simultaneously, merge `constraints[1]` and `constraints[2]` into a new intermediate network `Nhat12` (using the portions of `D` and `namelist` that pertain only to these constraints).
+2. Remove `constraints[1]` and `constraints[2]` from the list of constraints.
+3. Add `Nhat12` to the list of constraints.
+4. Repeat until `constraints` has only 1 network remaining: this network is the final inferred network.
+
+This algorithm will never fail and is used as a fallback for when the main InPhyNet algorithm fails in its first round.
+
+For details on the method's arguments, see [`inphynet`](@ref) (the arguments are identical).
+"""
+function inphynetpairwise(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool=true; kwargs...)
     D = deepcopy(D)
     constraints = deepcopy(constraints)
     namelist = deepcopy(namelist)
 
     if length(constraints) == 1
-        return inphynet!(D, constraints, namelist)
+        return inphynet!(D, constraints, namelist, use_heuristic=use_heuristic; kwargs...)
     end
 
     for i = 1:(length(constraints) - 1)
@@ -29,7 +41,7 @@ function inphynet_pairwise(D, constraints, namelist; kwargs...)
         @debug "--------------------------------------------------"
         @debug "1: $(cs[1].numtaxa), $(cs[1].numhybrids): $(writenewick(cs[1]))"
         @debug "2: $(cs[2].numtaxa), $(cs[2].numhybrids): $(writenewick(cs[2]))"
-        temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter))
+        temp = inphynet!(deepcopy(view(D, idxfilter, idxfilter)), deepcopy(cs), view(namelist, idxfilter), use_heuristic=use_heuristic; kwargs...)
         deleteat!(constraints, 2)
         deleteat!(constraints, 1)
         push!(constraints, temp)
@@ -42,13 +54,17 @@ end
 """
 Runs the InPhyNet algorithm on the given distance matrix and constraint networks
 where the entries in `namelist` correspond to indices in `D`.
+
+### Arguments
+- `use_heuristic::Bool` (default=true): whether or not InPhyNet should use a heuristic to determine whether a given merge will result in a future conflict. Setting this value to `false` will sharply improve runtimes but will almost always lead to algorithm failure due to merging conflicts if the input data are not very close to ground truth (even with the pairwise fallback algorithm [`inphynetpairwise`](@ref)).
+- `refuse_pairwise::Bool` (default=false): whether InPhyNet should refuse to run the pairwise fallback algorithm [`inphynetpairwise`](@ref) if the main algorithm fails. Can lead to algorithm failure if set to `true` - only change if you know what you're doing.
 """
-function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true, refuse_pairwise::Bool = false; kwargs...)
+function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}; use_heuristic::Bool = true, refuse_pairwise::Bool = false, kwargs...)
     try
         return inphynet!(deepcopy(D), Vector{HybridNetwork}([readnewick(writenewick(c)) for c in constraints]), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
     catch e
         refuse_pairwise && rethrow(e)
-        return inphynet_pairwise(D, constraints, namelist)
+        return inphynetpairwise(D, constraints, namelist, use_heuristic; kwargs...)
     end
 end
 inphynet(D::AbstractMatrix{<:Real}, namelist::AbstractVector{<:AbstractString}; kwargs...) =
