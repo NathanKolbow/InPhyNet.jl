@@ -21,6 +21,9 @@ makedocs(
             "Inferring constraint networks" => "walkthrough/constraints.md",
             "Constructing the full network" => "walkthrough/full_net.md"
         ],
+        "Advanced" => [
+            "Pairwise InPhyNet" => "advanced/pairwise-usage.md"
+        ],
         # "Simulation Results" => [
         #     "Runtime evaluations" => "intro/runtimes.md",
         #     "Accuracy evaluations" => "intro/accuracies.md"
