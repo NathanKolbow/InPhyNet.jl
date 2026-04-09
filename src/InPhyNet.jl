@@ -29,6 +29,7 @@ module InPhyNet
         SolutionDNEError, ConstraintError,
         are_compatible_after_merge,
         # DOCS WALKTHROUGH DATA LOADING FXNS
-        load_inphynet_example_gts
+        load_inphynet_example_gts,
+        loadconflictexample
 
 end
