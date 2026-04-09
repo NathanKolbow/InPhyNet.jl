@@ -43,18 +43,12 @@ end
 Runs the InPhyNet algorithm on the given distance matrix and constraint networks
 where the entries in `namelist` correspond to indices in `D`.
 """
-function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true; kwargs...)
+function inphynet(D::AbstractMatrix{<:Real}, constraints::AbstractVector{HybridNetwork}, namelist::AbstractVector{<:AbstractString}, use_heuristic::Bool = true, refuse_pairwise::Bool = false; kwargs...)
     try
         return inphynet!(deepcopy(D), Vector{HybridNetwork}([readnewick(writenewick(c)) for c in constraints]), deepcopy(namelist); use_heuristic=use_heuristic, kwargs...)
     catch e
+        refuse_pairwise && rethrow(e)
         return inphynet_pairwise(D, constraints, namelist)
-
-        # if (typeof(e) <: ErrorException && string(e) == "ErrorException(\"No compatible merge found.\")") || typeof(e) <: SolutionDNEError
-        #     return inphynet_pairwise(D, constraints, namelist)
-        # else
-        #     # We don't know what this error is, re-throw it.
-        #     rethrow(e)
-        # end
     end
 end
 inphynet(D::AbstractMatrix{<:Real}, namelist::AbstractVector{<:AbstractString}; kwargs...) =
@@ -77,7 +71,6 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
     rootretics, rootreticprocessed = setup_root_retics(constraints; kwargs...)
     compatibility_trees = [majortree(c) for c in constraints]
     constraint_sibling_pairs = [findsiblingpairs(c; kwargs...) for c in compatibility_trees]
-    
     # Main iterative loop
     while n > 1
         start_time = time_ns()
@@ -104,7 +97,6 @@ function inphynet!(D::AbstractMatrix{<:Real}, constraints::AbstractVector{Hybrid
         subnets = subnets[idxfilter]
         namelist = namelist[idxfilter]
         n -= 1
-
 
         time_elapsed = round((time_ns() - start_time) / 1e9, digits=2)
         @debug "Iteration $(n) took $(time_elapsed)s"
@@ -758,7 +750,10 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 deleteEdge!(net, e; part=false)
                 for node in e.node node.edge = filter(node_edge -> node_edge != e, node.edge) end
                 nodej.name = nodei_name
-            else
+            else #if any(ch -> ch.hybrid && has_direct_root_connection(net, ch), getchildren(getparent(nodei)))
+                # `nodei` is on the root side and has a direct root connection except for a hybrid edge that is in the way
+
+
                 # @info has_direct_root_connection(net, nodei)
                 # @info has_direct_root_connection(net, nodej)
                 # @info getroot(net).number
@@ -809,7 +804,7 @@ function mergeconstraintnodes!(net::HybridNetwork, nodei::Node, nodej::Node, ret
                 #     [(c.number, c.name) for c in getchildren(p5)]
                 # ]
 
-                throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case."))
+                throw(ErrorException("Expected at least one of the node's parents to be the root. Unknown case. Please submit your data as a GitHub issue at https://github.com/NathanKolbow/InPhyNet.jl/issues."))
             end
 
 
