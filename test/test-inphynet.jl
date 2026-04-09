@@ -100,7 +100,7 @@ end
         mnet = inphynet(D, T_constraints, namelist)
         @test hardwiredclusterdistance(T, mnet, false) == 0
 
-        pair_mnet = InPhyNet.inphynet_pairwise(D, T_constraints, namelist)
+        pair_mnet = InPhyNet.inphynetpairwise(D, T_constraints, namelist)
         @test hardwiredclusterdistance(T, pair_mnet, false) == 0
     end
 end
