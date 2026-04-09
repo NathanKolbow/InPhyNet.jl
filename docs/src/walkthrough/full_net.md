@@ -1,4 +1,4 @@
-# Constructing the full network
+# [Constructing the full network](@id walkthrough_full_net)
 
 Finally, putting the full network together with InPhyNet is simple:
 
