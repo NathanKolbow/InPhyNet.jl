@@ -30,6 +30,6 @@ module InPhyNet
         are_compatible_after_merge,
         # DOCS WALKTHROUGH DATA LOADING FXNS
         load_inphynet_example_gts,
-        loadconflictexample
+        loadconflictexample, loadworkedexample
 
 end
