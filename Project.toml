@@ -1,7 +1,7 @@
 name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 license = "MIT"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
 
 [deps]
