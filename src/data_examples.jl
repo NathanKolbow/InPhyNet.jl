@@ -27,11 +27,11 @@ function loadconflictexample()::Nothing
     Core.eval(Main, :(constraints = $constraints))
     Core.eval(Main, :(namelist = $namelist))
 
-    printstyled("\n\tExample data has been loaded into the variables `D`, `namelist`, and `constraints`. To see the conflict, paste the following into the terminal:\n\n", color=:black)
+    printstyled("\n\tExample data has been loaded into the variables `D`, `namelist`, and `constraints`. To see the conflict, paste the following into the terminal:\n\n", color=:white)
     printstyled("\t\tinphynet(D, constraints, namelist; refuse_pairwise=true)", color=:cyan)
-    printstyled("\n\n\tThis will throw an error stating \"No compatible merge found.\" To use the pairwise version of InPhyNet as a fallback, run the `inphynet` function as usual:\n\n", color=:black)
+    printstyled("\n\n\tThis will throw an error stating \"No compatible merge found.\" To use the pairwise version of InPhyNet as a fallback, run the `inphynet` function as usual:\n\n", color=:white)
     printstyled("\t\tinphynet(D, constraints, namelist)", color=:cyan)
-    printstyled("\n", color=:black)
+    printstyled("\n", color=:white)
     return nothing
 end
 
@@ -54,8 +54,8 @@ function loadworkedexample()::Nothing
     Core.eval(Main, :(constraints = $constraints))
     Core.eval(Main, :(namelist = $namelist))
 
-    printstyled("\n\tExample data has been loaded into the variables `D`, `namelist`, and `constraints`. To see the result of the worked example, paste the following into your terminal:\n\n", color=:black)
+    printstyled("\n\tExample data has been loaded into the variables `D`, `namelist`, and `constraints`. To see the result of the worked example, paste the following into your terminal:\n\n", color=:white)
     printstyled("\t\tinphynet(D, constraints, namelist)", color=:cyan)
-    printstyled("\n", color=:black)
+    printstyled("\n", color=:white)
     return nothing
 end
