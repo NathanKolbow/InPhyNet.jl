@@ -172,7 +172,6 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
         for removeidx in reverse(sort(matching_taxa[2:end]))
             deleteat!(namelist, removeidx)
         end
-        @info "$(namelist[i]) => $(species_map[namelist[i]])"
         namelist[i] = species_map[namelist[i]]
         Didxs = setdiff(axes(D, 1), matching_taxa[2:end])
         D = Matrix{Float64}(D[Didxs, Didxs])
