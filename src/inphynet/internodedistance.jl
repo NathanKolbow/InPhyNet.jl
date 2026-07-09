@@ -159,11 +159,12 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
         # erase `matching_taxa[2:]` from `D` and `namelist`
         other_taxa = setdiff(1:length(namelist), matching_taxa)
         i = matching_taxa[1]
+        @info "New"
         for j in other_taxa
             Dis = [D[ii, j] for ii in matching_taxa];
             nis = [pair_appearance_count[ii, j] for ii in matching_taxa];
 
-            D[i, j] = sum(ni * Di for (ni, Di) in zip(nis, Dis)) / sum(nis)
+            D[i, j] = sum(Dis)
             pair_appearance_count[i, j] = sum(nis)
 
             D[j, i] = D[i, j]
