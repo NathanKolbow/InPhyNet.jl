@@ -113,7 +113,8 @@ function calculate_average_network_metric(Ns::AbstractVector{HybridNetwork}, pai
         union!(all_names, tiplabels(net))
     end
     n = length(all_names)
-    namelist = Vector{String}(sort(collect(all_names)))
+    all_names = collect(all_names)
+    namelist = Vector{String}(sort(all_names))
 
     # Species name mapping
     # We don't use it right away but we do error checking right away so that
