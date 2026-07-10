@@ -206,6 +206,16 @@ function check_inphynet_parameters(D::AbstractMatrix{<:Real}, constraints::Abstr
         throw(ArgumentError("`namelist` has length $(length(namelist)) but `D` has size ($(size(D, 1)), $(size(D,2)))."))
     end
 
+    uqtips = unique(reduce(vcat, tiplabels.(constraints)))
+    if length(intersect(uqtips, namelist)) != length(uqtips)
+        badtips = symdiff(intersect(uqtips, namelist), uqtips)
+        throw(ArgumentError("The following taxa appear in the input networks but are not in the provided namelist (and thus are not in the pairwise distance matrix): $(badtips)"))
+    end
+    if length(intersect(uqtips, namelist)) != length(namelist)
+        missingtips = symdiff(namelist, intersect(uqtips, namelist))
+        @warn "$(length(missingtips)) were found in the provided namelist that do not appear in any input networks."
+    end
+
     if length(unique(namelist)) != length(namelist)
         throw(ArgumentError("Namelist contains non-unique names."))
     end

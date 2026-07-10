@@ -28,6 +28,25 @@ gt3 = readnewick("(E:1,F:1):1;")
     @test D[2, 4] == 6
 end
 
+@testset "AGID - species map" begin
+    gts = [
+        readnewick("((A1:1,B:1):1,(C:1,A2:1):1);"),
+        readnewick("((A2:2,B:2):1,(C:2,A1:2):1);")
+    ]
+    taxonmap = Dict(
+        "A1" => "A",
+        "A2" => "A",
+        "B" => "B",
+        "C" => "C"
+    )
+    D, namelist = calculateAGID(gts, species_map=taxonmap)
+
+    @test length(namelist) == 3
+    @test size(D) == (3, 3)
+    @test D[1, 2] == (2 + 4 + 4 + 6) / 4
+    @test D[1, 3] == (4 + 2 + 4 + 6) / 4
+end
+
 @testset "AGID - missing pairs" begin
     D, namelist = calculateAGID([gt1, gt3], allow_missing_pairs=true, default_missing_value=Inf)
     @test all(j -> namelist[j] == ["A", "B", "C", "D", "E", "F"][j], 1:length(namelist))
