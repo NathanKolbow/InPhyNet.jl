@@ -38,8 +38,8 @@ plot(tob)
 
 When using TINNIK, it is important to explore multiple values of $\alpha$ and $\beta$ before assessing any results. Fortunately, evaluating subsequent values for $\alpha$ and $\beta$ is very fast because we can re-use data from the original analysis.
 
->[!NOTE]
-More information on $\alpha$ and $\beta$ parameters, including best practices recommended by the authors of TINNIK, can be found in [this TINNIK vignette](https://cran.r-project.org/web/packages/MSCquartets/vignettes/TINNIK.html), which we highly recommend reading before using TINNIK.
+!!! note
+	More information on $\alpha$ and $\beta$ parameters, including best practices recommended by the authors of TINNIK, can be found in [this TINNIK vignette](https://cran.r-project.org/web/packages/MSCquartets/vignettes/TINNIK.html), which we highly recommend reading before using TINNIK.
 
 ```R
 results2 <- TINNIK(results$pTable, alpha=0.01, beta=0.99, plot=FALSE)
@@ -58,7 +58,7 @@ From these results, we would ideally split these taxa three subsets:
 
 For this walkthrough, such subsets would lead to very long inference times, so we will forgo this step and instead utilize the subsets generated above.
 
->[!NOTE]
-In practice, if such subsets are too large to be feasible with your preferred method of network inference, then concessions must be made in some manner, likely either by splitting these blocks into smaller subsets or by utilizing a faster but less accurate method of network inference.
+!!! note
+	In practice, if such subsets are too large to be feasible with your preferred method of network inference, then concessions must be made in some manner, likely either by splitting these blocks into smaller subsets or by utilizing a faster but less accurate method of network inference.
 
 

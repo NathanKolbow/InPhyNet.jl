@@ -10,6 +10,6 @@ To install `InPhyNet`, simply open an interactive Julia session and type the fol
 
 ```julia
 using Pkg
-Pkg.add("https://github.com/NathanKolbow/InPhyNet.jl")
+Pkg.add("InPhynet.jl")
 ```
 

@@ -7,8 +7,8 @@ For each subset, we need to perform the following in order to infer a network wi
 2. Generate SNaQ's input data
 3. Run SNaQ
 
->[!NOTE]
-When using SNaQ, it is best practice to (1) set the `runs` parameter to a large value (at least 10) and (2) infer networks with numbers of hybrids $h=0,1,2,3,...$ before performing model selection to determine the "best" network. For simplicity, here we only perform 1 run for each inferred network and we only infer networks with $h=1$.
+!!! note
+    When using SNaQ, it is best practice to (1) set the `runs` parameter to a large value (at least 10) and (2) infer networks with numbers of hybrids $h=0,1,2,3,...$ before performing model selection to determine the "best" network. For simplicity, here we only perform 1 run for each inferred network and we only infer networks with $h=1$.
 
 ```julia
 # First, make a folder to put the data in
