@@ -13,8 +13,8 @@ using Pkg
 Pkg.add("InPhyNet")
 ```
 
-The walkthrough also uses [SNaQ.jl](https://github.com/JuliaPhylo/SNaQ.jl) to infer the constraint networks and [PhyloPlots.jl](https://github.com/JuliaPhylo/PhyloPlots.jl) to plot the final network. To follow along, install them as well:
+The walkthrough also uses [SNaQ.jl](https://github.com/JuliaPhylo/SNaQ.jl) to infer the constraint networks, [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl) to build the guide tree, and [PhyloPlots.jl](https://github.com/JuliaPhylo/PhyloPlots.jl) to plot the final network. To follow along, install them as well:
 
 ```julia
-Pkg.add(["SNaQ", "PhyloPlots"])
+Pkg.add(["SNaQ", "DataFrames", "PhyloPlots"])
 ```
