@@ -28,10 +28,6 @@ makedocs(
         "Advanced" => [
             "Pairwise InPhyNet" => "advanced/pairwise-usage.md"
         ],
-        # "Simulation Results" => [
-        #     "Runtime evaluations" => "intro/runtimes.md",
-        #     "Accuracy evaluations" => "intro/accuracies.md"
-        # ],
         "Documentation" => "documentation.md"
     ]
 )
