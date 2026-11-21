@@ -10,13 +10,12 @@ InPhyNet enables the inference of large-scale phylogenetic networks that would o
 ### [Citation](@id citation)
 
 ```tex
-@article{
-    Kolbow_InPhyNet_2025,
-    title = {A method for massively scalable phylogenetic network inference},
-    url = {https://www.biorxiv.org/content/10.1101/2025.05.05.652278v1},
-    author = {Nathan Kolbow, Sungsik Kong and Claudia Solís-Lemus},
+@article{Kolbow_InPhyNet_2025,
+    title   = {A method for massively scalable phylogenetic network inference},
+    author  = {Kolbow, Nathan and Kong, Sungsik and Sol{\'i}s-Lemus, Claudia},
     journal = {bioRxiv},
-    url = {https://www.biorxiv.org/content/10.1101/2025.05.05.652278},
-    doi = {10.1101/2025.05.05.652278}
+    year    = {2025},
+    doi     = {10.1101/2025.05.05.652278},
+    url     = {https://www.biorxiv.org/content/10.1101/2025.05.05.652278}
 }
 ```

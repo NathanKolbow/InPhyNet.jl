@@ -13,7 +13,7 @@ nj_tre = inphynet(D, namelist)
 subsets = centroid_edge_decomposition(nj_tre, 5, 8)
 ```
 
-# Using TINNiK
+## Using TINNiK
 
 TINNiK is implemented in the [MSCquartets](https://cran.r-project.org/web/packages/MSCquartets/vignettes/TINNIK.html) package in [R](https://www.r-project.org/about.html), so we need to save our estimated gene trees to a file so that they can be opened in R.
 
@@ -22,7 +22,7 @@ TINNiK is implemented in the [MSCquartets](https://cran.r-project.org/web/packag
 writemultinewick(est_gts, "example_gts.tre")
 ```
 
-The runtime of TINNIK quickly climbs with the number of taxa being evaluated. With our 51 taxa example it may take several minutes for results to come back. In the case of many more taxa it could take several hours, days, or even longer. In such cases, TINNIK may not be the preferred tool for conducting this portion of the analyses. If it is still preferred, though, it may be necessary to break the set of all taxa into smaller subsets each of which has its own tree of blobs inferred.
+The runtime of TINNiK quickly climbs with the number of taxa being evaluated. With our 51 taxa example it may take several minutes for results to come back. In the case of many more taxa it could take several hours, days, or even longer. In such cases, TINNiK may not be the preferred tool for conducting this portion of the analyses. If it is still preferred, though, it may be necessary to break the set of all taxa into smaller subsets each of which has its own tree of blobs inferred.
 
 ```R
 # In R
@@ -36,10 +36,10 @@ plot(tob)
 ```
 ![First Tree of Blobs](first-tob.png)
 
-When using TINNIK, it is important to explore multiple values of $\alpha$ and $\beta$ before assessing any results. Fortunately, evaluating subsequent values for $\alpha$ and $\beta$ is very fast because we can re-use data from the original analysis.
+When using TINNiK, it is important to explore multiple values of $\alpha$ and $\beta$ before assessing any results. Fortunately, evaluating subsequent values for $\alpha$ and $\beta$ is very fast because we can re-use data from the original analysis.
 
 !!! note
-	More information on $\alpha$ and $\beta$ parameters, including best practices recommended by the authors of TINNIK, can be found in [this TINNIK vignette](https://cran.r-project.org/web/packages/MSCquartets/vignettes/TINNIK.html), which we highly recommend reading before using TINNIK.
+	More information on $\alpha$ and $\beta$ parameters, including best practices recommended by the authors of TINNiK, can be found in [this TINNiK vignette](https://cran.r-project.org/web/packages/MSCquartets/vignettes/TINNIK.html), which we highly recommend reading before using TINNiK.
 
 ```R
 results2 <- TINNIK(results$pTable, alpha=0.01, beta=0.99, plot=FALSE)
@@ -50,7 +50,7 @@ plot(tob2)
 
 ![Second Tree of Blobs](second-tob.png)
 
-From these results, we would ideally split these taxa three subsets:
+From these results, we would ideally split these taxa into three subsets:
 
 1. Containing the taxa with tree-like relationships at the top of the figure along with the outgroup
 2. The first large block of taxa represented by a multifurcation (t48, t46, t45, ..., t30, t26)

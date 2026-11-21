@@ -21,7 +21,7 @@ When inferring species networks with multiple alleles, we often want to combine 
 
 In this `Dict`, the left-hand side of each pair (in this case A1, A2, B1, B2, B3, C1, D) should match the names of the leaves in the *gene trees*, and the right-hand side (in this case A, A, B, B, B, C, D) should match the names of the leaves in the *input networks*. If this is not the case, errors may occur.
 
-Below is an example where species A has two alleles, species B has 3 alleles, and species C and D have one allele each. The species C allele does not match the speices name, but the species D allele does.
+Below is an example where species A has two alleles, species B has 3 alleles, and species C and D have one allele each. The species C allele does not match the species name, but the species D allele does.
 
 ```julia
 speciesmap = Dict(
@@ -33,5 +33,5 @@ speciesmap = Dict(
 	"C1" => "C",
 	"D"  => "D"
 )
-calculateAGID(genetrees, species_map=speciesmap)
+D, namelist = calculateAGID(est_gts, species_map=speciesmap)
 ```

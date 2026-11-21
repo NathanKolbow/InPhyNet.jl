@@ -1,3 +1,4 @@
+# API reference
 
 ## Most relevant functions
 
@@ -17,4 +18,5 @@ Pages   = ["documentation.md"]
 
 ```@autodocs
 Modules = [InPhyNet]
+Filter = t -> !(t in (inphynet, calculateAGID))
 ```
