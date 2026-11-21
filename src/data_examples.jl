@@ -1,6 +1,18 @@
 using PhyloNetworks
 
 # FUNCTIONS FOR LOADING THE DATA EXAMPLES USED IN THE DOCUMENTATION WALKTHROUGH
+"""
+    load_inphynet_example_gts()
+
+Load the 100 estimated gene trees used in the documentation walkthrough, on 51 taxa
+(50 taxa plus an outgroup named `OUTGROUP`). Returns a `Vector{HybridNetwork}`.
+
+# Example
+```julia
+est_gts = load_inphynet_example_gts()
+D, namelist = calculateAGID(est_gts)
+```
+"""
 function load_inphynet_example_gts()::Vector{HybridNetwork}
 
     path = joinpath(dirname(@__FILE__), "..", "examples", "n50_example_gts.treefile")

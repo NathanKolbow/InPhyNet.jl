@@ -1,15 +1,20 @@
-
+# Installation
 
 ## Install Julia
 
-Julia is a high-level interactive programming language with C-like runtime speeds. To download and install Julia, [following the instructions here](https://julialang.org/downloads/). For a quick introduction to Julia, see [this article from Learn X in Y minutes](https://learnxinyminutes.com/julia/).
+Julia is a high-level interactive programming language with C-like runtime speeds. To download and install Julia, [follow the instructions here](https://julialang.org/downloads/). For a quick introduction to Julia, see [this article from Learn X in Y minutes](https://learnxinyminutes.com/julia/).
 
 ## Install InPhyNet
 
-To install `InPhyNet`, simply open an interactive Julia session and type the following:
+To install InPhyNet, open an interactive Julia session and type:
 
 ```julia
 using Pkg
-Pkg.add("InPhynet.jl")
+Pkg.add("InPhyNet")
 ```
 
+The walkthrough also uses [SNaQ.jl](https://github.com/JuliaPhylo/SNaQ.jl) to infer the constraint networks, [DataFrames.jl](https://github.com/JuliaData/DataFrames.jl) to build the guide tree, and [PhyloPlots.jl](https://github.com/JuliaPhylo/PhyloPlots.jl) to plot the final network. To follow along, install them as well:
+
+```julia
+Pkg.add(["SNaQ", "DataFrames", "PhyloPlots"])
+```

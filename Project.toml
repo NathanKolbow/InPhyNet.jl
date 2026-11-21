@@ -1,7 +1,7 @@
 name = "InPhyNet"
 uuid = "7d272db0-e1ce-47ab-9b64-d0002ca9962f"
 license = "MIT"
-version = "1.0.7"
+version = "1.0.8"
 authors = ["Nathan Kolbow <nkolbow@wisc.edu>"]
 
 [deps]
@@ -12,13 +12,13 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
-DataStructures = "0.18"
+DataStructures = "0.18, 0.19"
 Graphs = "1"
 PhyloNetworks = "1"
 Random = "1"
 StatsBase = "0.26, 0.27, 0.28, 0.29, 0.30, 0.31, 0.32, 0.33, 0.34"
 Test = "1"
-julia = "1.5"
+julia = "1.10"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
